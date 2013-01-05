@@ -1,0 +1,48 @@
+extends ../layout
+block body
+  style(type='text/css')
+
+  h1 About the icons
+
+  div.row-fluid
+    div.span6.offset3
+      p
+        | We use icons taken from the beautiful
+        | <a href='http://thenounproject.com'>The Noun Project</a>. 
+        | Why these icons? It's an effort to inspire playful expression, and a
+        | departure from the dreary world of online social networks profile
+        | icons, while still allowing a distinctive visual representation that
+        | can identify each member of your group.
+
+      p Below is detailed info on the source of each icon:
+
+  div.row-fluid
+    div.span6.offset3
+      table#icon_attribution
+
+block postscripts
+  :coffeescript
+    $.get "/static/js/intertwinkles_icon_chooser_attribution.json", (data) ->
+      count = 0
+      table = $("#icon_attribution")
+      for icon in data
+        do (icon) ->
+          tr = $("<tr />")
+          icon_td = $("<td/>")
+          icon_div = $("<div></div>").css({
+            "display": "inline-block"
+            "width": "32px"
+            "height": "32px"
+            "background-image": "url(#{intertwinkles.IconChooser.prototype.chooser_image})"
+            "background-position": (-32 * count) + "px 0px"
+            "cursor": "pointer"
+          })
+          link = $("<a></a>").attr("href", "http://thenounproject.com/noun/#{icon.name.toLowerCase().replace(" ", "-")}/##{icon.id.replace("icon-", "icon-No")}")
+          link.append(icon_div)
+          icon_td.append(link)
+          att_td = $("<td/>").html(icon.attribution)
+          tr.append(icon_td)
+          tr.append(att_td)
+          table.append(tr)
+          count += 1
+

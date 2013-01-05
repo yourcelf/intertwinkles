@@ -1,0 +1,288 @@
+extends layout
+
+block body
+  script(type='text/template', id='splashTemplate')
+    div.row-fluid
+      div.span12
+        h1 Resolve
+        div(style='text-align: center')
+          p.
+            Decide something, together. This tool is for finalizing decisions.
+            Think of it as "doodle for deliberation".
+          a.btn.btn-primary.btn-large.softnav(href='new/') New Proposal
+    div.row-fluid
+      div.span6
+        h3 Public
+        ul.public-proposals
+          li Nothing here yet.
+      div.span6
+        h3 For your groups
+        ul.group-proposals
+          <% if (!intertwinkles.is_authenticated()) { %>
+          li Sign in &#8599; to see your group's proposals.
+          <% } else { %>
+          li Nothing here yet.
+          <% } %>
+
+  script(type='text/template', id='listedProposalTemplate')
+    li.listed-proposal.
+      <% if (proposal.resolved != null) { %>
+        <span class='label <%= proposal.passed ? "label-success" : "" %>'>
+          <%= proposal.passed ? "Approved" : "Rejected" %>
+        </span>
+      <% } %>
+      <a class='softnav' href='<%= url %>'><%= proposal.revisions[0].text.split(" ").slice(0, 20).join(" ") %>...</a>
+      <br />
+      <span class='date proposal-listing-date' style='float: right;' data-date="<%= proposal.revisions[0].date %>"></span>
+      <% if (group) { %>
+        <span class=''><%= group.name %></span>
+      <% } %>
+      <span class='responses small-green'>(<%= proposal.opinions.length %> responses)</span>
+
+
+
+  script(type='text/template', id='addProposalTemplate')
+    div.row-fluid
+      h1 Make a proposal
+      br
+      br
+      div.span6.offset3
+        form#new_proposal_form.form-horizontal
+          <% if (!intertwinkles.is_authenticated()) { %>
+          div.control-group.name-field
+            label.control-label(for='id_name') Your name
+            div.controls
+              input#id_name(type='text', name='name')
+              br
+              span.small-green Or, better yet, just sign in. &#8599;
+          <% } %>
+          input(type='hidden', id='id_user_id', name='user_id',
+                value='<%= intertwinkles.user.id %>')
+          div.control-group
+            label.control-label(for='id_group') Group and sharing
+            div.controls.group-choice
+          div.control-group
+            label.control-label(for="id_proposal") Proposal
+            div.controls
+              span.help-inline.
+                Please write the proposal with the language you would like the
+                group to approve.
+              textarea#id_proposal(name="proposal", rows=10, cols=20, style='width: 100%')
+          div.control-group
+            div.controls
+              button.btn.btn-primary.btn-large(type='submit')
+                i.icon-thumbs-up.icon-white
+                | &nbsp;Make Proposal&nbsp;
+                i.icon-thumbs-down.icon-white
+
+  script(type='text/template', id='showProposalTemplate')
+    div.proposal-page
+      div.row-fluid(style='position: relative;')
+        div.pull-right(style='position: absolute; right: 1em; top: 1em; text-align: left;')
+          ul.sharing-online-group
+            li.room-users
+            li.sharing
+        div.hide-desktop(style='height: 2.5em; clear: both;')
+        h1 Proposal
+
+      div.row-fluid
+        div.span6.proposal
+          div.resolution.hide.alert
+            div.resolution-passed.hide.
+              This proposal was <b>approved</b>.<br />
+              Closed <span class='resolved-date'></span>
+            div.resolution-failed.hide.
+              This proposal <b>failed to carry</b>.<br />
+              Closed <span class='resolved-date'></span>
+            a.btn.btn-link.reopen-proposal.pull-right(href='#') Re-open proposal
+            div(style='clear: both;')
+          blockquote.text
+          div.btn-group.pull-right
+            button.btn.edit-proposal(type='button')
+              <i class='icon-edit'></i>
+              &nbsp;Edit
+            button.btn.finalize-proposal(type='button') Finalize
+          div(style='clear: both;')
+          div.proposal-twinkle-holder.pull-right
+          div.byline
+            span.editors
+            span.date.pull-right
+              | Last modified:&nbsp;
+              span.date-auto
+
+        div.span6
+          h4 Vote Tallies
+          div.tallies
+            | No votes yet.
+          div.missing
+
+
+      div.respond(style='text-align: center;')
+        div.confirm-prompt.alert.alert-block.hide
+          p.
+            The proposal has changed since you last voted.  Please
+            <b>confirm your vote</b>:
+          a.btn.btn-success.btn-large.confirm-my-vote(href='#') Confirm vote
+
+          
+        a.btn.btn-primary.btn-large.respond-link(href='#') Vote now
+
+      div.opinions
+
+      div.timeline-holder-holder(style='clear: both; padding-top: 4em;')
+        h3 Events
+        div.timeline-holder
+
+      div.modal.fade.hide.edit-proposal-modal
+        form.edit-proposal.form-horizontal
+          div.modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+            h3 Edit Proposal
+          div.modal-body
+            p.revision-warning.alert.alert-block.
+              Note: Others have already voted for this proposal. If you change
+              it now, their votes will be marked as "stale".
+            input(type='hidden', name='revision_user_id')
+            div.control-group.name-field-group
+              label.control-label(for='revision_name') Your name
+              div.controls
+                input#revision_name(type='text', name='revision_name')
+                span.help-inline Or just sign in first &#8599;
+            div.control-group
+              div.controls
+              textarea(name='proposal_revision', rows=10, cols=30, style='width: 95%')
+          div.modal-footer
+            input.btn.btn-primary(type='submit', value='Save')
+            a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+
+      div.modal.fade.hide.finalize-proposal-modal
+        div.modal-header
+          button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+          h3 Finalize Proposal
+        div.modal-body
+          p.
+            Finalizing the proposal ends voting, and marks the proposal as
+            passed or failed.
+        div.modal-footer
+          button.btn.btn-danger.proposal-failed(type='button') Proposal failed
+          button.btn.btn-success.proposal-passed(type='button') Proposal passed
+          a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+
+      div.modal.fade.hide.reopen-proposal-modal
+        div.modal-header
+          button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+          h3 Re-open proposal?
+        div.modal-body
+          p.
+            Delete the resolution for this proposal and open it back up to
+            voting and edits?
+        div.modal-footer
+          a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+          button.btn.btn-success.really-reopen(type='button') Re-open
+
+      div.modal.fade.hide.edit-response-modal
+        form.weigh-in.form-horizontal
+          div.modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+            h3 Your vote
+          div.modal-body
+            div.control-group.name
+              label.control-label(for="id_user") Name:
+              div.controls
+                div.name-input
+
+            div.control-group
+              label.control-label(for="id_vote") Vote:
+              div.controls
+                select#id_vote(name='vote')
+                  option(value='') ----
+                  <% for (var i = 0; i < vote_order.length; i++) { %>
+                  <option value='<%= vote_order[i][0] %>'><%= vote_order[i][1] %></option>
+                  <% } %>
+            div.control-group
+              label.control-label(for="id_text") Please explain:
+              div.controls
+                textarea#id_text(name='text', rows='10', cols='30')
+          div.modal-footer
+            button.btn.btn-primary(type='submit') Save
+            a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+
+      div.modal.fade.hide.delete-opinion-modal
+        form.delete-opinion.form-horizontal
+          input(type='hidden', name='opinion_id')
+          div.modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+            h3 Really delete opinion?
+          div.modal-body.
+            Delete the response by <span class='rendered-user'></span>?  This can't be undone.
+          div.modal-footer
+            a.btn(href='#', data-dismiss='modal') Cancel
+            input.btn.btn-danger(type='submit', value='Delete')
+
+  script(type='text/template', id='opinionTemplate').
+    <div id='<%= _id %>' class='opinion <%= stale ? "stale" : "" %> span4'>
+      <% if (stale) { %>
+        <div class='stale-msg'>
+          This was written before the last proposal edit.
+        </div>
+      <% } %>
+      <div class='vote <%= vote_value %> <%= is_non_voting ? "" : "" %>'>
+        <% if (is_non_voting) { %>
+          <span class='label non-voting-warning pull-left'>Advisory</span>
+        <% } %>
+        <%= vote_display %>
+      </div>
+      <div class='text'><%- rendered_text %></div>
+      <div class='byline'>
+        <span class='user'><%- rendered_user %></span>
+        <div class='twinkle-holder' style='display: inline-block;'>
+          <span class='twinkles'
+                data-application='resolve'
+                data-entity='<%= proposal_id %>'
+                data-subentity='<%= rev_id %>'
+                data-recipient='<%= user_id %>'
+                data-url='<%= window.location.pathname %>'></span>
+        </div>
+              
+        <span class='date pull-right'></span>
+      </div>
+      <div class='edit-links'>
+        <a href='#' class='delete-opinion pull-left' data-id="<%= _id %>">
+          <i class='icon-trash' title='Delete opinion'></i>
+        </a>
+        <a href='#' class='edit-opinion pull-right' data-id="<%= _id %>">
+          edit
+        </a>
+      </div>
+    </div>
+
+  script(type='text/template', id='talliesTemplate').
+    <table class='multibar'>
+      <% for (var i = 0; i < tallies.length; i++) { %>
+        <% var tally = tallies[i]; %>
+        <% if (tally.count > 0) { %>
+          <tr>
+            <th><%= tally.vote_display %></th>
+            <td class='bar-set bar-set-<%= tally.className %>'>
+              <% for (var j = 0; j < tally.counts.length; j++) { %>
+                <% var type = tally.counts[j]; %>
+                <% if (type.count > 0) { %>
+                  <div class='bar <%= type.className %> popover-trigger'
+                       rel="popover"
+                       data-title='<%= type.title %>'
+                       data-content='<%= type.content %>'
+                       data-placement='bottom'
+                       data-trigger='hover'
+                       data-html='true'
+                       style='width: <%= type.percentage %>%' 
+                       >
+                    <%= type.count %>
+                  </div>
+                <% } %>
+              <% } %>
+            </td>
+          </tr>
+        <% } %>
+      <% } %>
+    </table>
+

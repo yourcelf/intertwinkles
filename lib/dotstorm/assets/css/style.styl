@@ -1,0 +1,577 @@
+// Mixins
+@import "../intertwinkles/css/intertwinkles"
+
+background-rgba(r, g, b, a)
+  // rgba with fallback to rgb
+  background-color: rgb(r, g, b)
+  background-color: rgba(r, g, b, a)
+
+// Main
+@media only screen and (max-width: 480px)
+  // Override bootstrap's margins
+  body
+    padding: 0px
+
+
+smallIdeaMargin = 14px
+
+a:link.cta, a:visited.cta, a.cta
+  color: white
+
+#main
+  position: relative
+
+#size
+  position: fixed
+  bottom: 0
+  left: 0
+  background: white
+  border: 1px solid #aaa
+
+#auth
+  font-size: 16px
+  position: relative
+  float: right
+  color: white
+  span.users
+    z-index: 2
+    display: inline-block
+    width: 3em
+    height: 3em
+    text-align: right
+    position: relative
+    top: 3px
+    right: 1em
+    cursor: pointer
+    img
+      vertical-align: middle
+  text-shadow: black 0 0 5px, black 0 0 5px, black 0 0 5px
+  .userlist
+    position: absolute
+    top: 25px
+    right: 0
+    z-index: 1
+    .box
+      border-radius: 5px
+      background: rgba(0, 0, 0, 0.8)
+      padding: 1em
+    ol
+      margin: 0
+      padding: 0
+
+    li
+      padding: 0
+      margin-left: 1em
+      list-style-type: disc
+    input
+      width: 10em
+  .invite
+    display: none
+    margin-top: 10px
+    border-radius: 5px
+    border-top: 1px solid
+    a, a:link, a:visited
+      color: #09f
+      font-weight: bold
+
+ul.sharing-online-group
+  padding: inherit 
+  margin: inherit
+  margin-bottom: 10px
+  margin-left: 25px
+
+@media only screen and (min-width: 480px)
+  #auth .invite 
+    display: block
+
+#intro
+  .span4
+    min-width: 335px
+  iframe
+    position: relative
+    border: none
+    margin-top: -3em
+    z-index: -1
+
+  h1
+    font-size: 300%
+    position: relative
+    padding-bottom: 0
+    margin-bottom: 0
+  h2
+    text-align: center
+    margin-top: -8px
+    padding-top: 0
+    font-size: 1.5em
+    font-weight: normal
+    margin-left: 5px
+  form
+    text-align: center
+  .subtle
+    color: #999
+
+/*
+  Editing
+*/
+
+.clickToEdit
+  border: 1px inset transparent
+.clickToEdit:hover
+  background-color: #ffe
+  border: 1px inset black
+  &:before
+    content: "✎"
+.inPlaceTextarea
+  max-width: 90%
+  overflow: hidden
+  textarea
+    max-width: 80%
+    overflow: hidden
+.editInPlace
+  max-width: 90%
+  overflow: hidden
+  display: inline-block
+  input
+    max-width: 60%
+
+#addIdea
+  margin-left: auto
+  margin-right: auto
+  min-width: 320px
+  max-width: 600px
+  position: relative
+  div.toolbar
+    margin-top: 1em
+    a, .file-chooser
+      display: inline-block
+      width: 32px
+      height: 32px
+      border: 1px solid #eee
+    a.tool
+      padding: 6px
+      float: left
+      &:active, &.active
+        background: #f90
+      &.loading
+        img
+          display: none
+        background: url("/static/img/spinner.gif") no-repeat
+        background-position: 14px 14px
+    a.note-color
+      position: relative
+      top: 5px
+      &.yellow
+        background-color: #ffd
+      &.pink
+        background-color: #fdd
+      &.aqua
+        background-color: #ddf
+      &.green
+        background-color: #dfd
+    
+  canvas
+    position: absolute
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
+  input[type=text]
+    max-width: 160px
+  .canvasHolder
+    -webkit-box-sizing: border-box
+    -moz-box-sizing: border-box
+    -ie-box-sizing: border-box
+    box-sizing: border-box
+    position: relative
+    width: 100%
+    height: 100%
+    .photo
+      position: absolute
+      bottom: 0
+      left: 0
+      width: 100%
+      img
+        width: 100%
+    .canvas
+      position: relative
+      width: 100%
+      height: 100%
+    .text, .text textarea, .text textarea[disabled=disabled]
+      position: absolute
+      top: 0
+      left: 0
+      margin: 0
+      padding: 0
+      width: 100%
+      height: 100%
+      white-space: pre-wrap
+      color: black
+      font-family: Arial
+      line-height: 1em
+      width: 100%
+      height: 100%
+      border: none 
+      background: transparent
+      text-align: left
+      overflow: hidden
+      resize: none
+  .cta.loading
+    background-image: url("/static/img/spinner.gif")
+    background-repeat: no-repeat
+    background-color: #0093e6
+
+.participation-menu
+  width: 320px
+
+
+/*
+  Tag links
+*/
+.tag-links
+  h2
+    margin-bottom: 0
+  display: inline-block
+  padding-left: 1em
+  margin-bottom: 0.5em
+  border-bottom: 1px solid #eee
+  a.tag
+    &, &:link, &:visited
+      margin-right: 0.5em
+      &.active
+        font-weight: bold
+      &.inactive
+        color: #999
+
+/*
+  Organizer
+*/
+
+
+
+// Add an extra margin for touch-scrolling.
+.idea-browser, .front-matter
+  margin-right: 2em
+@media only screen and (min-width: 480px)
+  .idea-browser, .front-matter
+    margin: 1em
+    margin-right: 2em
+@media only screen and (min-width: 840px)
+  .idea-browser, .front-matter
+    margin-right: 1em
+  .idea-browser
+    width: 80%
+  .tag-links
+    width: 10%
+.idea-browser
+  float: left
+  position: relative
+.idea-browser, .idea-browser *
+  user-select: none
+
+.idea-browser input, .idea-browser textarea
+  user-select: text
+
+.add-link-block
+  float: left
+  height: 96px
+  text-align: center
+  .add-link
+    font-weight: bold
+
+    padding-left: 10px
+    padding-right: 10px
+    width: 96px - 10px - 10px - 2px
+
+    line-height: 72px
+    height: 72px
+    z-index: 1
+.front-matter
+  position: relative
+  margin-bottom: 0
+  .topic
+    h1
+      text-align: center
+      display: inline-block
+      margin-top: 0.2em
+      margin-bottom: 0.2em
+      clear: both
+    margin-bottom: 1em
+    border-bottom: 1px solid #ddd
+    display: inline-block
+    min-width: 100%
+    .embed
+      display: none
+    @media only screen and (min-width: 840px)
+      margin-left: 10%
+      min-width: 60%
+      max-width: 60%
+
+// All ideas are in masonry's.
+.masonry
+  position: relative
+  float: left
+  margin-top: smallIdeaMargin
+  display: inline-block
+  border: 1px solid transparent
+  text-align: center
+  padding-top: 10px
+  padding-bottom: 10px
+  .labelHolder
+    z-index: 10
+    height: 27px
+    input[type=text]
+      width: 120px
+    form
+      display: inline
+  .embed
+    position: absolute
+    right: 0.5em
+    top: 0
+    text-decoration: none
+    font-size: 20px
+    color: #060
+  .smallIdea
+    overflow: visible
+    margin-left: 5px
+    margin-right: 5px
+  &.group
+    padding-left: 13px
+    padding-right: 13px
+    .smallIdea
+      margin-left: 2px
+      margin-right: 2px
+    margin-left: 5px
+    margin-right: 5px
+    border-color: #999
+    background: rgba(200, 200, 200, 0.5)
+
+.smallIdea
+  float: left
+  cursor: pointer
+  overflow: hidden
+  position: relative
+  width: 120px
+  height: 120px
+  &.fade /* for tag fading.. */
+    opacity: 0.2
+  img
+    border: 1px solid #ccc
+    max-width: 100%
+    max-height: 100%
+  .votes
+    position: absolute
+    top: 0
+    right: 0
+  .tags
+    position: absolute
+    bottom: 0
+    left: 0
+    background-color: rgba(0, 0, 0, 0.5)
+    color: white
+    font-size: 12px
+  .dragger
+    position: absolute
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
+
+.smallIdea, .group
+  &.active
+    -webkit-transform: rotate(-2deg)
+    -moz-transform: rotate(-2deg)
+    -ms-transform: rotate(-2deg)
+    -o-transform: rotate(-2deg)
+    transform: rotate(-2deg)
+    opacity: 0.7
+    z-index: 10
+  &.hovered
+    outline: 1em solid #E83C00
+.placeholder.active
+  outline: 3px dashed #E83C00
+.dropline
+  z-index: 1
+  position: absolute
+  width: 44px
+  height: 118px
+  background: url("/static/img/droptarget.png")
+  background-size: 44px 100%
+
+.vote-widget
+  display: inline-block
+  text-align: right
+  height: 32px
+  a.upvote, a.downvote
+    cursor: pointer
+    position: relative
+    display: inline-block
+    overflow: hidden
+    line-height: 500px
+    height: 2em
+    width: 32px
+    &.active
+      cursor: auto
+  a.upvote
+    background: url("/static/img/upvote.png") no-repeat
+    &.active
+      background: url("/static/img/upvote-active.png") no-repeat
+  a.downvote
+    background: url("/static/img/downvote.png") no-repeat
+    top: 8px
+    &.active
+      background: url("/static/img/downvote-active.png") no-repeat
+
+  .vote-count
+    position: relative
+    display: inline-block
+    text-align: center
+    background: green
+    font-size: 16px
+    line-height: 32px
+    width: 32px
+    height: 32px
+    border-radius: 32px
+    color: white
+    font-weight: bold
+    -webkit-box-shadow: inset 0px 0px 10px white
+    -khtml-box-shadow: inset 0px 0px 10px white
+    -moz-box-shadow: inset 0px 0px 10px white
+    -o-box-shadow: inset 0px 0px 10px white
+    box-shadow: inset 0px 0px 10px white
+    &.active
+      -webkit-box-shadow: 0px 0px 5px red, 0px 0px 5px red
+      -khtml-box-shadow: 0px 0px 5px red, 0px 0px 5px red
+      -moz-box-shadow: 0px 0px 5px red, 0px 0px 5px red
+      -o-box-shadow: 0px 0px 5px red, 0px 0px 5px red
+      box-shadow: 0px 0px 5px red, 0px 0px 5px red
+
+#trash
+  -webkit-box-sizing: border-box
+  -moz-box-sizing: border-box
+  -ms-box-sizing: border-box
+  box-sizing: border-box
+  float: right
+  position: relative
+  .trash
+    padding: 2em
+    background: rgba(200, 200, 200, 0.8)
+    cursor: pointer
+    &.dragging, &:active
+      background: rgba(255, 200, 0, 0.5)
+      &.active
+        background-color: #E83C00
+    .icon
+      width: 32px
+      height: 32px
+      margin-left: auto
+      margin-right: auto
+      background: url("/static/img/trash-full.png")
+    &.empty
+      cursor: auto
+      &.open
+        .contents
+          display: none
+      .icon
+        background: url("/static/img/trash-empty.png")
+    .contents
+      display: none
+      margin-top: 0.5em
+    &.open
+      border: 1px solid #999
+      z-index: 1
+      position: absolute
+      display: inline-block
+      right: 0
+      top: 0
+      .contents
+        display: block
+        // Snap to 120px widths for 1, 2, 3, or 4 columns depending on 
+        // screen size
+        width: 120px
+        @media only screen and (min-width: 480px)
+          width: 240px
+        @media only screen and (min-width: 720px)
+          width: 360px
+        @media only screen and (min-width: 960px)
+          width: 480px
+
+.bigIdea
+  overflow: hidden
+  .shadow
+    z-index: 1
+    overflow: auto
+    background-color: rgba(0, 0, 0, 0.5)
+    position: fixed
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
+  .note
+    -webkit-box-sizing: border-box
+    -moz-box-sizing: border-box
+    -ie-box-sizing: border-box
+    box-sizing: border-box
+    -webkit-box-shadow: 0px 0px 50px white
+    -khtml-box-shadow: 0px 0px 50px white
+    -moz-box-shadow: 0px 0px 50px white
+    -o-box-shadow: 0px 0px 50px white
+    box-shadow: 0px 0px 50px white
+    max-width: 100%
+    position: relative
+    padding: 1em
+    margin-left: auto
+    margin-right: auto
+    background: rgba(255, 255, 255, 0.8)
+    .toolbar
+      text-align: center
+      .edit
+        float: left
+        margin-left: 1em
+      img
+        vertical-align: middle
+      padding-bottom: 0.5em
+
+    .canvasHolder
+      text-align: center
+      img
+        max-width: 100%
+        max-height: 100%
+
+    form
+      user-select: text
+      
+    .close
+      cursor: pointer
+      position: absolute
+      right: 0
+      top: 8px
+      width: 2em
+      height: 2em
+      text-align: center
+      color: #000
+      text-decoration: none
+      font-size: 24pt
+    .nav
+      position: absolute
+      bottom: 40px
+      width: 30%
+      height: 30%
+      user-select: none
+      &.prevHolder
+        left: 0
+      &.nextHolder
+        right: 0
+      .navlink
+        color: orange
+        font-weight: bold
+        height: 100%
+        cursor: pointer
+        display: none
+        font-size: 90pt
+        background: rgba(0, 0, 0, 0.5)
+      &:hover .navlink
+        display: block
+    .tags
+      font-size: 24px
+      padding-left: 0.5em
+      padding-right: 0.5em

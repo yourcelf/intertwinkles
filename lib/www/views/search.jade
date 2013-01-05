@@ -1,0 +1,37 @@
+extends layout
+
+block body
+  div.container-fluid
+    div.row-fluid
+      h1 Search 
+
+      div.span12
+        form.form-search.search-page(method='GET', action='')
+          div.input-append
+            input.input-medium.search-query(type='text', name='q', value=q)
+            button.btn(type='submit')
+              i.icon-search(title='Search')
+    div.results
+      div.loading(style='display: none;')
+        img(src='/static/img/spinner.gif')
+      if q
+        p
+          | #{docs.length} result#{docs.length != 1 ? "s" : ""}
+          if q
+            | &nbsp;for <b>#{q}</b>
+        if !authenticated
+          p Sign in to see private results from your groups.
+
+      for doc in docs
+        div.row-fluid.search-result
+          div.span12.search-result
+            summary = highlighting[doc.entity].text
+            include includes/search_result
+
+block postscripts
+  :coffeescript
+    intertwinkles.instasearch(
+      ".form-search.search-page",
+      "div.results",
+      -> sub_vars(".results")
+    )

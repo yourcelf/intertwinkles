@@ -1,0 +1,129 @@
+extends ../layout
+
+block poststyles
+  :stylus
+    a.remove
+      color: #999
+      &:hover
+        background-color: #f00
+        color: white
+    td
+      padding: 0.1em
+    th .popover
+      font-weight: normal
+      text-align: left
+    tr.removed
+      background-color: #fee
+      td
+        text-decoration: line-through
+        font-style: italic
+      td.link
+        text-decoration: none
+    tr.newinvite
+      background-color: #efe
+    td.changed
+      background-color: #ffe
+    .table th, .table td
+      border-top: 1px solid #eee
+
+block body
+  if group.name
+    h1= group.name
+  else
+    h1 New group
+  <br /><br />
+
+  div.row-fluid
+    div.span12
+      form.form-horizontal(method='post', action='', enctype='multipart/form-data')
+        input(type='hidden', name='_id', value=group._id)
+        div.control-group
+          label.control-label(for='id_name') Group name *
+          div.controls
+            input#id_name(type='text', name='name', value=group.name)
+        div.control-group
+          label.control-label(for='logo') Logo image
+          div.controls
+            input#id_logo(type='file', name='logo')
+            if group.logo && group.logo.thumb
+              a.undo-remove-logo.hide(href='#') Undo remove logo
+              div.logo(style='display: inline-block; vertical-align: middle')
+                | &nbsp;Current logo:&nbsp;
+                div(style='display: inline-block; vertical-align: middle')
+                  a(href=group.logo.large)
+                    img.logo(src=group.logo.small)
+                  input(type='hidden', name='remove_logo', value='')
+                  br
+                  a.remove-logo(href='#') Remove
+        div.control-group
+          label.control-label Members
+          div.controls
+            div.membership-table
+        div.control-group
+          div.controls
+            input(type='hidden', name='member_changeset', value='')
+            input.btn.btn-primary.btn-large(type='submit',
+              value=(group.name ? "Save changes" : "Create new group"))
+
+block postscripts
+  != js('membership')
+  <script type='text/javascript'>
+  != "window.GROUP_ID = " + (group.id ? "'" + group.id + "'" : "null") + ";"
+  </script>
+  :coffeescript
+    mem_table = new MembershipTable({
+      group_id: GROUP_ID
+      destination_selector: $("[name=member_changeset]")
+    })
+    $(".membership-table").html(mem_table.el)
+    mem_table.render()
+
+    errorify = (selector, msg) ->
+      cg = $(selector).parentsUntil(".control-group").parent()
+      cg.addClass("error")
+      cg.find(".controls").append("<span class='help-inline error-msg'>#{msg}</span>")
+
+    check_name = ->
+      name_field = $("[name=name]")
+      name_field.addClass("loading")
+      cg = name_field.parentsUntil(".control-group").parent()
+      cg.removeClass("error")
+      cg.find(".error-msg").remove()
+      $.ajax {
+        url: "/groups/is_available/"
+        data: {slug: name_field.val(), _id: $("[name=_id]").val()}
+        type: 'GET'
+        success: (data) ->
+          name_field.removeClass("loading")
+          if not data.available
+            errorify(name_field, "This name is not available.")
+          else if name_field.val() != INITIAL_DATA.groups?[GROUP_ID]?.name
+            cg.find(".controls").append("<span class='help-inline error-msg'>Name available</span>")
+      }
+    check_name()
+
+    nameTimeout = null
+    $("[name=name]").on "keydown", (event) ->
+      clearTimeout(nameTimeout) if nameTimeout?
+      setTimeout check_name, 50
+
+    $(".remove-logo").on "click", (event) ->
+      event.preventDefault()
+      $("[name=remove_logo]").val("1")
+      $(".logo").hide()
+      $(".undo-remove-logo").show()
+    
+    $(".undo-remove-logo").on "click", (event) ->
+      event.preventDefault()
+      $("[name=remove_logo]").val("")
+      $(".logo").show()
+      $(".undo-remove-logo").hide()
+
+
+
+    $("form").on "submit", (event) ->
+      proceed = $(".error", this).length == 0
+      unless $("[name=name]").val()
+        errorify($("[name=name]"), "This field is required.")
+        proceed = false
+      return proceed

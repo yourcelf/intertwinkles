@@ -1,0 +1,35 @@
+extends ../layout
+
+block body
+  div.container-fluid
+    div.row-fluid
+      div.span6.offset3
+        h1= group.name
+        div.well(style='text-align: center;')
+          p(style='font-size: 2em; line-height: 1em') You've been invited to join us!
+          br
+          br
+          form#invitation(action='', method='post')
+            div.row-fluid
+              div.span4
+                input.btn.btn-block.btn-large(name='decline', value='Decline')
+              div.span4
+              div.span4
+                input.btn.btn-block.btn-success.btn-large(type='submit', name='accept', value='Join Group')
+        div.modal.hide.fade
+          div.modal-header
+            button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+            h3 Decline invitation?
+          div.modal-body
+            p You won't be able to participate with this group on InterTwinkles.
+          div.modal-footer
+            a.btn(href='#', data-dismiss='modal') Cancel
+            a.confirm-decline.btn.btn-danger(href='#') Decline invitation
+
+block postscripts
+  :coffeescript
+    $("[name=decline]").on "click", (event) ->
+      event.preventDefault()
+      $(".modal").modal()
+
+    $(".confirm-decline").on "click", -> $("#invitation").submit()

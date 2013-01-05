@@ -1,0 +1,38 @@
+{
+    "port": 9000,
+    "host": "localhost",
+    "intertwinkles_api_key": "one",
+    "intertwinkles_base_url": "http://localhost:8000",
+    "secret": "Ooh seecret !! don't tell....",
+    "intertwinkles": {
+        "api_key": "one",
+        "api_url": "http://localhost:8000",
+        "apps": {
+            "home": {
+                "url": "http://localhost:9000",
+                "name": "Home",
+                "about": "Home page for InterTwinkles."
+            },
+            "resolve": {
+                "url": "http://localhost:8000",
+                "name": "Resolve",
+                "about": "Approve or reject a proposal with a group. Asynchronous voting and revising of proposals."
+            },
+            "dotstorm": {
+                "url": "http://dotstorm.intertwinkles.org",
+                "name": "Dotstorm",
+                "about": "Structured brainstorming with sticky notes. Come up with new ideas."
+            },
+            "tenpoints": {
+                "url": "http://tenpoints.intertwinkles.org",
+                "name": "Ten Points",
+                "about": "Come up with a set of values or principles for your group."
+            },
+            "firestarter": {
+                "url": "http://localhost:9000",
+                "name": "Firestarter",
+                "about": "Go arounds, ice breakers, intros. Get to know each other."
+            }
+        }
+    }
+}

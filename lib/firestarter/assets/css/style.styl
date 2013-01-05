@@ -1,0 +1,73 @@
+// Mixins
+@import "nib"
+@import "../intertwinkles/css/intertwinkles"
+//
+
+.firestarter-url
+  color: green
+  font-family: sans-serif
+  font-size: 80%
+
+.modal-body
+  max-height: 450px
+
+.firestarter-response
+  text-align: left
+  display: inline-block
+  vertical-align: top
+  width: 240px
+  background-color: rgba(255, 255, 255, 0.5)
+  border: 1px solid #eee
+  border-radius: 5px
+  margin: 0.5em
+  .name
+    background-color: #ffe
+    padding: 0.5em
+  .response
+    padding: 0.5em
+    white-space: pre-wrap
+  &:hover
+    .foot .delete, .foot .edit
+      visibility: visible
+  .foot
+    padding-top: 0.5em
+    .edit
+      visibility: hidden
+    .delete
+      visibility: hidden
+      opacity: 0.2
+      &:hover
+        opacity: 1
+        background-color: #f00
+        outline: 6px solid #f00
+
+.listed-firestarter
+  list-style-type: none
+  margin-top: 0.5em
+  margin-bottom: 0.5em
+  green-glow()
+  .prompt
+    font-style: italic
+    margin-bottom: 0
+    padding-top: 0.5em
+    border-left: none
+  .responses
+    color: #060
+    font-family: sans-serif
+    font-size: 80%
+  .name
+    color: #999
+    font-family: sans-serif
+    font-size: 80%
+
+
+.hover-edit
+  &:hover
+    .edit-link
+      visibility: visible
+  .edit-link
+    font-family: Georgia, serif
+    font-size: 14px
+    font-weight: normal
+    float: right
+    visibility: hidden

@@ -1,0 +1,13 @@
+<span class='varsub' data-date='#{event.date}'></span>
+if show_user !== false
+  &ensp;
+  if event.user
+    <span class='varsub' data-user-id='#{event.user}'></span>
+  else
+    <span>Anonymous</span>
+&ensp;
+= event.verbed
+&ensp;
+span.
+  <a href='#{event.absolute_url}'>#{event.title}</a>
+  (<span class='small-green'>#{conf.apps[event.application] ? conf.apps[event.application].name : "unknown" }</span>)

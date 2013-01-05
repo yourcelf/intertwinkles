@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+html
+  head
+    meta(http-equiv="Content-Type", content="text/html; charset=utf-8")
+    meta(http-equiv="X-UA-Compatible", content="IE=edge,chrome=1")
+    meta(name="viewport", content="width=device-width")
+    link(rel="shortcut icon", href="/static/img/favicon.ico")
+    !=css("bootstrap")
+    !=css("style")
+    title= title
+  body
+    <!--[if lt IE 9]><p class=chromeframe>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
+    div#page
+      header
+      noscript
+        :markdown
+          This site depends on javascript and cookies, thoroughly and completely.
+          Please enable and allow scripts from this site in order to use it.  If your
+          device does not support javascript, our apologies.
+      div#flash
+      div#app!= body
+      div#push
+    footer
+
+    <script type='text/javascript'>
+    != "var INITIAL_DATA = " + JSON.stringify(initial_data) + ";"
+    != "var INTERTWINKLES_API_URL = '" + conf.api_url + "';"
+    != "var INTERTWINKLES_APPS = " + JSON.stringify(conf.apps) + ";"
+    </script>
+    script(src="/socket.io/socket.io.js", type="text/javascript")
+    !=js('frontend')
+    include analytics.html

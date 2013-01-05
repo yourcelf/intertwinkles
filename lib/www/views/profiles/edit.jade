@@ -1,0 +1,102 @@
+extends ../layout
+
+block body
+  h1 Profile Settings
+  form#edit_profile.form-horizontal(method='post', action='')
+    div.row-fluid
+      div.span6.offset3
+        div.control-group
+          label.control-label(for="id_name") Name:
+          div.controls
+            input#id_name(type="text", name="name", value=user.name)
+        div.control-group
+          label.control-label(for="id_email") Email:
+          div.controls
+            input#id_email(type="email", name="email", value=user.email)
+            if user.email_change_request
+              div.small-green.
+                You have requested to change your email to:&nbsp; <i>user.email</i>.
+                Please sign out and sign in with that email to complete.
+        div.control-group
+          label.control-label(for="id_icon") Icon:
+          div.controls
+            div.image-chooser-lite(data-pk=user.icon.pk)
+            div.help-inline.small.
+              (<a href='/profiles/icon_attribution/'>About these icons</a>)
+        div.control-group
+          label.control-label(for="id_color") Color:
+          div.controls
+            input#id_color.color(type="text", value=user.icon.color, name='color')
+            span.color-name
+        div.control-group
+          div.controls#number_controls
+            table
+              tr
+                td
+                  label(for="id_mobile_number") Mobile number
+                td
+                  label(for="id_mobile_carrier") Carrier
+              tr
+                td
+                  input#id_mobile_number(type="text", name="mobile_number", value=user.mobile.number)
+                td
+                  select#id_mobile_carrier(name="mobile_carrier")
+                    option(value='')
+                    for carrier in carrier_list
+                      if carrier == user.mobile.carrier
+                        option(value=carrier, selected)= carrier
+                      else
+                        option(value=carrier)= carrier
+            span.help-inline Optional, For SMS notifications only
+        div.control-group
+          div.controls TODO: Notification settings
+        div.control-group
+          div.controls
+            input.btn.btn-primary.btn-large(type="submit", value="Save")
+
+block postscripts
+  :coffeescript
+    profile_editor = $("#edit_profile")
+
+    $(".image-chooser-lite", profile_editor).each ->
+      chooser = new intertwinkles.IconChooserLite(chosen: $(this).attr("data-pk"))
+      $(this).html(chooser.el)
+      chooser.render()
+
+    $("#id_color", profile_editor).on "change", (event) ->
+      $(".color-name", profile_editor).html(
+        intertwinkles.match_color($(event.currentTarget).val())
+      )
+    $("#id_color").change()
+
+    # Error handling for profile editor form.
+    profile_editor.on "submit", ->
+      $(".error", profile_editor).removeClass(".error")
+      $(".error-msg", profile_editor).remove()
+      errored = false
+      $in = (name) -> $("[name=#{name}]", profile_editor)
+      for name in ["name", "email", "icon", "color"]
+        if $in(name).val() == ""
+          $in(name).parentsUntil(".control-group").parent().addClass("error")
+          $in(name).parent().append(
+            "<span class='help-inline error-msg'>This field is required.</span>"
+          )
+          errored = true
+      if $in("mobile_number").val() != ""
+        cleaned = $.trim($in("mobile_number").val().replace(/[^0-9]/, ''))
+        if not (/[0-9]+/.test(cleaned) and (10 <= cleaned.length <= 14))
+          $("#number_controls", profile_editor).parent().addClass("error")
+          $("#number_controls", profile_editor).prepend("
+            <span class='help-inline error-msg'>
+              We don't know how to recognize this mobile number.
+            </span>")
+          errored = true
+      if ($in("mobile_number").val() == "") != ($in("mobile_carrier").val() == "")
+        $("#number_controls", profile_editor).parent().addClass("error")
+        $("#number_controls", profile_editor).append("
+          <span class='help-inline error-msg'>
+            If you add a number or carrier, please add both.</span>")
+        errored = true
+      if errored
+        return false
+

@@ -1,0 +1,11 @@
+.DS_Store*
+*.~
+*.swp
+*.pyc
+server.log
+bin
+fabfile.py
+lib/www/assets/user_icons/
+lib/www/assets/group_logos/
+node_modules
+vendor

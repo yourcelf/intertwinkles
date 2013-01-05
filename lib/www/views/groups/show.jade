@@ -1,0 +1,29 @@
+extends ../layout
+
+block body
+  div(style='text-align: center')
+    h1(style='display: inline-block; vertical-align: middle;')= group.name + "&ensp;"
+    a.btn(href='/groups/edit/#{group.slug}/', title='Edit group') <i class='icon-cog'></i> Edit
+  div.row-fluid
+    div.span3.offset3
+      h3 Members
+      for member in group.members
+        div.member
+          <span class='varsub' data-user-id='#{member.user}'></span>
+          br
+          span
+            | Member since: <span class='varsub' data-date='#{member.joined}'></span>
+          br
+          if member.role
+            | Role: #{member.role}
+          unless member.voting
+            | (nonvoting)
+      p
+        a(href='/groups/edit/#{group.slug}/') Invite or manage members
+
+    div.span3
+      h3 Stuff
+      for doc in docs
+        div.search-result.green-glow
+          summary = "<span class='markmeup'>" + doc.summary + "</span>"
+          include ../includes/search_result

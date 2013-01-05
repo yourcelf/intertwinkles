@@ -1,0 +1,12 @@
+a(href=doc.absolute_url)
+  img(style='float: left; margin-right: 5px; margin-bottom: 5px; max-width: 32px; max-height: 32px;',
+    src='#{conf.apps[doc.application].url}#{conf.apps[doc.application].image}')
+a(href='#{doc.absolute_url}')= doc.title
+br
+if (doc.sharing && doc.sharing.group_id)
+  span.varsub.group-label(data-group-id='#{doc.sharing.group_id}')
+  &nbsp;
+span.small-green #{conf.apps[doc.application].name}
+p.
+  !{summary}
+  <span class='varsub date' data-date='#{doc.date}'></span>
