@@ -70,6 +70,9 @@ start = (config) ->
     asset_folders.push("#{__dirname}/#{key}/assets")
 
   app.use connect_assets(src: asset_folders)
+  # Don't prefix connect-assets' css and js paths by default.
+  css.root = ''
+  js.root = ''
 
   app.set "views", view_folders
 

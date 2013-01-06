@@ -43,7 +43,7 @@ module.exports = {
       "name": "Firestarter"
       "about": "Go arounds, ice breakers, intros. Get to know each other."
       "url_prefix": "/firestarter"
-      "image": "/static/img/firestarter_tile.png"
+      "image": "/static/firestarter/img/firestarter_tile.png"
     }
   }
 }

@@ -2,7 +2,7 @@ ul.app-icon-list
   for app in hero_apps
     if conf.apps[app]
       li.tile-link
-        a(href=conf.apps[app].url)
+        a(href=conf.apps[app].url_prefix + "/")
           img(src=conf.apps[app].image)
           span.name= conf.apps[app].name
         p= conf.apps[app].about

@@ -1,5 +1,3 @@
-#= require ../intertwinkles/js/intertwinkles/index
-
 fire = {}
 
 intertwinkles.build_toolbar($("header"), {applabel: "firestarter"})

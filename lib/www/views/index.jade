@@ -1,7 +1,7 @@
 extends ../../../views/layout
 
 block poststyles
-  !=css("www/style")
+  !=css("www/css/style")
   
 
 block body
@@ -53,7 +53,7 @@ block body
           div.row-fluid
             div.span6
               h1(style='text-align: left;') Inter&#8203;<span class='intertwinkles'>Twinkles</h1>
-              img(src='/static/img/inspire.svg', alt="Inspire, expand, contract, approve, accomplish")
+              img(src='/static/www/img/inspire.svg', alt="Inspire, expand, contract, approve, accomplish")
             div.span6
               p(style='text-align: center;') Twinkling all over the interwebs.
 
@@ -138,7 +138,7 @@ block body
 
 
 block postscripts
-  !=js("www/frontend")
+  !=js("www/js/frontend")
   :coffeescript
     intertwinkles.user.on "change", ->
       window.location.href = window.location.href

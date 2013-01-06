@@ -3,6 +3,7 @@ RoomManager   = require('iorooms').RoomManager
 schema        = require './schema'
 _             = require 'underscore'
 async         = require 'async'
+intertwinkles = require 'node-intertwinkles'
 
 start = (config, app, sessionStore, io) ->
   io.of("/io-firestarter").setMaxListeners(15)
@@ -23,7 +24,7 @@ start = (config, app, sessionStore, io) ->
   index_res = (req, res, initial_data) ->
     intertwinkles.list_accessible_documents schema.Firestarter, req.session, (err, docs) ->
       return res.send(500) if err?
-      res.render 'index', {
+      res.render 'firestarter/index', {
         title: "Firestarter"
         initial_data: _.extend(
           {application: "firestarter"},
@@ -31,6 +32,7 @@ start = (config, app, sessionStore, io) ->
             listed_firestarters: docs
           }, initial_data)
         conf: intertwinkles.clean_conf(config)
+        flash: req.flash()
       }
 
   app.get '/firestarter/', (req, res) -> index_res(req, res, {})

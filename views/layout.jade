@@ -3,12 +3,14 @@ html
   head
     meta(http-equiv="Content-Type", content="text/html; charset=utf-8")
     meta(http-equiv="X-UA-Compatible", content="IE=edge,chrome=1")
-    meta(name="viewport", content="width=device-width")
+    meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    meta(name="apple-mobile-web-app-capable", content="yes")
     link(rel="shortcut icon", href="/static/img/favicon.ico")
-    !=css("bootstrap")
-    !=css("intertwinkles")
+    !=css("css/bootstrap")
+    !=css("css/intertwinkles")
     block poststyles
     title= title
+
   body
     <!--[if lt IE 9]><p class=chromeframe>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
     div#page
@@ -24,13 +26,17 @@ html
       div#push
     footer
 
+    // Initial data
     <script type='text/javascript'>
     != "var INITIAL_DATA = " + JSON.stringify(initial_data) + ";"
     != "var INTERTWINKLES_API_URL = '" + conf.api_url + "';"
     != "var INTERTWINKLES_APPS = " + JSON.stringify(conf.apps) + ";"
     </script>
+    // Socket IO
     script(src="/socket.io/socket.io.js", type="text/javascript")
-    !=js('intertwinkles/index')
+    // Intertwinkles library
+    !=js('js/intertwinkles/index')
+    // Flash messages
     <script type='text/javascript'>
     for msg in (flash.error || [])
       != "flash('error', '" + msg + "');"
@@ -39,5 +45,6 @@ html
     for msg in (flash.success || [])
       != "flash('success', '" + msg + "');"
     </script>
+    // Page-specific scripts
     block postscripts
     include analytics.html
