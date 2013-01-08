@@ -18,6 +18,7 @@
   //You shouldn't use "dirty" for for anything else than testing or development
   "dbType" : "dirty",
   //the database specific settings
+
   "dbSettings" : {
                    "filename" : "var/dirty.db"
                  },

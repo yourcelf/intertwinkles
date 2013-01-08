@@ -6,6 +6,8 @@ package.json.
 """
 import os
 import sys
+import json
+import time
 import shutil
 import string
 import random
@@ -92,14 +94,6 @@ def install_etherpad():
     else:
         subprocess.call(["git", "pull", "origin", "master"], cwd=dest)
 
-    # Install plugins
-    subprocess.check_call(["npm", "install", "ep_headings"], cwd=dest)
-
-    # Install dependencies
-    subprocess.check_call([os.path.abspath(
-            os.path.join(dest, "bin", "installDeps.sh")
-        )], cwd=os.path.join(dest, "bin"))
-
     # Install settings
     _overwrite_link(
         os.path.join(CONFIG_DIR, "etherpad", "settings.json"),
@@ -107,6 +101,37 @@ def install_etherpad():
     _overwrite_link(
         os.path.join(CONFIG_DIR, "etherpad", "pad.css"),
         os.path.join(dest, "src", "static", "custom", "pad.css"))
+
+    # Etherpad has an "installDeps.sh" script which installs some dependencies.
+    # However, not everything is created or initialized until you first run the
+    # server and hit it with a page request.  We want to run etherpad under
+    # users that don't have permissions to do this initialization, so we must
+    # launch and access etherpad first here to do the initialization.
+
+    # Install dependencies...
+    subprocess.check_call([os.path.abspath(
+        os.path.join(dest, "bin", "installDeps.sh"))],
+        cwd=os.path.join(dest, "bin"))
+
+    # Install plugins
+    subprocess.check_call(["npm", "install", "ep_headings"], cwd=dest)
+
+    # Run the etherpad server.
+    proc = subprocess.Popen(["node",
+        os.path.join("node_modules", "ep_etherpad-lite", "node", "server.js")
+    ], cwd=dest)
+     # Wait for server to start.
+    time.sleep(1)
+
+     # Access the server to trigger final initialization.
+     # XXX: this URL/port should be de-duplicated.
+    print "Accessing etherpad to install dependencies..."
+    req = urllib2.urlopen("http://0.0.0.0:9001")
+    req.read()
+    status = req.getcode()
+    print "Status", status
+    proc.kill()
+    assert status == 200
 
 def _overwrite_link(source, dest):
     try:
