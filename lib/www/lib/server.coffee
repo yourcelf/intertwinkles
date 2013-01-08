@@ -25,7 +25,7 @@ start = (config, app, io, sessionStore) ->
   context = (req, obj, initial_data) ->
     return _.extend({
       initial_data: _.extend(
-        {application: "home"},
+        {application: "www"},
         intertwinkles.get_initial_data(req?.session, config),
         initial_data or {}
       )
@@ -369,7 +369,7 @@ start = (config, app, io, sessionStore) ->
             # Add invitation notices for any new invitees.
             return done() unless add_invitation_notices.length > 0
             notice_params = ({
-              application: "home"
+              application: "www"
               type: "invitation"
               entity: group.id
               group: group.id
@@ -424,7 +424,7 @@ start = (config, app, io, sessionStore) ->
     update_group req, res, group, (group, event_data) ->
       intertwinkles.post_event {
         type: "create"
-        application: "home"
+        application: "www"
         entity: group.id
         entity_url: "/groups/#{group.slug}"
         user: req.session.auth.email
@@ -482,7 +482,7 @@ start = (config, app, io, sessionStore) ->
       update_group req, res, doc, (group, event_data) ->
         intertwinkles.post_event {
           type: "update"
-          application: "home"
+          application: "www"
           entity: group.id
           entity_url: "/groups/#{group.slug}"
           user: req.session.auth.email
@@ -527,7 +527,7 @@ start = (config, app, io, sessionStore) ->
           group.save (err, group) ->
             return handle_error(req, res, err) if err?
             event = {
-              application: "home"
+              application: "www"
               entity: group._id
               entity_url: "/groups/#{group.slug}"
               user: req.session.auth.email

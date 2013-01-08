@@ -1,5 +1,6 @@
 fire = {}
 
+intertwinkles.connect_socket()
 intertwinkles.build_toolbar($("header"), {applabel: "firestarter"})
 intertwinkles.build_footer($("footer"))
 
@@ -561,7 +562,6 @@ socket.on "error", (data) ->
 
 socket.on "connect", ->
   fire.socket = socket
-  intertwinkles.socket = socket
   unless fire.started == true
     fire.app = new Router()
     Backbone.history.start(pushState: true, silent: false)

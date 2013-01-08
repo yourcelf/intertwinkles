@@ -525,7 +525,7 @@ describe "api", ->
 
   it "Creates and resolves short URLs", (done) ->
     intertwinkles.get_short_url {
-      application: "home", path: "/this/is/awesome"
+      application: "firestarter", path: "/firestarter/this/is/awesome"
     }, config, (err, results) ->
       expect(err).to.be(null)
       expect(results.short_url).to.not.be(undefined)
@@ -544,6 +544,6 @@ describe "api", ->
         res.on 'data', (chunk) -> answer += chunk
         res.on 'end', ->
           expect(res.statusCode).to.be(302)
-          expect(res.headers.location).to.be("http://localhost:8888/this/is/awesome")
+          expect(res.headers.location).to.be("http://localhost:8888/firestarter/this/is/awesome")
           done()
       ).on "error", done

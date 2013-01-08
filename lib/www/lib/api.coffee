@@ -530,16 +530,27 @@ route = (config, app) ->
     return unless validate_request(req, res, ["api_key", "path", "application"], 'POST')
     unless config.apps[req.body.application]?
       return res.send({error: "Invalid application"})
+
+    app_url = config.apps[req.body.application].url
+    app_url_parts = url.parse(app_url)
+    parts = url.parse(req.body.path)
+    unless parts.path.substring(0, app_url_parts.path.length) == app_url_parts.path
+      return res.send({error: "Application and URL don't match"})
+
+    # The long path is only the part of the URL that follows the configured app
+    # URL.  That way, we can change where the application lives, without
+    # breaking short URLs.
+    long_path = parts.path.substring(app_url_parts.path.length)
+    
     async.waterfall [
       (done) ->
-        parts = url.parse(req.body.path)
         schema.ShortURL.findOne {
-          long_path: parts.path
+          long_path: long_path
           application: req.body.application
         }, (err, doc) ->
           return done(err, doc) if err? or doc?
           short_doc = new schema.ShortURL({
-            long_path: parts.path
+            long_path: long_path
             application: req.body.application
           })
           short_doc.save(done)
