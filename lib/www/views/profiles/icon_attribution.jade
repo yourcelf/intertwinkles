@@ -1,4 +1,4 @@
-extends ../layout
+extends ../www_base
 block body
   style(type='text/css')
 
@@ -20,7 +20,7 @@ block body
     div.span6.offset3
       table#icon_attribution
 
-block postscripts
+block append postscripts
   :coffeescript
     $.get "/static/js/intertwinkles_icon_chooser_attribution.json", (data) ->
       count = 0

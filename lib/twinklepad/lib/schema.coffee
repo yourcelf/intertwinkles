@@ -6,10 +6,9 @@ url            = require 'url'
 uuid           = require 'node-uuid'
 
 load = (config) ->
-
-  pad_url_parts = url.parse(config.etherpad.url)
+  pad_url_parts = url.parse(config.apps.twinklepad.etherpad.url)
   etherpad = etherpadClient.connect({
-    apikey: config.etherpad.api_key
+    apikey: config.apps.twinklepad.etherpad.api_key
     host: pad_url_parts.hostname
     port: pad_url_parts.port
   })
@@ -59,9 +58,9 @@ load = (config) ->
           next()
 
   TwinklePadSchema.virtual('url').get ->
-    "#{config.etherpad.url}/p/#{@pad_id}"
+    "#{config.apps.twinklepad.etherpad.url}/p/#{@pad_id}"
   TwinklePadSchema.virtual('read_only_url').get ->
-    "#{config.etherpad.url}/p/#{@read_only_pad_id}"
+    "#{config.apps.twinklepad.etherpad.url}/p/#{@read_only_pad_id}"
   TwinklePadSchema.set('toObject', {virtuals: true})
   TwinklePadSchema.set('toJSON', {virtuals: true})
   TwinklePad = mongoose.model("TwinklePad", TwinklePadSchema)

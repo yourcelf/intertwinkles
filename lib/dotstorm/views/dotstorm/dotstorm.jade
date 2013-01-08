@@ -1,0 +1,179 @@
+extends base
+
+block preapp
+  div.pull-right(style='position: absolute; right: 1em; top: 60px;')
+    a.dotstorm-read-only-link(href='#', style='float: right; margin-left: 0.5em') read-only &#8734;
+    ul.sharing-online-group(style='float: right;')
+      li.room-users
+      li.sharing
+  div(style='height: 2em;')
+
+block body
+  div#app
+    <img src='/static/img/spinner.gif' alt='loading' /> Loading...
+
+  script#dotstormTopic(type='text/template')
+    div#dotstorm
+      div.nameEdit
+        h1.clickToEdit <%= name || "[add name]" %>
+      div.topicEdit
+        span.clickToEdit <%- _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
+
+  script#dotstormInPlaceInput(type='text/template')
+    form.editInPlace.input-append
+      <input type='text' value='<%= text %>' />
+      input.btn(type='submit', value='OK')
+
+  script#dotstormInPlaceTextarea(type='text/template')
+    form.inPlaceTextarea
+      textarea(rows="4", cols="40") <%= text %>
+      br
+      input.btn(type='submit', value='save')
+      a.cancel(href='#') cancel
+
+  script#dotstormAddIdea(type='text/template')
+    div#addIdea
+      div.toolbar
+        a.tool.active(data-tool='text')
+          img(src='/static/dotstorm/img/T.png', alt='Text')
+        a.tool(data-tool='pencil')
+          img(src='/static/dotstorm/img/pencil.png', alt='Pencil')
+        a.tool(data-tool='eraser')
+          img(src='/static/dotstorm/img/eraser.png', alt='Eraser')
+        <% if (cameraEnabled) { %>
+        a.tool(data-tool='camera')
+          img(src='/static/dotstorm/img/camera.png', alt='Camera')
+        <% } else if (fileEnabled) { %>
+        a.tool.file-upload(data-tool='file-upload')
+          img.normal(src='/static/dotstorm/img/camera.png', alt='Camera')
+        input.file-input(type='file', accept='image/*;capture=camera')
+        <% } %>
+        span(style='float: right')
+          a.note-color.yellow
+          a.note-color.pink
+          a.note-color.aqua
+          a.note-color.green
+      div(style='clear: both;')
+      div.canvasHolder
+        div.photo
+        div.canvas
+        div.text
+          textarea#id_description <%= description %>
+      form
+        label(for='id_tags') Tags
+        div.input-append
+          <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
+          //a.cta.cta-yellow.cta-thin Say more
+          input.btn.btn-primary(type='submit', value='Share &raquo;', style='float: right')
+      div(style='clear: both;')
+
+  script#dotstormOrganizer(type='text/template')
+    div(style='clear: both;')
+    div.front-matter
+      div.topic
+      div.add-link-block
+        <a href='/dotstorm/d/<%= slug %>/add/' class='btn btn-primary btn-large add-link'>+ Add</a>
+      div#trash
+        div.trash
+          div.icon
+          div.contents
+      div(style='clear: both;')
+    div.idea-browser
+      span#organizer
+      div(style='clear: both;')
+    div.tag-links
+
+  script#dotstormSmallIdea(type='text/template')
+    <img src='/static<%= drawingURLs.medium %>' alt='<%= description %>' />
+    div.tags
+      <%= tags.join(", ") %>
+    div.votes
+    div.dragger
+
+  script#dotstormSmallIdeaGroup(type='text/template')
+    div.labelHolder
+      span.labelMask
+        <% if (showGroup) { %>
+        span.grouplabel.clickToEdit
+          <%= label || "[Click to add label]" %>
+        <a href='/dotstorm/g/<%= group_id %>/' class='embed group' title='Embed this group'>&#8734;</a> 
+        <% } else {%>
+        | &nbsp;
+        <% } %>
+    div.ideas
+
+  script#dotstormSmallIdeaGroupEditLabel(type='text/template')
+    form.input-append
+      | <input type='text' value='<%= label %>' placeholder='label' />
+      input.btn(type='submit', value='OK')
+
+  script#dotstormBigIdea(type='text/template')
+    div.shadow
+      div.noteHolder
+        div.note
+          div.toolbar.image-boxed
+            a.edit(href='#', title='edit')
+              img(src="/static/dotstorm/img/pencil.png", alt='edit')
+            span.vote-widget
+            a.close(title='close') &#10006;
+          div.canvasHolder
+            <img src='/static<%= drawingURLs.full %>' alt='<%= description %>' />
+            <% if (hasPrev) { %>
+            div.nav.prevHolder
+              div.navlink.prev(title='previous') &laquo;
+            <% } %>
+            <% if (hasNext) { %>
+            div.nav.nextHolder
+              div.navlink.next(title='next') &raquo;
+            <% } %>
+          div.tags
+            b tags:&nbsp;
+            span.clickToEdit
+              <%= tags.join(", ") || "[Click to add]"%>
+        div(style='clear: both;')
+
+  script#dotstormTagOverlay(type='text/template')
+    div.shadow
+
+  script#dotstormVoteWidget(type='text/template')
+    <% if (!readOnly) { %>
+    a.upvote(title='Vote up') Vote up
+    <% } %>
+    span.vote-count
+    <% if (!readOnly) { %>
+    a.downvote(title='Vote down') Vote down
+    <% } %>
+
+  script#usersWidget(type='text/template')
+
+
+  script#intro(type='text/template')
+    div#intro.row-fluid
+      div.span5.offset1
+        h1 Dotstorm
+        h2 Sticky-note brainstorming
+        div(style='text-align: center;')
+          iframe(width="335", height="400", src="http://dotstorm.intertwinkles.org/e/8771d8b6-a355-4ffc-90ff-49832b65ebde")
+      div.span5(style='padding-top: 5em;')
+        ul
+          li 
+            | Totally free. 
+            span.subtle (Fork me on <a href='http://github.com/yourcelf/dotstorm/'>github</a>!)
+          li 
+            | Rather beta.
+            span.subtle  (please don't use for sensitive or critical data).
+          li 
+            | Compatible with all modern web devices 
+            span.subtle (iPhone, Android, Firefox, Chrome, etc).
+          li Awesome
+
+        form#random
+          input.btn.btn-primary.btn-large(type='submit', value='New random dotstorm')
+        form#named
+          p
+            label(for='id_join')
+              | Or choose a name:
+            div.input-append
+              input(type='text', name='room', id='id_join', placeholder='name')
+              input.btn.btn-success(type='submit', value='OK')
+

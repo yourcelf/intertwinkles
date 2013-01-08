@@ -31,6 +31,7 @@
       "async": "~0",
       "http-proxy": "*",
       "solr-client": "~0",
+      "etherpad-lite-client": "*",
       "node-iorooms": "git+https://github.com/yourcelf/node-iorooms.git",
       "node-intertwinkles": "git+https://github.com/yourcelf/node-intertwinkles.git"
   },

@@ -1,4 +1,4 @@
-extends ../layout
+extends ../www_base
 
 block body
   h1 Profile Settings
@@ -54,7 +54,7 @@ block body
           div.controls
             input.btn.btn-primary.btn-large(type="submit", value="Save")
 
-block postscripts
+block append postscripts
   :coffeescript
     profile_editor = $("#edit_profile")
 

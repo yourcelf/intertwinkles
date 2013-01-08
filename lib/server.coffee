@@ -2,7 +2,6 @@ express        = require 'express'
 socketio       = require 'socket.io'
 intertwinkles  = require 'node-intertwinkles'
 RedisStore     = require('connect-redis')(express)
-RoomManager    = require('iorooms').RoomManager
 mongoose       = require 'mongoose'
 _              = require 'underscore'
 connect_assets = require 'connect-assets'
@@ -29,8 +28,7 @@ start = (config) ->
   app = express.createServer()
   sessionStore = new RedisStore()
   io = socketio.listen(app, {"log level": 0})
-  iorooms = new RoomManager("/io-intertwinkles", io, sessionStore)
-  intertwinkles.attach(config, app, iorooms)
+  intertwinkles.attach(config, app, io, sessionStore)
   db = mongoose.connect(
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
@@ -57,7 +55,7 @@ start = (config) ->
   asset_folders = [__dirname + "/../node_modules/node-intertwinkles/assets"]
   for key, appconf of config.apps
     # App-specific routes
-    require("./#{key}/lib/server").start(config, app, sessionStore, io)
+    require("./#{key}/lib/server").start(config, app, io, sessionStore)
 
     app.configure 'development', ->
       app.use "/static/", express.static("#{__dirname}/#{key}/assets")

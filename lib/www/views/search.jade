@@ -1,4 +1,4 @@
-extends layout
+extends www_base
 
 block body
   div.container-fluid
@@ -28,7 +28,7 @@ block body
             summary = highlighting[doc.entity].text
             include includes/search_result
 
-block postscripts
+block append postscripts
   :coffeescript
     intertwinkles.instasearch(
       ".form-search.search-page",

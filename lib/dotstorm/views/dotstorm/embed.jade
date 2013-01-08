@@ -1,0 +1,43 @@
+doctype 5
+html(lang="en")
+  head
+    meta(http-equiv="Content-Type", content="text/html; charset=utf-8")
+    meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    meta(name="apple-mobile-web-app-capable", content="yes")
+
+    link(rel='shortcut icon', href="/favicon.ico")
+    title= title
+    !=css('css/intertwinkles')
+    !=css('dotstorm/css/style')
+    style(type='text/css')
+      .smallIdea {
+        cursor: auto !important;
+      }
+
+  body
+    div#dotstormEmbed
+      if (!group_id)
+        div#title
+          if dotstorm.name
+            h1= dotstorm.name
+          if dotstorm.topic
+            div.topic= dotstorm.topic
+      div.idea-browser
+        each group in dotstorm.groups
+          if !group_id || group._id == group_id
+            div(class='masonry' + (group.ideas.length > 1 ? ' group' : ''))
+              div.labelHolder
+                if group.ideas.length > 1 && group.label
+                  span.label= group.label
+                else
+                  | &nbsp;
+
+              div.ideas
+                each idea in group.ideas
+                  div.smallIdea
+                    img(src="/static" + idea.drawingURLs.medium, alt=idea.description)
+                    div.tags= idea.tags.join(", ")
+                    div.vote-widget
+                      div.votes
+                        if idea.votes > 0
+                          span.vote-count= idea.votes

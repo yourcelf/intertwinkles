@@ -9,3 +9,4 @@ lib/www/assets/user_icons/
 lib/www/assets/group_logos/
 node_modules
 vendor
+config/secrets

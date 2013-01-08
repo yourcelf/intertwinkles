@@ -1,4 +1,4 @@
-extends ../layout
+extends ../www_base
 
 block body
   div.container-fluid
@@ -26,7 +26,7 @@ block body
             a.btn(href='#', data-dismiss='modal') Cancel
             a.confirm-decline.btn.btn-danger(href='#') Decline invitation
 
-block postscripts
+block append postscripts
   :coffeescript
     $("[name=decline]").on "click", (event) ->
       event.preventDefault()

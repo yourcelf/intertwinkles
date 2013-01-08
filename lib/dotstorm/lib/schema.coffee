@@ -92,13 +92,13 @@ IdeaSchema.virtual('photoURLs').get ->
     photos = {}
     if @photoVersion?
       for size in ["small", "medium", "large", "full"]
-        photos[size] = "/uploads/idea/#{@id}/photo/#{size}#{@photoVersion}.png"
+        photos[size] = "/dotstorm/uploads/idea/#{@id}/photo/#{size}#{@photoVersion}.png"
     return photos
 IdeaSchema.virtual('drawingURLs').get ->
     thumbs = {}
     if @imageVersion?
       for size in ["small", "medium", "large", "full"]
-        thumbs[size] = "/uploads/idea/#{@id}/drawing/#{size}#{@imageVersion}.png"
+        thumbs[size] = "/dotstorm/uploads/idea/#{@id}/drawing/#{size}#{@imageVersion}.png"
     return thumbs
 IdeaSchema.virtual('taglist').get(
   -> return @tags.join(", ")

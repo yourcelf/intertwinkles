@@ -160,7 +160,7 @@ load = (config) ->
       decline: "declined"
     }[@type] or @type + "ed"
   EventSchema.virtual("absolute_url").get ->
-    if config.apps[@application]?
+    if config.apps[@application]?.url?
       return config.apps[@application].url + @entity_url
     return null
   EventSchema.virtual("title").get ->
@@ -225,7 +225,10 @@ load = (config) ->
     }
   }
   SearchIndexSchema.virtual('absolute_url').get ->
-    config.apps[@application].url + @url
+    if config.apps[@application]?.url?
+      config.apps[@application].url + @url
+    else
+      null
   SearchIndexSchema.pre "save", (next) ->
     @modified = new Date()
     next()
@@ -273,7 +276,9 @@ load = (config) ->
   ShortURLSchema.virtual("absolute_short_url").get ->
     return config.short_url_base + @short_path
   ShortURLSchema.virtual("absolute_long_url").get ->
-    return config.apps[@application].url + @long_path
+    if config.apps[@application]?.url?
+      return config.apps[@application].url + @long_path
+    return null
   ShortURLSchema.pre "save", (next) ->
     return next() if @short_path?
     get_unique_short_path (err, short_path) =>

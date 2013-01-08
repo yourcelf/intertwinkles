@@ -13,9 +13,7 @@
   
   //Ip and port which etherpad should bind at
   "ip": "0.0.0.0",
-  "port" : 9005,
-  "transports": ["websocket", "jsonp-polling"],
-  
+  "port" : 9001,
   //The Type of the database. You can choose between dirty, postgres, sqlite and mysql
   //You shouldn't use "dirty" for for anything else than testing or development
   "dbType" : "dirty",
@@ -78,5 +76,7 @@
   */
 
   /* The log level we are using, can be: DEBUG, INFO, WARN, ERROR */
-  "loglevel": "INFO"
+  "loglevel": "INFO",
+  // restrict socket.io transport methods
+  "socketTransportProtocols" : ['xhr-polling', 'jsonp-polling', 'htmlfile']
 }

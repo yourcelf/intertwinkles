@@ -1,8 +1,4 @@
-extends ../../../views/layout
-
-block poststyles
-  !=css("www/css/style")
-  
+extends www_base
 
 block body
   div.container-fluid#frontpage
@@ -137,8 +133,7 @@ block body
 
 
 
-block postscripts
-  !=js("www/js/frontend")
+block append postscripts
   :coffeescript
     intertwinkles.user.on "change", ->
       window.location.href = window.location.href
@@ -147,5 +142,3 @@ block postscripts
       $("h1").css("font-size", Math.min(600, Math.max(30, width * 0.8)) + "%")
     $(window).on "resize", resizeH1
     resizeH1()
-
-    

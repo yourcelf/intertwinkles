@@ -9,7 +9,7 @@ api           = require './api'
 carriers      = require './carriers'
 thumbnails    = require './thumbnails'
 
-start = (config, app, sessionStore, io) ->
+start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
   iorooms = new RoomManager("/io-www", io, sessionStore)
 

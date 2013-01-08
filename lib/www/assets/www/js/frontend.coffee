@@ -1,12 +1,6 @@
+intertwinkles.connect_socket()
 intertwinkles.build_toolbar($("header"), {applabel: "home"})
 intertwinkles.build_footer($("footer"))
-
-socket = io.connect("/io-www")
-socket.on "error", (data) ->
-  flash "error", "Oh noes, server error."
-  window.console?.log?(data.error)
-
-socket.on "connect", -> intertwinkles.socket = socket
 
 sub_vars = (scope=document) ->
   $(".varsub", scope).each ->

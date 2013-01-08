@@ -7,50 +7,10 @@ _             = require 'underscore'
 async         = require 'async'
 mongoose      = require 'mongoose'
 
-start = (config) ->
+start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
-  db = mongoose.connect(
-    "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
-  )
-  app = express.createServer()
-  sessionStore = new RedisStore()
-  io = socketio.listen(app, {"log level": 0})
-  iorooms = new RoomManager("/iorooms", io, sessionStore)
-  io.of("/iorooms").setMaxListeners(20)
-  iorooms.authorizeJoinRoom = (session, name, callback) ->
-    # Only allow to join the room if we're allowed to view the proposal.
-    schema.Proposal.findOne {'_id': name}, 'sharing', (err, doc) ->
-      return callback(err) if err?
-      if intertwinkles.can_view(session, doc)
-        callback(null)
-      else
-        callback("Permission denied")
-  intertwinkles.attach(config, app, iorooms)
-
-  #
-  # Config
-  #
-  app.use require('connect-assets')()
-  app.use express.bodyParser()
-  app.use express.cookieParser()
-  app.use express.session {
-    secret: config.secret
-    key: 'express.sid'
-    store: sessionStore
-  }
-  app.set 'view engine', 'jade'
-  app.set 'view options', {layout: false}
-
-  app.configure 'development', ->
-      app.use '/static', express.static(__dirname + '/../assets')
-      app.use '/static', express.static(__dirname + '/../node_modules/node-intertwinkles/assets')
-      app.use express.errorHandler {dumpExceptions: true, showStack: true}
-
-  app.configure 'production', ->
-    # Cache long time in production.
-    app.use '/static', express.static(__dirname + '/../assets', { maxAge: 1000*60*60*24 })
-    app.use '/static', express.static(__dirname + '/../node_modules/node-intertwinkles/assets', { maxAge: 1000*60*60*24 })
-
+  iorooms = new RoomManager("/io-resolve", io, sessionStore)
+  
   #
   # Routes
   #
@@ -109,7 +69,7 @@ start = (config) ->
       application: "resolve"
       entity: doc._id
       type: "proposal"
-      url: "/p/#{doc._id}/"
+      url: "/resolve/p/#{doc._id}/"
       title: doc.title
       summary: "Proposal with #{doc.opinions.length} responses."
       text: parts.join("\n")
@@ -132,21 +92,22 @@ start = (config) ->
   index_res = (req, res, extra_context, initial_data) ->
     intertwinkles.list_accessible_documents schema.Proposal, req.session, (err, docs) ->
       return server_error(req, res, err) if err?
-      res.render 'index', context(req, extra_context or {}, _.extend(initial_data or {}, {
+      res.render 'resolve/index', context(req, extra_context or {}, _.extend(initial_data or {}, {
         listed_proposals: docs
       }))
 
-  app.get "/", (req, res) ->
+  app.get /\/resolve$/, (req, res) -> res.redirect('/resolve/')
+  app.get "/resolve/", (req, res) ->
     index_res(req, res, {
       title: "Resolve: Decide Something"
     })
 
-  app.get "/new/", (req, res) ->
+  app.get "/resolve/new/", (req, res) ->
     index_res(req, res, {
       title: "New proposal"
     })
 
-  app.get "/p/:id/", (req, res) ->
+  app.get "/resolve/p/:id/", (req, res) ->
     schema.Proposal.findOne {_id: req.params.id}, (err, doc) ->
       return server_error(req, res, err) if err?
       return not_found(req, res) unless doc?
@@ -193,7 +154,7 @@ start = (config) ->
           application: "resolve"
           entity: doc._id
           subentity: data.subentity
-          url: "/p/#{doc._id}/"
+          url: "/resolve/p/#{doc._id}/"
           sender: socket.session.auth?.user_id
           sender_anon_id: socket.session.anon_id
           recipient: recipient_id
@@ -266,7 +227,7 @@ start = (config) ->
         response.proposal = proposal
       socket.emit data.callback, response
       resolve_post_event(
-        socket.session, "/p/#{proposal._id}", proposal, "visit", {timeout: 60 * 5000}
+        socket.session, "/resolve/p/#{proposal._id}", proposal, "visit", {timeout: 60 * 5000}
       )
 
   iorooms.onChannel "get_proposal_events", (socket, data) ->
@@ -430,7 +391,7 @@ start = (config) ->
 
       # Log events
       resolve_post_event(
-        socket.session, "/p/#{proposal.id}/", proposal, data.action, event_data
+        socket.session, "/resolve/p/#{proposal.id}/", proposal, data.action, event_data
       )
       # Post search index
       resolve_post_search_index(proposal)
@@ -479,7 +440,7 @@ start = (config) ->
               entity: proposal._id
               group: proposal.sharing.group_id
               recipient: user_id
-              url: "/p/#{proposal._id}/"
+              url: "/resolve/p/#{proposal._id}/"
               sender: proposal.revisions[0].user_id
               formats: { web }
             })
@@ -487,9 +448,5 @@ start = (config) ->
             intertwinkles.post_notices notices, config, (err, results) ->
               return console.error err if err?
               intertwinkles.broadcast_notices(socket, results.notifications)
-
-  intertwinkles.attach(config, app, iorooms)
-
-  app.listen (config.port)
 
 module.exports = {start}

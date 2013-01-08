@@ -87,7 +87,7 @@ class SplashView extends Backbone.View
 
   newFirestarter: (event) =>
     event.preventDefault()
-    fire.app.navigate("/new", {trigger: true})
+    fire.app.navigate("/firestarter/new", {trigger: true})
 
 class AddFirestarterView extends Backbone.View
   template: _.template($("#addFirestarterTemplate").html())

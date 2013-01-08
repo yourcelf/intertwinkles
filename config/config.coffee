@@ -1,7 +1,13 @@
+fs = require 'fs'
+ETHERPAD_API_KEY = fs.readFileSync(__dirname + "/../vendor/etherpad-lite/APIKEY.txt", 'utf-8').trim()
+SECRET = fs.readFileSync(__dirname + "/secrets/SECRET.txt", 'utf-8').trim()
+API_KEY = fs.readFileSync(__dirname + "/secrets/APIKEY.txt", 'utf-8').trim()
+
+base_url = "http://localhost:9000"
 # Configuration:
 module.exports = {
   # Make this unique, secret, and complex.  It's used for signing session cookies.
-  "secret": "aC]l'0IWX;vi>:IptJ=+XP?s75wQDe1W|apN6.Pw|Z?5zfuTZ%Th}E*Ny03_)RW~"
+  "secret": SECRET
   # Mongodb host and port
   "dbhost": "localhost"
   "dbport": 27017,
@@ -11,7 +17,7 @@ module.exports = {
   "port": 9000
   # Make this unique, secret, and complex. It's used for authorizing API access
   # between InterTwinkles apps.
-  "api_key": "1kjJiF6aK4GLcVqDomIpbsy6mJwZlEjF2mCya6mJLYgNo1BTkAem6mxbuivBpq8J"
+  "api_key": API_KEY
   # The formatted name of the app.
   "name": "Example"
   # A short sentence describing the app for menus.
@@ -21,7 +27,7 @@ module.exports = {
   # An optional youtube video link for the app.
   "video": undefined
   # Path to a URL shortener that is configured to rewrite to {api_url}/r/.  If you don't have a short URL domain, use http://YOURDOMAIN/r/.
-  "short_url_base": "http://localhost:9000/r/"
+  "short_url_base": "#{base_url}/r/"
   # Domain to use for cookie suppressing alpha warning
   "ALPHA_COOKIE_DOMAIN": "localhost"
 
@@ -29,22 +35,47 @@ module.exports = {
   # It should contain a list of IP's of the hosts for each InterTwinkles app.
   "api_clients": ["127.0.0.1"]
   # This contain a list of all API keys from authorized clients.
-  "authorized_keys": ["1kjJiF6aK4GLcVqDomIpbsy6mJwZlEjF2mCya6mJLYgNo1BTkAem6mxbuivBpq8J"]
-  "api_url": "http://localhost:9000"
+  "authorized_keys": [API_KEY]
+  "api_url": base_url
   # Installed apps.
   "apps": {
     "www": {
       "name": "Home"
       "about": "Home page for InterTwinkles."
-      "url": "http://localhost:9000"
-      "url_prefix": ""
+      "url": base_url
     },
     "firestarter": {
       "name": "Firestarter"
       "about": "Go arounds, ice breakers, intros. Get to know each other."
-      "url_prefix": "/firestarter"
-      "image": "/static/firestarter/img/firestarter_tile.png"
-    }
+      "url": "#{base_url}/firestarter"
+      "image": "#{base_url}/static/firestarter/img/firestarter_tile.png"
+    },
+    "resolve": {
+      "name": "Resolve"
+      "about": "Approve or reject a proposal with a group. Asynchronous voting and revising of proposals."
+      "url": "#{base_url}/resolve"
+      "image": "#{base_url}/static/resolve/img/resolve_tile.png"
+    },
+    "dotstorm": {
+      "name": "Dotstorm"
+      "about": "Structured brainstorming with sticky notes. Come up with new ideas."
+      "url": "#{base_url}/dotstorm"
+      "image": "#{base_url}/static/dotstorm/img/dotstorm_tile.png"
+      "video": "https://www.youtube-nocookie.com/embed/dj_yW2WfsEw"
+    },
+    "twinklepad": {
+      "name": "TwinklePad"
+      "about": "Public or private collaborative document editing with etherpads"
+      "url": "#{base_url}/twinklepad"
+      "image": "#{base_url}/static/twinklepad/img/twinklepad_tile.png"
+      "etherpad": {
+        "url": "http://localhost:9001"
+        "api_key": ETHERPAD_API_KEY
+        "cookie_domain": "localhost"
+        "backend_host": "localhost"
+        "backend_port": 9001
+      }
+    },
   }
 }
 

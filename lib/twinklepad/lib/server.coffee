@@ -9,47 +9,12 @@ url            = require 'url'
 etherpadClient = require 'etherpad-lite-client'
 async          = require 'async'
 
-start = (config) ->
-  db = mongoose.connect(
-    "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
-  )
+start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
-  sessionStore = new RedisStore()
-  app = express.createServer()
-
-  #
-  # Config
-  #
-  
-  app.configure ->
-    app.use require('connect-assets')()
-    app.use express.bodyParser()
-    app.use express.cookieParser()
-    app.use express.session
-      secret: config.secret
-      key: 'express.sid'
-      store: sessionStore
-
-  app.configure 'development', ->
-      app.use '/static', express.static(__dirname + '/../assets')
-      app.use '/static', express.static(__dirname + '/../node_modules/node-intertwinkles/assets')
-      app.use express.errorHandler {dumpExceptions: true, showStack: true}
-
-  app.configure 'production', ->
-    # Cache long time in production.
-    app.use '/static', express.static(__dirname + '/../assets', { maxAge: 1000*60*60*24 })
-    app.use '/static', express.static(__dirname + '/../node_modules/node-intertwinkles/assets', { maxAge: 1000*60*60*24 })
-
-  app.set 'view engine', 'jade'
-  app.set 'view options', {layout: false}
-
   #
   # Sockets
   #
-
-  io = socketio.listen(app, {"log level": 0})
-  iorooms = new RoomManager("/iorooms", io, sessionStore)
-  intertwinkles.attach(config, app, iorooms)
+  iorooms = new RoomManager("/io-twinklepad", io, sessionStore)
   iorooms.authorizeJoinRoom = (session, name, callback) ->
     schema.TwinklePad.findOne {pad_id: name}, 'sharing', (err, doc) ->
       return callback(err) if err?
@@ -80,7 +45,7 @@ start = (config) ->
         application: "twinklepad"
         entity: doc._id
         type: "etherpad"
-        url: "/p/#{doc.pad_name}"
+        url: "/twinklepad/p/#{doc.pad_name}"
         title: "#{doc.pad_name}"
         summary: summary
         text: text
@@ -146,14 +111,15 @@ start = (config) ->
   permission_denied = (req, res) ->
     return res.send("Permission denied", 403) # TODO pretty 403 page
 
-  pad_url_parts = url.parse(config.etherpad.url)
+  pad_url_parts = url.parse(config.apps.twinklepad.etherpad.url)
   etherpad = etherpadClient.connect({
-    apikey: config.etherpad.api_key
+    apikey: config.apps.twinklepad.etherpad.api_key
     host: pad_url_parts.hostname
     port: pad_url_parts.port
   })
 
-  app.get '/', (req, res) ->
+  app.get /\/twinklepad$/, (req, res) -> res.redirect('/twinklepad/')
+  app.get '/twinklepad/', (req, res) ->
     async.parallel [
       (done) ->
         intertwinkles.search {
@@ -176,7 +142,7 @@ start = (config) ->
           done(null, [])
     ], (err, results) ->
       return server_error(req, res, err) if err?
-      res.render 'index', context(req, {
+      res.render 'twinklepad/index', context(req, {
         title: "#{config.apps.twinklepad.name}"
         is_authenticated: intertwinkles.is_authenticated(req.session)
         listed_pads: {
@@ -185,7 +151,7 @@ start = (config) ->
         }
       })
 
-  app.get '/p/:pad_name', (req, res) ->
+  app.get '/twinklepad/p/:pad_name', (req, res) ->
     #
     # The strategy for authorizing access to InterTwinkles etherpads is to use
     # the Etherpad API to create one group per pad, and to add a one-time-use
@@ -207,7 +173,7 @@ start = (config) ->
 
     ], (err, doc) ->
       return server_error(req, res, err) if err?
-      
+
       # Check that we can view this pad.
       if intertwinkles.can_edit(req.session, doc)
         read_only = false
@@ -220,7 +186,7 @@ start = (config) ->
       intertwinkles.post_event {
         application: "twinklepad"
         type: "visit"
-        entity_url: "/p/#{doc.pad_name}"
+        entity_url: "/twinklepad/p/#{doc.pad_name}"
         entity: doc._id
         user: req.session.auth?.user_id
         anon_id: req.session.anon_id
@@ -239,7 +205,7 @@ start = (config) ->
       #
       if read_only
         etherpad.getHTML {padID: doc.pad_id}, (err, data) ->
-          res.render "pad", context(req, {
+          res.render "twinklepad/pad", context(req, {
             title: title
             embed_url: null
             text: data.html
@@ -277,15 +243,16 @@ start = (config) ->
           return server_error(req, res, err) if err?
           req.session.etherpad_session_id = data.sessionID
           res.cookie("sessionID", data.sessionID, {
+            path: "/"
             maxAge: maxAge
-            domain: config.etherpad.cookie_domain
+            domain: config.apps.twinklepad.etherpad.cookie_domain
           })
           embed_url = doc.url
           if intertwinkles.is_authenticated(req.session)
             author_color = req.session.users[req.session.auth.user_id].icon?.color
             author_name = req.session.users[req.session.auth.user_id].name
             embed_url += "?userName=#{author_name}&userColor=%23#{author_color}"
-          res.render "pad", context(req, {
+          res.render "twinklepad/pad", context(req, {
             title: "#{req.params.pad_name} | #{config.apps.twinklepad.name}"
             embed_url: embed_url
             text: null
@@ -293,7 +260,5 @@ start = (config) ->
             read_only: read_only
             twinklepad: doc
           })
-
-  app.listen (config.port)
 
 module.exports = {start}

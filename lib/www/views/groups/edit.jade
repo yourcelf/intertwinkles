@@ -1,6 +1,6 @@
-extends ../layout
+extends ../www_base
 
-block poststyles
+block append poststyles
   :stylus
     a.remove
       color: #999
@@ -65,8 +65,8 @@ block body
             input.btn.btn-primary.btn-large(type='submit',
               value=(group.name ? "Save changes" : "Create new group"))
 
-block postscripts
-  != js('membership')
+block append postscripts
+  != js('www/js/membership')
   <script type='text/javascript'>
   != "window.GROUP_ID = " + (group.id ? "'" + group.id + "'" : "null") + ";"
   </script>
@@ -118,8 +118,6 @@ block postscripts
       $("[name=remove_logo]").val("")
       $(".logo").show()
       $(".undo-remove-logo").hide()
-
-
 
     $("form").on "submit", (event) ->
       proceed = $(".error", this).length == 0

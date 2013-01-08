@@ -5,7 +5,7 @@ _             = require 'underscore'
 async         = require 'async'
 intertwinkles = require 'node-intertwinkles'
 
-start = (config, app, sessionStore, io) ->
+start = (config, app, io, sessionStore) ->
   io.of("/io-firestarter").setMaxListeners(15)
   iorooms = new RoomManager("/io-firestarter", io, sessionStore)
   iorooms.authorizeJoinRoom = (session, name, callback) ->
@@ -35,6 +35,7 @@ start = (config, app, sessionStore, io) ->
         flash: req.flash()
       }
 
+  app.get /\/firestarter$/, (req, res) -> res.redirect('/firestarter/')
   app.get '/firestarter/', (req, res) -> index_res(req, res, {})
   app.get '/firestarter/new', (req, res) -> index_res(req, res, {})
   app.get '/firestarter/f/:slug', (req, res) ->
