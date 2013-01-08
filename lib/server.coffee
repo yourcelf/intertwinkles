@@ -5,6 +5,7 @@ RedisStore     = require('connect-redis')(express)
 mongoose       = require 'mongoose'
 _              = require 'underscore'
 connect_assets = require 'connect-assets'
+stylus         = require 'stylus'
 
 # Allow express to look for views in app subfolders, and not just the one
 # top-level view folder.

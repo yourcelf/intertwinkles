@@ -12,20 +12,9 @@ module.exports = {
   "dbhost": "localhost"
   "dbport": 27017,
   "dbname": "intertwinkles",
-  # Host and port where an app is listening (overridden by each app).
-  "host": "localhost"
-  "port": 9000
   # Make this unique, secret, and complex. It's used for authorizing API access
   # between InterTwinkles apps.
   "api_key": API_KEY
-  # The formatted name of the app.
-  "name": "Example"
-  # A short sentence describing the app for menus.
-  "about": "This is an example description."
-  # A 64x64 image for the app (optional).
-  "image": undefined
-  # An optional youtube video link for the app.
-  "video": undefined
   # Path to a URL shortener that is configured to rewrite to {api_url}/r/.  If you don't have a short URL domain, use http://YOURDOMAIN/r/.
   "short_url_base": "#{base_url}/r/"
   # Domain to use for cookie suppressing alpha warning

@@ -4,7 +4,8 @@ url       = require 'url'
 
 start = (config) ->
   router = {}
-  for app in config.proxy.routes
+  for app in config.routes
+    console.log app.url, "=>", "#{app.host}:#{app.port}"
     frontend_parsed = url.parse(app.url)
     router[frontend_parsed.hostname] = "#{app.host}:#{app.port}"
 
@@ -12,6 +13,6 @@ start = (config) ->
     hostnameOnly: true
     router: router
   })
-  proxyServer.listen(config.proxy.port)
+  proxyServer.listen(config.listen)
 
-start(require('../www/config/base'))
+module.exports = {start}
