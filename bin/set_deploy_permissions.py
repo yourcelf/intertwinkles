@@ -8,8 +8,9 @@ import os
 import sys
 import subprocess
 
-server_writable = [
+server_writable_directories = [
     "vendor/solr/apache-solr-4.0.0/example/solr/collection1/data/",
+    "vendor/solr/apache-solr-4.0.0/example/solr-webapp/",
     "lib/dotstorm/assets/dotstorm/uploads/",
     "lib/www/assets/group_logos/",
     "lib/www/assets/user_icons/",
@@ -17,8 +18,10 @@ server_writable = [
 BASE = os.path.join(os.path.dirname(__file__), "..")
 
 def set_permissions(user):
-    for path in server_writable:
+    for path in server_writable_directories:
         print user, path
+        if not os.path.exists(path):
+            os.makedirs(path)
         subprocess.check_call(["chown", "-R", user, os.path.join(BASE, path)])
 
 if __name__ == "__main__":
