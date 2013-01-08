@@ -33,7 +33,7 @@ start = (config, app, io, sessionStore) ->
       flash: req.flash()
     }, obj)
 
-  app.get /\/dotstorm$/, -> res.redirect "/dotstorm/"
+  app.get /\/dotstorm$/, (req, res) -> res.redirect "/dotstorm/"
   app.get '/dotstorm/', (req, res) ->
     res.render 'dotstorm/dotstorm', context(req, {
       title: "DotStorm", slug: ""

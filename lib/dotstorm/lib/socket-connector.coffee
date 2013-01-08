@@ -100,7 +100,7 @@ attach = (config, iorooms) ->
               method = "findOne"
             models.Idea[method] query, (err, doc) ->
               return errorOut(err) if err?
-              return errorOut("Not found") unless doc?
+              return errorOut("Idea not found") unless doc?
               if query.dotstorm_id?
                 dotstorm_query = {_id: query.dotstorm_id}
               else if data.model.dotstorm_id?

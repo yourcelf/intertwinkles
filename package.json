@@ -4,8 +4,7 @@
   "description": "Web application for group collaboration and decision making",
   "scripts": {
       "run": "bin/run.py",
-      "bootstrap": "bin/bootstrap.sh",
-      "test": "mocha --compilers coffee:coffee-script --globals css,js,img spec/*.spec.coffee"
+      "test": "mocha --compilers coffee:coffee-script --globals css,js,img,lineno test/*.spec.coffee --timeout 5000"
   },
   "repository": "",
   "author": "Charlie DeTar",
@@ -37,7 +36,7 @@
   },
   "devDependencies": {
     "mocha": "~1",
-    "zombie": "~2",
+    "zombie": "2.0.0-alpha9",
     "expect.js": "~0.1",
     "backbone": "~0.9"
   }

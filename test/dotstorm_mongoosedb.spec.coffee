@@ -1,17 +1,19 @@
 expect   = require 'expect.js'
 mongoose = require 'mongoose'
-models   = require '../lib/schema'
+models   = require '../lib/dotstorm/lib/schema'
 fs       = require 'fs'
 _        = require 'underscore'
-h        = require './helper'
+common   = require './common'
 
 describe "Mongoose connector", ->
   before (done) ->
-    mongoose.connect("mongodb://localhost:27017/test")
-    h.clearDb(done)
+    common.startUp (server, browser) =>
+      @server = server
+      @browser = browser
+      done()
 
   after (done) ->
-    h.clearDb(done)
+    common.shutDown(@server, done)
 
   it "creates a dotstorm", (done) ->
     new models.Dotstorm({
@@ -48,7 +50,7 @@ describe "Mongoose connector", ->
       idea.background = "#ffffff"
       idea.save (err) ->
         expect(err).to.be null
-        expect(idea.drawingURLs.small).to.be "/uploads/idea/#{idea._id}/drawing/small#{idea.imageVersion}.png"
+        expect(idea.drawingURLs.small).to.be "/dotstorm/uploads/idea/#{idea._id}/drawing/small#{idea.imageVersion}.png"
         expect(fs.existsSync idea.getDrawingPath("small")).to.be true
         done()
 

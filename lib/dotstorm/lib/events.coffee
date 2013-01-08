@@ -50,17 +50,17 @@ module.exports = (config) ->
               stuff.push(tag)
               untrash_count += 1
 
-
-        search_data = {
-          application: "dotstorm"
-          entity: dotstorm._id
-          type: "dotstorm"
-          url: "/dotstorm/d/#{dotstorm.slug}/"
-          title: dotstorm.name or "Untitled dotstorm"
-          summary: "#{dotstorm.topic or ""} " +
-            "(#{untrash_count} idea#{if untrash_count == 1 then "" else "s"})"
-          text: stuff.join("\n")
-          sharing: dotstorm.sharing
-        }
-        intertwinkles.post_search_index(search_data, config, callback)
+        if stuff.length > 0
+          search_data = {
+            application: "dotstorm"
+            entity: dotstorm._id
+            type: "dotstorm"
+            url: "/dotstorm/d/#{dotstorm.slug}/"
+            title: dotstorm.name or "Untitled dotstorm"
+            summary: "#{dotstorm.topic or ""} " +
+              "(#{untrash_count} idea#{if untrash_count == 1 then "" else "s"})"
+            text: stuff.join("\n")
+            sharing: dotstorm.sharing
+          }
+          intertwinkles.post_search_index(search_data, config, callback)
   }

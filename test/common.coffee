@@ -5,8 +5,9 @@ async   = require 'async'
 expect  = require 'expect.js'
 mongoose= require 'mongoose'
 Schema  = mongoose.Schema
-config  = require './config'
-schema  = require('../lib/schema').load(config)
+config  = require './test_config'
+www_schema = require('../lib/www/lib/schema').load(config)
+ds_schema  = require('../lib/dotstorm/lib/schema')
 server  = require '../lib/server'
 fixture = require './fixture'
 
@@ -41,14 +42,13 @@ shutDown = (srv, done) ->
     done()
   )
 
-
 deleteIcons = (cb) ->
-  schema.User.find {}, (err, docs) ->
+  www_schema.User.find {}, (err, docs) ->
     deletions = []
     _.each docs, (doc) ->
       _.each ["16", "32", "64"], (size) ->
         deletions.push (done) ->
-          fs.unlink(__dirname + '/../assets/' + doc.icon.sizes[size], done)
+          fs.unlink(__dirname + '/../lib/www/assets/' + doc.icon.sizes[size], done)
     async.parallel(deletions, cb)
 
 clearDb = (cb) ->
@@ -64,9 +64,10 @@ clearDb = (cb) ->
     (done) -> deleteIcons(done),
     (done) ->
       async.map [
-        schema.User, schema.Group, schema.Event,
-        schema.Notification, schema.SearchIndex,
-        schema.Twinkle, schema.ShortURL, TestModel
+        www_schema.User, www_schema.Group, www_schema.Event,
+        www_schema.Notification, www_schema.SearchIndex,
+        www_schema.Twinkle, www_schema.ShortURL, TestModel
+        ds_schema.Dotstorm, ds_schema.Idea, ds_schema.IdeaGroup
       ], clearModel, done
   ], cb)
 
@@ -77,7 +78,7 @@ loadFixture = (callback) ->
   userAdders = []
   _.each fixture.users, (user) ->
     userAdders.push (done) ->
-      new schema.User(user).save (err, doc) ->
+      new www_schema.User(user).save (err, doc) ->
         expect(err).to.be(null)
         users_by_name[doc.name] = doc
         done(null)
@@ -93,7 +94,7 @@ loadFixture = (callback) ->
             member.user = users_by_name[member.user]._id
           member.invited_by = users_by_name[member.invited_by]?._id or null
 
-      model = new schema.Group(group)
+      model = new www_schema.Group(group)
       model.save (err, doc) ->
         expect(err).to.be(null)
         done(null)

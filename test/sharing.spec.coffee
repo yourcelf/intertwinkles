@@ -1,8 +1,8 @@
 expect        = require 'expect.js'
 _             = require 'underscore'
 async         = require 'async'
-config        = require './config'
-schema        = require('../lib/schema').load(config)
+config        = require './test_config'
+schema        = require('../lib/www/lib/schema').load(config)
 common        = require './common'
 intertwinkles = require 'node-intertwinkles'
 

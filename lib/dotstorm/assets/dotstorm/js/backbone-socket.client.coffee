@@ -6,7 +6,7 @@ Backbone.getSocket = -> Backbone._socket
 
 
 Backbone.sync = (method, model, options) ->
-  console.log method, model, options
+  #console.log method, model, options
   unless Backbone._socket?
     options.error "No socket connection" if options.error
     return

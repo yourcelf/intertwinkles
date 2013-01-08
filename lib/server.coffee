@@ -75,7 +75,7 @@ start = (config) ->
 
   app.set "views", view_folders
 
-  app.listen 9000
-  return {app}
+  app.listen config.port
+  return {app, db}
 
 module.exports = {start}

@@ -1,19 +1,20 @@
 fs         = require 'fs'
 expect     = require 'expect.js'
-h          = require './helper'
-models     = require '../lib/schema'
+common     = require './common'
+models     = require '../lib/dotstorm/lib/schema'
 
 BASE_DIR = __dirname + "/../assets"
 
 describe "Canvas to image from idea", ->
   before (done) ->
     @mahId = undefined
-    @server = h.startServer()
-    done()
+    common.startUp (server, browser) =>
+      @server = server
+      @browser = browser
+      done()
 
   after (done) ->
-    @server.app.close()
-    done()
+    common.shutDown(@server, done)
 
   it "creates idea", (done) ->
     idea = new models.Idea

@@ -3,38 +3,40 @@ _          = require 'underscore'
 Browser    = require 'zombie'
 mongoose   = require 'mongoose'
 fs         = require 'fs'
-h          = require './helper'
-models     = require '../lib/schema'
+common     = require './common'
+models     = require '../lib/dotstorm/lib/schema'
+config     = require './test_config'
 
 #
 # Test CRUD for ideas and dotstorms for the whole socket pipeline.
 #
+
+await = (fn) ->
+  if fn() == true
+    return
+  setTimeout (-> await fn), 100
+
 describe "socket pipeline", ->
   before (done) ->
-    mongoose.disconnect =>
-      @server = h.startServer()
-      @browser  = new Browser()
-      @browser2 = new Browser()
-      h.clearDb(done)
+    common.startUp (server, browser) =>
+      @server = server
+      @browser = browser
+      done()
 
   after (done) ->
-    @server.app.close()
-    h.clearDb(-> mongoose.disconnect(done))
+    common.shutDown(@server, done)
 
   it "visits the front page", (done) ->
-    @browser.visit "http://localhost:8127", =>
-      expect(@browser.text("title")).to.be "DotStorm"
-      h.waitsFor =>
-        socketid = @browser.evaluate("ds.socket.socket.sessionid")
-        if socketid?
-          expect(@server.io.roomClients[socketid]).to.not.be undefined
-          done()
-          return true
+    @browser.visit(config.apps.dotstorm.url + "/")
+      .then ->
+        done()
+      .fail (err) ->
+        done(new Error(err))
   
   it "connects to a room", (done) ->
     @browser.fill("#id_join", "test").pressButton "OK", =>
-      h.waitsFor =>
-        if @browser.evaluate("window.location.pathname") == "/d/test/"
+      await =>
+        if @browser.evaluate("window.location.pathname") == "/dotstorm/d/test/"
           done()
           return true
 
@@ -51,7 +53,7 @@ describe "socket pipeline", ->
         window.testIdea = model;
       }
     });")
-    h.waitsFor =>
+    await =>
       backboneIdea = @browser.evaluate("window.testIdea")
       if backboneIdea != undefined
         models.Idea.findOne {_id: backboneIdea.id}, (err, doc) =>
@@ -70,7 +72,7 @@ describe "socket pipeline", ->
         window.ideaUpdateSuccess = true;
       }
     });")
-    h.waitsFor =>
+    await =>
       if @browser.evaluate("window.ideaUpdateSuccess")
         startingVersion = @idea.imageVersion
         models.Idea.findOne {_id: @idea._id}, (err, doc) =>
@@ -91,7 +93,7 @@ describe "socket pipeline", ->
           }
         });
       ")
-    h.waitsFor =>
+    await =>
       model = @browser.evaluate("window.ideaWithPhoto")
       if model?
         models.Idea.findOne {_id: @idea.id}, (err, doc) =>
@@ -102,7 +104,7 @@ describe "socket pipeline", ->
         return true
       
   it "saves tags", (done) ->
-    @browser.evaluate("new ds.Idea({_id: '#{@idea._id}'}).fetch({
+    @browser.evaluate("new ds.Idea({_id: '#{@idea.id}', dotstorm_id: '#{@idea.dotstorm_id}'}).fetch({
         success: function(model) {
           model.save({'tags': ['one', 'two', 'three']}, {
             success: function(model) {
@@ -112,7 +114,7 @@ describe "socket pipeline", ->
         }
       });
     ")
-    h.waitsFor =>
+    await =>
       model = @browser.evaluate("window.taggedModel")
       if model?
         expect(model.get("tags")).to.eql ["one", "two", "three"]
@@ -123,27 +125,30 @@ describe "socket pipeline", ->
 
   it "reads an idea", (done) ->
     @browser.evaluate("new ds.Idea({
-      _id: '#{@idea._id}'
+      _id: '#{@idea._id}', dotstorm_id: '#{@idea.dotstorm_id}'
     }).fetch({
       success: function(model) {
         window.ideaReadSuccess = true;
       }
     });")
-    h.waitsFor =>
+    await =>
       if @browser.evaluate("window.ideaReadSuccess")
         done()
         return true
 
   it "reads a non-existent idea", (done) ->
-    @browser.evaluate("new ds.Idea({_id: 'no exist'}).fetch({
-      success: function(model) {
-        window.ideaReadNoExist = model.toJSON();
-      }
-    });")
-    h.waitsFor =>
+    # Use the dotstorm_id as a stand-in for a non-existent idea._id
+    @browser.evaluate("new ds.Idea({
+        _id: '#{@idea.dotstorm_id}',
+        dotstorm_id: '#{@idea.dotstorm_id}'
+      }).fetch({
+        error: function(model) {
+          window.ideaReadNoExist = true
+        }
+      });")
+    await =>
       nonexistent = @browser.evaluate("window.ideaReadNoExist")
       if nonexistent?
-        expect(nonexistent).to.eql {_id: 'no exist'}
         done()
         return true
 
@@ -154,41 +159,41 @@ describe "socket pipeline", ->
         window.ideaReadColl = coll;
       }
     });")
-    h.waitsFor =>
+    await =>
       coll = @browser.evaluate("window.ideaReadColl")
       if coll?
         expect(coll.models[0].attributes.drawing).to.be undefined
         done()
         return true
 
-  it "reads an empty collection", (done) ->
+  it "reads an non-existent collection", (done) ->
+    # Use the idea_id as a stand-in for a non-existent dotstorm_id
     @browser.evaluate("new ds.IdeaList().fetch({
-      query: {dotstorm_id: 'fiddlesticks'},
-      success: function(coll) {
-        window.ideaReadEmptyColl = coll;
-      }, 
-      error: function(err) { console.log(err); }
+      query: {dotstorm_id: '#{@idea.id}'},
+      error: function(err) { 
+        window.ideaReadNonExistentColl = true
+      }
     });")
-    h.waitsFor =>
-      emptyColl = @browser.evaluate("window.ideaReadEmptyColl")
-      if emptyColl?
-        expect(emptyColl.length).to.be 0
+    await =>
+      emptyColl = @browser.evaluate("window.ideaReadNonExistentColl")
+      if emptyColl == true
         done()
         return true
 
-  it "deletes an idea", (done) ->
-    @browser.evaluate("window.testIdea.destroy({
-      success: function() {
-        window.ideaDeleteSuccess = true;
-      }
-    });")
-    h.waitsFor =>
-      if @browser.evaluate("window.ideaDeleteSuccess")
-        models.Idea.findOne {_id: @idea._id}, (err, doc) =>
-          expect(doc).to.be null
-          expect(fs.existsSync @idea.getDrawingPath('small')).to.be false
-          done()
-        return true
+# Delete method removed.
+#  it "deletes an idea", (done) ->
+#    @browser.evaluate("window.testIdea.destroy({
+#      success: function() {
+#        window.ideaDeleteSuccess = true;
+#      }
+#    });")
+#    await =>
+#      if @browser.evaluate("window.ideaDeleteSuccess")
+#        models.Idea.findOne {_id: @idea._id}, (err, doc) =>
+#          expect(doc).to.be null
+#          expect(fs.existsSync @idea.getDrawingPath('small')).to.be false
+#          done()
+#        return true
     
   it "creates a dotstorm", (done) ->
     @browser.evaluate("new ds.Dotstorm({
@@ -201,7 +206,7 @@ describe "socket pipeline", ->
         console.log(err.error);
       }
     });")
-    h.waitsFor =>
+    await =>
       dotstorm = @browser.evaluate("window.createdDotstorm")
       if dotstorm?
         expect(dotstorm.get "slug").to.be 'crazyslug'
@@ -216,7 +221,7 @@ describe "socket pipeline", ->
           window.dotstormColl = coll;
         }
       });")
-    h.waitsFor =>
+    await =>
       coll = @browser.evaluate("window.dotstormColl")
       if coll?
         expect(coll.length).to.be 2
@@ -232,7 +237,7 @@ describe "socket pipeline", ->
             window.dotstormColl = coll;
           }
         });")
-    h.waitsFor =>
+    await =>
       coll = @browser.evaluate("window.dotstormColl")
       if coll?
         expect(coll.length).to.be 1
@@ -250,7 +255,7 @@ describe "socket pipeline", ->
           window.dotstormColl = coll;
         }
       });")
-    h.waitsFor =>
+    await =>
       coll = @browser.evaluate("window.dotstormColl")
       if coll?
         expect(coll.length).to.be 0
@@ -267,7 +272,7 @@ describe "socket pipeline", ->
           window.readDotstorm = model;
         }
       });")
-    h.waitsFor =>
+    await =>
       dotstorm = @browser.evaluate("window.readDotstorm")
       if dotstorm?
         expect(dotstorm.id).to.be @dotstorm_id
@@ -284,7 +289,7 @@ describe "socket pipeline", ->
           window.readDotstorm = model;
         }
       });")
-    h.waitsFor =>
+    await =>
       dotstorm = @browser.evaluate("window.readDotstorm")
       if dotstorm?
         expect(dotstorm.id).to.be undefined
@@ -300,23 +305,24 @@ describe "socket pipeline", ->
           window.dotstormUpdated = true;
         }
       });")
-    h.waitsFor =>
+    await =>
       if @browser.evaluate("window.dotstormUpdated")
         models.Dotstorm.findOne {slug: 'test'}, (err, doc) =>
           expect(doc.name).to.be 'new name'
           done()
         return true
 
-  it "deletes a dotstorm", (done) ->
-    @browser.evaluate("
-      ds.model.destroy({
-        success: function() {
-          window.dotstormDestroyed = true;
-        }
-      });")
-    h.waitsFor =>
-      if @browser.evaluate("window.dotstormDestroyed")
-        models.Dotstorm.findOne {slug: 'test'}, (err, doc) =>
-          expect(doc).to.be null
-          done()
-        return true
+# Delete method removed.
+#  it "deletes a dotstorm", (done) ->
+#    @browser.evaluate("
+#      ds.model.destroy({
+#        success: function() {
+#          window.dotstormDestroyed = true;
+#        }
+#      });")
+#    await =>
+#      if @browser.evaluate("window.dotstormDestroyed")
+#        models.Dotstorm.findOne {slug: 'test'}, (err, doc) =>
+#          expect(doc).to.be null
+#          done()
+#        return true

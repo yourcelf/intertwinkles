@@ -128,7 +128,6 @@ ds.joinRoom = (newModel) ->
   room_view = new intertwinkles.RoomUsersMenu(room: newModel.id)
   $(".sharing-online-group .room-users").replaceWith(room_view.el)
   room_view.render()
-  console.log(room_view.el)
 
   sharing_view = new intertwinkles.SharingSettingsButton(model: newModel)
   $(".sharing-online-group .sharing").html(sharing_view.el)

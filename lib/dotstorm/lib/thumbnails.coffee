@@ -177,7 +177,7 @@ shrink = (buffer, thumbs, callback) ->
 
 drawingThumbs = (idea, callback) ->
   # Create thumbnail images for the given idea.
-  path.exists idea.getDrawingPath("small"), (exists) ->
+  fs.exists idea.getDrawingPath("small"), (exists) ->
     if exists
       callback?(null)
       logger.debug("skipping thumbnail; already exists")
@@ -198,7 +198,7 @@ drawingThumbs = (idea, callback) ->
 photoThumbs = (idea, photoData, callback) ->
   unless idea.photoVersion?
     return callback?("missing photo version")
-  path.exists idea.getPhotoPath("small"), (exists) ->
+  fs.exists idea.getPhotoPath("small"), (exists) ->
     if exists
       callback?(null)
       logger.debug("skipping photo; already exists")
