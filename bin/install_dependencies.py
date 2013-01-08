@@ -56,7 +56,7 @@ def install_solr():
             with tempfile.NamedTemporaryFile(suffix=".tgz") as fh:
                 fh.write(response.read())
                 fh.flush()
-                os.fsync()
+                os.fsync(fh.fileno())
                 with tarfile.open(fh.name) as tar:
                     tar.extractall(dest)
 
