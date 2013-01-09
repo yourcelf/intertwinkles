@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+"""
+This script runs the node server, as well as Solr, etherpad, and the proxy
+server all at once.  Logs for each are prepended with a tag indicating 
+which thing is logging.
+
+This is useful for development; though in production you'll
+probably want to run each part separately via supervisord or similar.
+"""
 from __future__ import print_function
 import os
 import subprocess
@@ -7,10 +15,10 @@ from threading import Thread
 
 apps = [
     # Tag, executable, cwd (relative to this file)
-    ("INTRTW ", "cake runserver", ".."),
+    ("INTRTW ", "node bin/run.js", ".."),
     ("SOLR   ", "./start.sh", "../vendor/solr/"),
     ("ETHER  ", "./bin/run.sh", "../vendor/etherpad-lite"),
-    ("PROXY  ", "cake runproxy", ".."),
+    ("PROXY  ", "node bin/proxy.js", ".."),
 ]
 
 class bcolors:

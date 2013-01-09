@@ -1,12 +1,22 @@
+#
+# Configuration of proxy server, for resolving public-facing URLs to the
+# backend host and etherpad instances.
+#
+# Launch the proxy server with `cake runproxy`.
+#
+
+domains           = require './domains'
+etherpad_settings = require './_read_etherpad_settings'
+
 module.exports = {
-  listen: 8080
+  listen: domains.proxy_port
   routes: [{
-    url: "http://dev.intertwinkles.org"
+    url: domains.front_end_url
     host: "localhost"
-    port: 9000
+    port: domains.base_port
   }, {
-    url: "http://etherpad.dev.intertwinkles.org"
+    url: domains.etherpad_url
     host: "localhost"
-    port: 9001
+    port: etherpad_settings.port
   }]
 }

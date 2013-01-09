@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Web application for group collaboration and decision making",
   "scripts": {
-      "run": "bin/run.py",
+      "start": "bin/run.js",
       "test": "mocha --compilers coffee:coffee-script --globals css,js,img,lineno test/*.spec.coffee --timeout 5000"
   },
   "repository": "",
