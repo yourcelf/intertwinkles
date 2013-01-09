@@ -14,6 +14,7 @@ server_writable_directories = [
     "lib/dotstorm/assets/dotstorm/uploads/",
     "lib/www/assets/group_logos/",
     "lib/www/assets/user_icons/",
+    "builtAssets/",
 ]
 BASE = os.path.join(os.path.dirname(__file__), "..")
 
