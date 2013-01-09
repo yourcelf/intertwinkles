@@ -34,7 +34,7 @@ node dependencies, and will set up the configuration.
 
 Configuration is found in the ``config`` directory.  The main configuration
 you'll want to change if you're deploying InterTwinkles are the ports and
-domains, found in ``config/domaing.coffee``.  For development, you can probably
+domains, found in ``config/domains.coffee``.  For development, you can probably
 just leave the defaults.
 
 ## Scripts
