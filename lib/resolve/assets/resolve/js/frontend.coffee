@@ -124,24 +124,45 @@ class AddProposalView extends intertwinkles.BaseView
       action: "create"
     }
 
+class EditProposalDialog extends intertwinkles.BaseModalFormView
+  template: _.template $("#editProposalDialogTemplate").html()
+
+class FinalizeProposalDialog extends intertwinkles.BaseModalFormView
+  template: _.template $("#finalizeProposalDialogTemplate").html()
+  events:
+    "click [name=passed]": "passed"
+    "click [name=failed]": "failed"
+  passed: => @trigger "passed"
+  failed: => @trigger "failed"
+
+
+class ReopenProposalDialog extends intertwinkles.BaseModalFormView
+  template: _.template $("#reopenProposalDialogTemplate").html()
+
+class EditOpinionDialog extends intertwinkles.BaseModalFormView
+  template: _.template $("#editOpinionDialogTemplate").html()
+  render: =>
+    super()
+    @addView(".name-input", new intertwinkles.UserChoice(model: {
+      user_id: @context.user_id
+      name: @context.name
+    }))
+
+class DeleteOpinionDialog extends intertwinkles.BaseModalFormView
+  template: _.template $("#deleteOpinionDialogTemplate").html()
+
 class ShowProposalView extends intertwinkles.BaseView
   template: _.template($("#showProposalTemplate").html())
   opinionTemplate: _.template($("#opinionTemplate").html())
   talliesTemplate: _.template($("#talliesTemplate").html())
   events: _.extend {
-    'click button.edit-proposal': 'showEditProposalForm'
+    'click button.edit-proposal': 'editProposal'
     'click   .finalize-proposal': 'finalizeProposal'
-    'click     .proposal-passed': 'proposalPassed'
-    'click     .proposal-failed': 'proposalFailed'
-    'submit  form.edit-proposal': 'saveProposalRevision'
-    'click        .respond-link': 'showOpinionForm'
-    'submit       form.weigh-in': 'saveOpinion'
-    'click     a.delete-opinion': 'showDeleteOpinionForm'
-    'submit form.delete-opinion': 'deleteOpinion'
+    'click     .reopen-proposal': 'reopenProposal'
+    'click        .respond-link': 'editOpinion'
     'click        .edit-opinion': 'editOpinion'
+    'click     a.delete-opinion': 'deleteOpinion'
     'click     .confirm-my-vote': 'confirmMyVote'
-    'click     .reopen-proposal': 'showReOpenProposalForm'
-    'click       .really-reopen': 'reOpenProposal'
   }, intertwinkles.BaseEvents
 
   votes: {
@@ -180,8 +201,7 @@ class ShowProposalView extends intertwinkles.BaseView
     if changes._id?
       @render()
     else
-      if changes.revisions? or changes.resolved? or changes.revisions? or changes.sharing?
-        @postRender()
+      @postRender()
 
   render: =>
     if not resolve.model.id?
@@ -231,8 +251,6 @@ class ShowProposalView extends intertwinkles.BaseView
               data-url='#{window.location.pathname}'></span>")
 
       @addView ".proposal .date-auto", new intertwinkles.AutoUpdatingDate(rev.date)
-      @userChoice = new intertwinkles.UserChoice()
-      @addView(".edit-response-modal .name-input", @userChoice)
       title = resolve.model.get("revisions")[0].text.split(" ").slice(0, 20).join(" ") + "..."
       $("title").html "Proposal: #{title}"
 
@@ -432,64 +450,46 @@ class ShowProposalView extends intertwinkles.BaseView
     @$(".tallies").html(@talliesTemplate({tallies}))
     @$("[rel=popover]").popover()
 
-  showEditProposalForm: (event) =>
+  editProposal: (event) =>
     event.preventDefault()
-    if intertwinkles.is_authenticated()
-      @$(".edit-proposal-modal [name=revision_user_id]").val(intertwinkles.user.id)
-      @$(".edit-proposal-modal .name-field-group").hide()
-    else
-      @$(".edit-proposal-modal [name=revision_user_id]").val("")
-      @$(".edit-proposal-modal .name-field-group").show()
-    @$(".edit-proposal-modal").modal('show')
-    @$(".edit-proposal-modal textarea").val(resolve.model.get("revisions")[0].text)
-
-  saveProposalRevision: (event) =>
-    event.preventDefault()
-
-    cleanedData = @validateFields "form.edit-proposal", [
-      ["[name=revision_name]", (val) ->
-          if @$("[name=revision_user_id]").val()
-            return ""
-          return val or null
-        , "This field is required."],
-      ["[name=proposal_revision]", ((val) -> val or null), "This field is required."]
+    validation = [
+      ["[name=proposal_revision]", ((v) -> v or null), "This field is required."]
     ]
-    return if cleanedData == false
-
-    @_saveProposal event, {
-      proposal: cleanedData.proposal_revision
-      name: cleanedData.revision_name
-      user_id: @$("[name=revision_user_id]").val()
-    }, =>
-      @$(".edit-proposal-modal").modal('hide')
+    if not intertwinkles.is_authenticated()
+      validation.push(["[name=revision_name]", ((v) -> v or null), "Please add your name."])
+    form = new EditProposalDialog({
+      context: { revision: resolve.model.get("revisions")[0].text }
+      validation: validation
+    })
+    form.render()
+    form.on "submitted", (cleaned_data) =>
+      @_saveProposal {
+        proposal: cleaned_data.proposal_revision
+        name: cleaned_data.revision_name
+        user_id: if intertwinkles.is_authenticated() then intertwinkles.user.id else undefined
+      }, =>
+        form.remove()
 
   finalizeProposal: (event) =>
     event.preventDefault()
-    @$(".finalize-proposal-modal").modal('show')
+    form = new FinalizeProposalDialog()
+    form.render()
+    form.on "passed", =>
+      @_saveProposal {passed: true}, form.remove
+    form.on "failed", =>
+      @_saveProposal {passed: false}, form.remove
 
-  proposalPassed: (event) =>
-    @_saveProposal event, {passed: true}, =>
-      @$(".finalize-proposal-modal").modal('hide')
-
-  proposalFailed: (event) =>
-    @_saveProposal event, {passed: false}, =>
-      @$(".finalize-proposal-modal").modal('hide')
-
-  showReOpenProposalForm: (event) =>
+  reopenProposal: (event) =>
     event.preventDefault()
-    @$(".reopen-proposal-modal").modal('show')
+    form = new ReopenProposalDialog()
+    form.render()
+    form.on "submitted", =>
+      @_saveProposal {reopened: true}, form.remove
 
-  reOpenProposal: (event) =>
-    @_saveProposal event, {reopened: true}, =>
-      @$(".reopen-proposal-modal").modal('hide')
-
-  _saveProposal: (event, changes, done) =>
-    event.preventDefault()
-    @$(event.currentTarget).addClass("loading").attr("disabled", true)
+  _saveProposal: (changes, done) =>
     callback = "update_proposal"+ new Date().getTime()
 
     resolve.socket.once callback, (data) =>
-      @$(event.currentTarget).removeClass("loading").attr("disabled", false)
       if data.error?
         flash "error", "Uh-oh, there was a server error. SRY!!!"
         console.info(data.error)
@@ -504,97 +504,80 @@ class ShowProposalView extends intertwinkles.BaseView
       callback: callback
     }
 
-  showDeleteOpinionForm: (event) =>
+  deleteOpinion: (event) =>
     event.preventDefault()
     opinion_id = $(event.currentTarget).attr("data-id")
     opinion = _.find resolve.model.get("opinions"), (o) -> o._id == opinion_id
-    return unless opinion?
-    rendered_user = @renderUser(opinion.user_id, opinion.name)
-    @$("form.delete-opinion .rendered-user").html(rendered_user)
-    @$("form.delete-opinion [name=opinion_id]").val(opinion_id)
-    @$(".delete-opinion-modal").modal('show')
+    form = new DeleteOpinionDialog()
+    form.render()
+    form.$(".rendered-user").html(@renderUser(opinion.user_id, opinion.name))
+    form.on "submitted", =>
+      resolve.socket.once "opinion_deleted", (data) =>
+        form.remove()
+        if data.error?
+          console.info("error", data.error)
+          flash "error", "Uh-oh. The server had an error."
+        else
+          resolve.model.set(data.proposal)
 
-  deleteOpinion: (event) =>
-    event.preventDefault()
-    opinion_id = @$("form.delete-opinion [name=opinion_id]").val()
-    submit = @$("form.delete-opinion input[type=submit]")
-    submit.addClass("loading").attr("disabled", true)
-
-    resolve.socket.once "opinion_deleted", (data) =>
-      submit.removeClass("loading").attr("disabled", false)
-      @$("form.delete-opinion [name=opinion_id]").val("")
-      @$(".delete-opinion-modal").modal('hide')
-      if data.error?
-        console.info("error", data.error)
-        flash "error", "Uh-oh. The server had an error."
-      else
-        resolve.model.set(data.proposal)
-
-    resolve.socket.emit "save_proposal", {
-      callback: "opinion_deleted"
-      action: "trim"
-      proposal: { _id: resolve.model.id }
-      opinion: { _id: opinion_id }
-    }
+      resolve.socket.emit "save_proposal", {
+        callback: "opinion_deleted"
+        action: "trim"
+        proposal: { _id: resolve.model.id }
+        opinion: { _id: opinion_id }
+      }
 
   editOpinion: (event) =>
-    @showOpinionForm(event)
-
-  showOpinionForm: (event) =>
-    event.preventDefault()
     opinion_id = $(event.currentTarget).attr("data-id")
     if opinion_id?
       opinion = _.find(resolve.model.get("opinions"), (o) -> o._id == opinion_id)
-      rev = opinion.revisions[0]
-      @$("#id_vote").val(rev.vote)
-      @$("#id_text").val(rev.text)
-      @userChoice.set(opinion.user_id, opinion.name)
-    else
-      @$("#id_vote").val("")
-      @$("#id_text").val("")
-      @userChoice.set(intertwinkles.user.id, intertwinkles.user.get("name"))
+    else if intertwinkles.is_authenticated()
+      opinion = _.find(resolve.model.get("opinions"), (o) ->
+        o.user_id == intertwinkles.user.id)
 
-    @$(".edit-response-modal").modal()
-
-  saveOpinion: (event) =>
-    event.preventDefault()
-    cleaned_data = @validateFields "form.weigh-in", [
-      ["#id_user_id", ((val) -> val or ""), ""]
-      ["#id_user", ((val) -> val or null), "This field is required"]
-      ["#id_vote", ((val) -> val or null), "This field is required"]
-      ["#id_text", ((val) -> val or null), "This field is required"]
-    ]
-    return if cleaned_data == false
-
-    @$("form.weigh-in input[type=submit]").addClass("loading").attr("disabled", true)
-
-    resolve.socket.once "save_complete", (data) =>
-      @$("form.weigh-in input[type=submit]").removeClass("loading").attr("disabled", false)
-      @$(".edit-response-modal").modal('hide')
-      if data.error?
-        flash "error", "Oh noes.. There seems to be a server malfunction."
-        console.info(data.error)
-        return
-      @onProposalData(data)
-
-    resolve.socket.emit "save_proposal", {
-      callback: "save_complete"
-      action: "append"
-      proposal: {
-        _id: resolve.model.id
+    form = new EditOpinionDialog({
+      context: {
+        vote_order: @vote_order
+        vote: opinion?.revisions[0].vote
+        text: opinion?.revisions[0].text
+        user_id: if opinion? then opinion?.user_id else intertwinkles.user.id
+        name: if opinion? then opinion?.name else intertwinkles.user.get("name")
       }
-      opinion: {
-        user_id: cleaned_data.user_id
-        name: cleaned_data.name
-        vote: cleaned_data.vote
-        text: cleaned_data.text
+      validation: [
+        ["#id_user_id", ((val) -> val or ""), ""]
+        ["#id_user", ((val) -> val or null), "This field is required"]
+        ["#id_vote", ((val) -> val or null), "This field is required"]
+        ["#id_text", ((val) -> val or null), "This field is required"]
+      ]
+    })
+    form.render()
+    form.on "submitted", (cleaned_data) =>
+      resolve.socket.once "save_complete", (data) =>
+        form.remove()
+        if data.error?
+          flash "error", "Oh noes.. There seems to be a server malfunction."
+          console.info(data.error)
+          return
+        @onProposalData(data)
+
+      resolve.socket.emit "save_proposal", {
+        callback: "save_complete"
+        action: "append"
+        proposal: {
+          _id: resolve.model.id
+        }
+        opinion: {
+          user_id: cleaned_data.user_id
+          name: cleaned_data.name
+          vote: cleaned_data.vote
+          text: cleaned_data.text
+        }
       }
-    }
 
   confirmMyVote: (event) =>
     ownOpinion = @_getOwnOpinion()
     $(event.currentTarget).attr("data-id", ownOpinion._id)
-    @showOpinionForm(event)
+    @editOpinion(event)
 
   buildTimeline: =>
     if resolve.model.id
@@ -622,16 +605,16 @@ class ShowProposalView extends intertwinkles.BaseView
             when "append"
               title = "Response added"
               if via_user?
-                content = "#{user?.name or event.data.name} responded (via #{via_user.name})."
+                content = "#{user?.name or event.data.action.name} responded (via #{via_user.name})."
               else
-                content = "#{user?.name or event.data.name} responded."
+                content = "#{user?.name or event.data.action.name} responded."
             when "update"
               title = "Proposal updated"
               content = "#{user?.name or "Anonymous"} updated the proposal."
             when "trim"
               title = "Response removed"
               content = "#{user?.name or "Anonymous"} removed
-                        the response by #{event.data.deleted_opinion.name}."
+                        the response by #{event.data.action.deleted_opinion.name}."
           return """
             <a class='#{ event.type }' rel='popover' data-placement='bottom'
               data-trigger='hover' title='#{ title }'

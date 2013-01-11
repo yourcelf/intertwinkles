@@ -105,36 +105,37 @@ block postscripts
             <% if (!read_only) { %>
             a.btn.btn-danger.btn-large#add_response Add response
             <% } %>
-          div.modal.hide.fade.add-response-holder
+          div.add-response-holder
       div.row-fluid
         div.span12.responses(style='text-align: center;')
 
       div.row-fluid
         div.span12.timeline-holder(style='text-align: center;')
 
-      div.modal.fade.hide.edit-name-modal
-        form.form-horizontal
-          div.modal-body
-            div.control-group
-              label.control-label(for="id_firestarter_name") Event name:
-              div.controls
-                input#id_firestarter_name(type='text')
-          div.modal-footer
-            a.btn.pull-left(data-dismiss="modal") Cancel
-            input.btn.btn-primary#id_save_name(type='submit', value='Save')
-      div.modal.fade.hide.edit-prompt-modal
-        form.form-horizontal
-          div.modal-body
-            div.control-group
-              label.control-label(for="id_firestarter_prompt") Prompt:
-              div.controls
-                textarea#id_firestarter_prompt
-          div.modal-footer
-            a.btn.pull-left(data-dismiss="modal") Cancel
-            input.btn.btn-primary#id_save_prompt(type='submit', value='Save')
+  script(type='text/template', id='editNameDialogTemplate')
+    form.form-horizontal
+      div.modal-body
+        div.control-group
+          label.control-label(for="id_firestarter_name") Event name:
+          div.controls
+            <input type='text' name='name' value='<%= name %>' />
+      div.modal-footer
+        a.btn.pull-left(data-dismiss="modal") Cancel
+        input.btn.btn-primary(type='submit', value='Save')
+
+  script(type='text/template', id='editPromptDialogTemplate')
+    form.form-horizontal
+      div.modal-body
+        div.control-group
+          label.control-label(for="id_firestarter_prompt") Prompt:
+          div.controls
+            <textarea><%= prompt %></textarea>
+      div.modal-footer
+        a.btn.pull-left(data-dismiss="modal") Cancel
+        input.btn.btn-primary(type='submit', value='Save')
 
   script(type="text/template", id="editResponseTemplate")
-    form.form-horizontal#edit_response_form
+    form.form-horizontal
       div.modal-body
         div.control-group
           label.control-label(for="id_name") Name
@@ -142,7 +143,7 @@ block postscripts
         div.control-group
           label.control-label(for="id_response") Response
           div.controls
-            textarea#id_response
+            textarea
               <%= response %>
       div.modal-footer
         a.btn.cancel.pull-left(data-dismiss="modal") Cancel
@@ -160,20 +161,18 @@ block postscripts
         i.icon.icon-trash
       a.edit(href='#', style='float: right;') Edit
       <% } %>
-      div.delete-confirmation.modal.fade.hide
-        div.modal-header
-          button.close.modal(type='button', data-dismiss='modal', aria-hidden='true', value='&times;')
-          h1 Really delete?
-        div.modal-body
-          p Delete this response by <%- intertwinkles.inline_user(user_id, name) %>?
-          blockquote.response
-            <%- intertwinkles.markup(response) %>
-            
 
-        div.modal-footer
-          a.btn(href='#', data-dismiss='modal') Close
-          a.btn.btn-danger.really-delete(href='#') Delete
-
-    div(style='clear: both;')
+  script(type='text/template', id='deleteResponseConfirmationTemplate')
+    div.modal-header
+      button.close.modal(type='button', data-dismiss='modal', aria-hidden='true', value='&times;')
+      h1 Really delete?
+    div.modal-body
+      p Delete this response by <%- intertwinkles.inline_user(user_id, name) %>?
+      blockquote.response
+        <%- intertwinkles.markup(response) %>
+    div.modal-footer
+      form
+        a.btn(href='#', data-dismiss='modal') Close
+        input.btn.btn-danger.really-delete(type='submit', value='Delete')
 
   !=js('firestarter/js/frontend')

@@ -135,7 +135,7 @@ block body
 
 block append postscripts
   :coffeescript
-    intertwinkles.user.on "change", ->
+    intertwinkles.user.on "change:_id", ->
       window.location.href = window.location.href
     resizeH1 = ->
       width = $("h1").width()

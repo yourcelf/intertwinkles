@@ -136,91 +136,96 @@ block body
         h3 Events
         div.timeline-holder
 
-      div.modal.fade.hide.edit-proposal-modal
-        form.edit-proposal.form-horizontal
-          div.modal-header
-            button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
-            h3 Edit Proposal
-          div.modal-body
-            p.revision-warning.alert.alert-block.
-              Note: Others have already voted for this proposal. If you change
-              it now, their votes will be marked as "stale".
-            input(type='hidden', name='revision_user_id')
-            div.control-group.name-field-group
-              label.control-label(for='revision_name') Your name
-              div.controls
-                input#revision_name(type='text', name='revision_name')
-                span.help-inline Or just sign in first &#8599;
-            div.control-group
-              div.controls
-              textarea(name='proposal_revision', rows=10, cols=30, style='width: 95%')
-          div.modal-footer
-            input.btn.btn-primary(type='submit', value='Save')
-            a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+  script(type='text/template', id='editProposalDialogTemplate')
+    form.edit-proposal.form-horizontal
+      div.modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        h3 Edit Proposal
+      div.modal-body
+        p.revision-warning.alert.alert-block.
+          Note: Others have already voted for this proposal. If you change
+          it now, their votes will be marked as "stale".
+        <input type='hidden' name='revision_user_id' value='<%= intertwinkles.user.id || "" %>' />
+        div.control-group.name-field-group
+          label.control-label(for='revision_name') Your name
+          div.controls
+            <% if (!intertwinkles.is_authenticated()) { %>
+            input#revision_name(type='text', name='revision_name')
+            span.help-inline Or just sign in first &#8599;
+            <% } %>
+        div.control-group
+          div.controls
+          textarea(name='proposal_revision', rows=10, cols=30, style='width: 95%')
+            <%= revision || "" %>
+      div.modal-footer
+        input.btn.btn-primary(type='submit', value='Save')
+        a.pull-left.btn(href='#', data-dismiss='modal') Cancel
 
-      div.modal.fade.hide.finalize-proposal-modal
-        div.modal-header
-          button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
-          h3 Finalize Proposal
-        div.modal-body
-          p.
-            Finalizing the proposal ends voting, and marks the proposal as
-            passed or failed.
-        div.modal-footer
-          button.btn.btn-danger.proposal-failed(type='button') Proposal failed
-          button.btn.btn-success.proposal-passed(type='button') Proposal passed
-          a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+  script(type='text/template', id='finalizeProposalDialogTemplate')
+    div.modal-header
+      button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+      h3 Finalize Proposal
+    div.modal-body
+      p.
+        Finalizing the proposal ends voting, and marks the proposal as
+        passed or failed.
+    div.modal-footer
+      button.btn.btn-danger(name='failed', type='submit') Proposal failed
+      button.btn.btn-success(name='passed', type='submit') Proposal passed
+      a.pull-left.btn(href='#', data-dismiss='modal') Cancel
 
-      div.modal.fade.hide.reopen-proposal-modal
-        div.modal-header
-          button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
-          h3 Re-open proposal?
-        div.modal-body
-          p.
-            Delete the resolution for this proposal and open it back up to
-            voting and edits?
-        div.modal-footer
-          a.pull-left.btn(href='#', data-dismiss='modal') Cancel
-          button.btn.btn-success.really-reopen(type='button') Re-open
+  script(type='text/template', id='reopenProposalDialogTemplate')
+    div.modal-header
+      button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+      h3 Re-open proposal?
+    div.modal-body
+      p.
+        Delete the resolution for this proposal and open it back up to
+        voting and edits?
+    div.modal-footer
+      a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+      form
+        button.btn.btn-success.really-reopen(type='submit') Re-open
 
-      div.modal.fade.hide.edit-response-modal
-        form.weigh-in.form-horizontal
-          div.modal-header
-            button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
-            h3 Your vote
-          div.modal-body
-            div.control-group.name
-              label.control-label(for="id_user") Name:
-              div.controls
-                div.name-input
+  script(type='text/template', id='editOpinionDialogTemplate')
+    form.weigh-in.form-horizontal
+      div.modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        h3 Your vote
+      div.modal-body
+        div.control-group.name
+          label.control-label(for="id_user") Name:
+          div.controls
+            div.name-input
 
-            div.control-group
-              label.control-label(for="id_vote") Vote:
-              div.controls
-                select#id_vote(name='vote')
-                  option(value='') ----
-                  <% for (var i = 0; i < vote_order.length; i++) { %>
-                  <option value='<%= vote_order[i][0] %>'><%= vote_order[i][1] %></option>
-                  <% } %>
-            div.control-group
-              label.control-label(for="id_text") Please explain:
-              div.controls
-                textarea#id_text(name='text', rows='10', cols='30')
-          div.modal-footer
-            button.btn.btn-primary(type='submit') Save
-            a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+        div.control-group
+          label.control-label(for="id_vote") Vote:
+          div.controls
+            select#id_vote(name='vote')
+              option(value='') ----
+              <% for (var i = 0; i < vote_order.length; i++) { %>
+              <option value='<%= vote_order[i][0] %>' <%= vote_order[i][0] == vote ? "selected" : "" %>><%= vote_order[i][1] %></option>
+              <% } %>
+        div.control-group
+          label.control-label(for="id_text") Please explain:
+          div.controls
+            textarea#id_text(name='text', rows='10', cols='30')
+              <%= text %>
+      div.modal-footer
+        button.btn.btn-primary(type='submit') Save
+        a.pull-left.btn(href='#', data-dismiss='modal') Cancel
 
-      div.modal.fade.hide.delete-opinion-modal
-        form.delete-opinion.form-horizontal
-          input(type='hidden', name='opinion_id')
-          div.modal-header
-            button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
-            h3 Really delete opinion?
-          div.modal-body.
-            Delete the response by <span class='rendered-user'></span>?  This can't be undone.
-          div.modal-footer
-            a.btn(href='#', data-dismiss='modal') Cancel
-            input.btn.btn-danger(type='submit', value='Delete')
+  script(type='text/template', id='deleteOpinionDialogTemplate')
+    form.delete-opinion.form-horizontal
+      input(type='hidden', name='opinion_id')
+      div.modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        h3 Really delete opinion?
+      div.modal-body.
+        Delete the response by <span class='rendered-user'></span>?  This can't be undone.
+      div.modal-footer
+        a.btn(href='#', data-dismiss='modal') Cancel
+        input.btn.btn-danger(type='submit', value='Delete')
 
   script(type='text/template', id='opinionTemplate').
     <div id='<%= _id %>' class='opinion <%= stale ? "stale" : "" %> span4'>

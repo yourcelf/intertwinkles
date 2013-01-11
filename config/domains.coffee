@@ -3,9 +3,7 @@
 # server.
 #
 module.exports = {
-  # Port on which the included proxy listens (e.g. `cake runproxy').
-  proxy_port: 8080
-  # Port on which app is listening. (e.g. `cake runserver`).
+  # Port on which app is listening. (e.g. `bin/run.js`).
   base_port: 9000
   # The URL clients should use when connecting, which is proxied to the
   # listening port (e.g. `dev.intertwinkles.org`)
@@ -23,4 +21,6 @@ module.exports = {
   etherpad_cookie_domain: "localhost"
   # Domain for the alpha warning cookie.
   alpha_cookie_domain: "localhost"
+  # Port on which the included proxy listens (e.g. `bin/proxy.js`).
+  proxy_port: 8080
 }

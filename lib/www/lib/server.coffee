@@ -95,21 +95,25 @@ start = (config, app, io, sessionStore) ->
     res.render 'about/index', context(req, {
       title: "About InterTwinkles"
     })
+  app.get '/about', (req, res) -> res.redirect("/about/")
 
   app.get '/about/terms/', (req, res) ->
     res.render 'about/terms', context(req, {
       title: "Terms of Use"
     })
+  app.get '/about/terms', (req, res) -> res.redirect("/about/terms/")
 
   app.get '/about/privacy/', (req, res) ->
     res.render 'about/privacy', context(req, {
       title: "Privacy Policy"
     })
+  app.get '/about/privacy', (req, res) -> res.redirect("/about/privacy/")
 
   app.get '/about/related/', (req, res) ->
     res.render 'about/related', context(req, {
       title: "Related Work"
     })
+  app.get '/about/related', (req, res) -> res.redirect("/about/related/")
 
   app.get '/test/', (req, res) ->
     res.render 'test', context(req, { title: "Test" })
@@ -143,6 +147,7 @@ start = (config, app, io, sessionStore) ->
         highlighting: results?.highlighting
         q: req.query.q
       })
+  app.get "/search", (req, res) -> res.redirect("/search/")
 
   #
   # Edit profile settings
@@ -178,6 +183,7 @@ start = (config, app, io, sessionStore) ->
         user: user
         carrier_list: _.keys(carriers)
       })
+  app.get "/profiles/edit", (req, res) -> res.redirect("/profiles/edit/")
 
   app.post '/profiles/edit/', (req, res) ->
     if not intertwinkles.is_authenticated(req.session)
@@ -205,11 +211,14 @@ start = (config, app, io, sessionStore) ->
         else
           req.session.users[doc.id] = doc.toObject()
           res.redirect(req.query.next or "/")
+  app.post '/profiles/edit', (req, res) -> res.redirect("/profiles/edit/")
 
   app.get '/profiles/icon_attribution/', (req, res) ->
     res.render 'profiles/icon_attribution', context(req, {
       title: "Icon Attribution"
     })
+  app.get '/profiles/icon_attribution', (req, res) ->
+    res.redirect("/profiles/icon_attribution/")
 
   app.get '/profiles/login/', (req, res) ->
     if intertwinkles.is_authenticated(req.session)
@@ -218,12 +227,14 @@ start = (config, app, io, sessionStore) ->
       title: "Sign in"
       next: req.query.next
     })
+  app.get '/profiles/login', (req, res) -> res.redirect("/profiles/login/")
 
   app.get '/profiles/logout/', (req, res) ->
     intertwinkles.clear_auth_session(req.session)
     res.render 'profiles/logout', context(req, {
       title: "Logging out..."
     })
+  app.get '/profiles/logout', (req, res) -> res.redirect("/profiles/logout/")
 
   #
   # Edit group settings.
@@ -406,6 +417,7 @@ start = (config, app, io, sessionStore) ->
       title: "New group"
       group: {}
     })
+  app.get '/groups/new', (req, res) -> res.redirect('/groups/new/')
 
   app.post '/groups/new/', (req, res) ->
     unless intertwinkles.is_authenticated(req.session)
@@ -435,6 +447,7 @@ start = (config, app, io, sessionStore) ->
         }
       }, config
       return res.redirect("/groups/edit/#{group.slug}")
+  app.post '/groups/new', (req, res) -> res.redirect("/groups/new/")
 
   app.get '/groups/is_available/', (req, res) ->
     unless intertwinkles.is_authenticated(req.session)
@@ -445,7 +458,7 @@ start = (config, app, io, sessionStore) ->
       return handle_error(req, res, {error: 'Server error'}) if err?
       res.send({available: (not doc?) or doc.id == req.query._id})
 
-  app.get '/groups/edit/:slug', (req, res) ->
+  app.get '/groups/edit/:slug/', (req, res) ->
     unless intertwinkles.is_authenticated(req.session)
       return redirect_to_login(req, res)
 
@@ -461,8 +474,9 @@ start = (config, app, io, sessionStore) ->
         title: "Edit " + doc.name
         group: doc
       })
+  app.get "/groups/edit/:slug", (req, res) -> res.redirect("/groups/edit/#{req.params.slug}/")
 
-  app.post '/groups/edit/:slug', (req, res) ->
+  app.post '/groups/edit/:slug/', (req, res) ->
     unless intertwinkles.is_authenticated(req.session)
       return res.send("Permission denied", 403)
 
@@ -505,13 +519,15 @@ start = (config, app, io, sessionStore) ->
       if not invitation?
         return res.send("Permission denied", 403) #TODO: friendlier error
       next(group)
+  app.post '/groups/edit/:slug', (req, res) -> req.redirect("/groups/edit/#{req.params.slug}")
 
-  app.get '/groups/join/:slug', (req, res) ->
+  app.get '/groups/join/:slug/', (req, res) ->
     verify_invitation req, res, (group) ->
       return res.render 'groups/join', context(req, {
         title: "Join " + group.name
         group: group
       })
+  app.get '/groups/join/:slug', (req, res) -> res.redirect("/groups/join/#{req.params.slug}/")
 
   app.post '/groups/join/:slug/', (req, res) ->
     verify_invitation req, res, (group) ->
@@ -553,6 +569,7 @@ start = (config, app, io, sessionStore) ->
               return handle_error(req, res, err) if err?
               return res.redirect("/")
           break
+  app.post '/groups/join/:slug', (req, res) -> res.redirect("/groups/join/#{req.params.slug}/")
 
   app.get '/groups/show/:slug/', (req, res) ->
     return redirect_to_login(req, res) unless intertwinkles.is_authenticated(req.session)
@@ -575,6 +592,7 @@ start = (config, app, io, sessionStore) ->
           group: doc
           docs: search_indexes
         })
+  app.get '/groups/show/:slug', (req, res) -> res.redirect("/groups/join/#{req.params.slug}/")
 
   return {app}
 

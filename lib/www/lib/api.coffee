@@ -73,7 +73,8 @@ route = (config, app) ->
         if doc?
           # Email recognized. Return the user object.
           if not doc.joined?
-            # This is the first time they've logged in.
+            # This is the first time they've logged in; but they've been previously invited.
+            console.log "First time login", doc
             doc.set("joined", new Date())
             doc.save (err, doc) ->
               fn({model: doc, message: "NEW_ACCOUNT"})
@@ -88,7 +89,8 @@ route = (config, app) ->
             fn({model: doc})
         else
           # Unknown user. Create a new account for them with random icon.
-          doc = new schema.User({email: email, name: ""})
+          console.log "Unknown user, creating"
+          doc = new schema.User({email: email, name: "", joined: new Date()})
           doc.save (err, doc) ->
             if err? then return server_error(res, err)
             fn({model: doc, message: "NEW_ACCOUNT"})

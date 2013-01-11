@@ -242,11 +242,19 @@ start = (config, app, io, sessionStore) ->
         }, (err, data) ->
           return server_error(req, res, err) if err?
           req.session.etherpad_session_id = data.sessionID
-          res.cookie("sessionID", data.sessionID, {
+          console.log config.apps.twinklepad.etherpad.cookie_domain
+          cookie_params = {
             path: "/"
             maxAge: maxAge
             domain: config.apps.twinklepad.etherpad.cookie_domain
-          })
+          }
+          # HACK: Chromium 20 seems to fail to set the cookie when domains are
+          # the same (at least for localhost) -- so remove the domain param if
+          # it isn't needed.
+          if (url.parse(config.apps.twinklepad.url).hostname ==
+              url.parse(config.apps.twinklepad.etherpad.url).hostname)
+            delete cookie_params.domain
+          res.cookie("sessionID", data.sessionID, cookie_params)
           embed_url = doc.url
           if intertwinkles.is_authenticated(req.session)
             author_color = req.session.users[req.session.auth.user_id].icon?.color

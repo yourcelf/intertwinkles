@@ -164,14 +164,18 @@ class AddFirestarterView extends Backbone.View
       }
     }
 
+class EditNameDialog extends intertwinkles.BaseModalFormView
+  template: _.template $("#editNameDialogTemplate").html()
+
+class EditPromptDialog extends intertwinkles.BaseModalFormView
+  template: _.template $("#editPromptDialogTemplate").html()
+
 class ShowFirestarter extends Backbone.View
   template: _.template $("#firestarterTemplate").html()
   events:
     'click #add_response': 'showAddResponseForm'
     'click .edit-name':    'editName'
     'click .edit-prompt':  'editPrompt'
-    'click #id_save_name': 'saveName'
-    'click #id_save_prompt': 'savePrompt'
 
   initialize: (options) ->
     if not fire.model?
@@ -233,40 +237,31 @@ class ShowFirestarter extends Backbone.View
 
   editName: (event) =>
     event.preventDefault()
-    @$(".edit-name-modal").modal('show').on 'shown', =>
-      @$("#id_firestarter_name").focus()
-    @$("#id_firestarter_name").val(fire.model.get("name"))
-
-  saveName: (event) =>
-    event.preventDefault()
-    val = @$("#id_firestarter_name").val()
-    @$("#id_save_name").addClass("loading")
-    done = =>
-      @$("#id_save_name").removeClass("loading")
-      @$(".edit-name-modal").modal('hide')
-
-    if val != fire.model.get("name")
-      @editFirestarter({name: val}, done)
-    else
-      done()
+    form = new EditNameDialog(
+      context: {name: fire.model.get("name")}
+      validation: [["input[name=name]", ((v) -> v or null), "Please add a name.", "name"]]
+    )
+    form.render()
+    form.$("input[name=name]").focus()
+    form.on "submitted", (cleaned_data) =>
+      if cleaned_data.name != fire.model.get("name")
+        @editFirestarter({name: cleaned_data.name}, form.remove)
+      else
+        form.remove()
 
   editPrompt: (event) =>
     event.preventDefault()
-    @$(".edit-prompt-modal").modal('show').on 'shown', =>
-      @$("#id_firestarter_prompt").focus()
-    @$("#id_firestarter_prompt").val(fire.model.get("prompt"))
-
-  savePrompt: (event) =>
-    event.preventDefault()
-    val = @$("#id_firestarter_prompt").val()
-    @$("#id_save_prompt").addClass("loading")
-    done = =>
-      @$("#id_save_prompt").removeClass("loading")
-      @$(".edit-prompt-modal").modal('hide')
-    if val != fire.model.get("prompt")
-      @editFirestarter({prompt: val}, done)
-    else
-      done()
+    form = new EditPromptDialog(
+      context: {prompt: fire.model.get("prompt")}
+      validation: [["textarea", ((v) -> v or null), "Please add a prompting question.", "prompt"]]
+    )
+    form.render()
+    form.$("textarea").focus()
+    form.on "submitted", (cleaned_data) =>
+      if cleaned_data.prompt != fire.model.get("prompt")
+        @editFirestarter({prompt: cleaned_data.prompt}, form.remove)
+      else
+        form.remove()
 
   editFirestarter: (updates, cb) =>
     fire.socket.once 'firestarter_edited', (data) =>
@@ -296,13 +291,8 @@ class ShowFirestarter extends Backbone.View
     @editResponse(new Response())
 
   editResponse: (response) =>
-    editor = new EditResponseView(model: response)
-    @$(".add-response-holder").html(editor.el)
-    editor.render()
-    @$(".add-response-holder").modal('show').on("shown", -> $("#id_user").focus())
-    editor.on "done", =>
-      @$(".add-response-holder").modal('hide')
-    @editor = editor
+    @editor = new EditResponseView(model: response)
+    @editor.render()
 
   addResponseView: (response) =>
     view = new ShowResponseView(response: response)
@@ -397,9 +387,9 @@ class ShowFirestarter extends Backbone.View
             when "append"
               title = "Response added"
               if via_user?
-                content = "#{user?.name or event.data.name} responded (via #{via_user.name})."
+                content = "#{user?.name or event.data.action.name} responded (via #{via_user.name})."
               else
-                content = "#{user?.name or event.data.name} responded."
+                content = "#{user?.name or event.data.action.name} responded."
             when "update"
               title = "Firestarter updated"
               content = "#{user?.name or "Anonymous"} updated the firestarter."
@@ -417,63 +407,38 @@ class ShowFirestarter extends Backbone.View
         firestarter_id: fire.model.id
       }
 
-class EditResponseView extends Backbone.View
+class EditResponseView extends intertwinkles.BaseModalFormView
   template: _.template $("#editResponseTemplate").html()
-  events:
-    'submit #edit_response_form': 'saveResponse'
-    'click .cancel': 'cancel'
 
   initialize: (options={}) =>
     @model = options.model or new Response()
-
-  remove: =>
-    @user_choice?.remove()
-    super()
-
-  cancel: =>
-    @trigger "done"
+    super({
+      context: _.extend({
+          response: ""
+          verb: if @model.get("_id") then "Save" else "Add"
+        }, @model.toJSON())
+      validation: [
+        ["#id_user", ((v) -> v or null), "Please add a name.", "name"],
+        ["#id_user_id", ((v) -> v or ""), "", "user_id"],
+        ["textarea", ((v) -> v or null), "Please add a response.", "response"],
+      ]
+    })
 
   render: =>
-    context = _.extend({
-      response: ""
-      read_only: not intertwinkles.can_edit(fire.model)
-    }, @model.toJSON())
-    context.verb = if @model.get("_id") then "Save" else "Add"
-    @$el.html @template(context)
-
-    @user_choice = new intertwinkles.UserChoice(model: @model)
-    @$("#name_controls").html @user_choice.el
-    @user_choice.render()
-
-  saveResponse: (event) =>
-    event.preventDefault()
-    @$("#edit_response_form input[type=submit]").addClass("loading")
-    @$(".error").removeClass("error")
-    @$(".error-msg").remove()
-    errors = false
-
-    name = @$("#id_user").val()
-    if not name
-      @$("#id_user").parentsUntil(".control-group").parent().addClass("error")
-      @$("#id_user").append("<span class='help-text error-msg'>This field is required</span>")
-      errors = true
-    response = @$("#id_response").val()
-    if not response
-      @$("#id_response").parentsUntil(".control-group").parent().addClass("error")
-      @$("#id_response").append("<span class='help-text error-msg'>This field is required</span>")
-      errors = true
-
-    if errors
-      @$("#edit_response_form input[type=submit]").removeClass("loading")
-    else
+    super()
+    @addView("#name_controls", new intertwinkles.UserChoice(model: @model))
+    @$("#id_user").focus()
+    @on "submitted", (cleaned_data) ->
       updates = {
         _id: @model.get("_id")
-        user_id: @$("#id_user_id").val()
-        name: name
-        response: response
+        user_id: cleaned_data.user_id
+        name: cleaned_data.name
+        response: cleaned_data.response
         firestarter_id: fire.model.id
       }
+      @$("input[type=submit]").addClass("loading")
       fire.socket.once "response_saved", (data) =>
+        @remove()
         if data.error
           flash "error", "Oh noes. SERVER ERROR. !!"
           console.info data.error
@@ -482,13 +447,14 @@ class EditResponseView extends Backbone.View
           @model.set(data.model)
           if add_it
             fire.responses.add(@model)
-          @trigger "done"
       fire.socket.emit "save_response", { callback: "response_saved", model: updates }
+
+class DeleteResponseConfirmation extends intertwinkles.BaseModalFormView
+  template: _.template $("#deleteResponseConfirmationTemplate").html()
 
 class ShowResponseView extends Backbone.View
   template: _.template $("#responseTemplate").html()
   events:
-    'click .really-delete': 'deleteResponse'
     'click .delete': 'confirmDelete'
     'click .edit':   'editResponse'
 
@@ -515,12 +481,11 @@ class ShowResponseView extends Backbone.View
 
   confirmDelete: (event) =>
     event.preventDefault()
-    @$(".delete-confirmation").modal('show')
-
-  deleteResponse: (event) =>
-    event.preventDefault()
-    @$(".delete-confirmation").modal('hide')
-    @trigger "delete", @response
+    form = new DeleteResponseConfirmation(context: @response.toJSON())
+    form.render()
+    form.on "submitted", =>
+      @trigger "delete", @response
+      form.remove()
 
   editResponse: (event) =>
     event.preventDefault()
