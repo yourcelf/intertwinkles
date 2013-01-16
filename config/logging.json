@@ -1,0 +1,4 @@
+{
+    "appenders": [ { "type": "console" } ],
+    "replaceConsole": false
+}

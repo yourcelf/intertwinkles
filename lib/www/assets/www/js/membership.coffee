@@ -110,7 +110,6 @@ class MembershipTable extends Backbone.View
     @renderMembers()
 
   renderMembers: =>
-    console.log @group
     @$("tr.member").remove()
     
     # Existing members

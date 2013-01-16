@@ -8,6 +8,7 @@ async         = require 'async'
 api           = require './api'
 carriers      = require './carriers'
 thumbnails    = require './thumbnails'
+logger        = require('log4js').getLogger()
 
 start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
@@ -34,7 +35,7 @@ start = (config, app, io, sessionStore) ->
     }, obj)
 
   handle_error = (req, res, err, msg) ->
-    console.error(err)
+    logger.error(err)
     res.statusCode = 500
     res.send(msg or "Server error")
 
@@ -206,8 +207,8 @@ start = (config, app, io, sessionStore) ->
           # TODO: Show a pretty 500 error page
           res.statusCode = 400
           res.send("Error!")
-          console.error(req.body)
-          console.error(err)
+          logger.error(req.body)
+          logger.error(err)
         else
           req.session.users[doc.id] = doc.toObject()
           res.redirect(req.query.next or "/")

@@ -6,6 +6,7 @@ RedisStore    = require('connect-redis')(express)
 _             = require 'underscore'
 async         = require 'async'
 mongoose      = require 'mongoose'
+logger        = require('log4js').getLogger()
 
 start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
@@ -17,7 +18,7 @@ start = (config, app, io, sessionStore) ->
 
   server_error = (req, res, err) ->
     res.statusCode = 500
-    console.error(err)
+    logger.error(err)
     return res.send("Server error") # TODO pretty 500 page
 
   not_found = (req, res) ->
@@ -407,7 +408,7 @@ start = (config, app, io, sessionStore) ->
         type: "proposal"
         entity: proposal._id
       }, config, (err, results) ->
-        return console.error(err) if err?
+        return logger.error(err) if err?
 
         intertwinkles.broadcast_notices(socket, results.notifications)
 
@@ -446,7 +447,7 @@ start = (config, app, io, sessionStore) ->
             })
           if notices.length > 0
             intertwinkles.post_notices notices, config, (err, results) ->
-              return console.error err if err?
+              return logger.error err if err?
               intertwinkles.broadcast_notices(socket, results.notifications)
 
 module.exports = {start}

@@ -1,3 +1,7 @@
+log4js = require 'log4js'
+logger = log4js.getLogger()
+logger.setLevel(log4js.levels.FATAL)
+
 Browser = require 'zombie'
 fs      = require 'fs'
 _       = require 'underscore'
@@ -25,6 +29,7 @@ TestModel = mongoose.model("TestModel", TestModelSchema)
 
 startUp = (done) ->
   srv = server.start(config)
+  logger.setLevel(log4js.levels.FATAL)
   browser = new Browser()
   async.series([
     (done) -> clearDb(done)
@@ -104,4 +109,29 @@ loadFixture = (callback) ->
     (done) -> async.parallel(groupAdders, done),
   ], callback)
 
-module.exports = {deleteIcons, clearDb, loadFixture, startUp, shutDown, TestModel}
+stubBrowserID = (browser, browserid_response) ->
+  browser.resources.mock "https://login.persona.org/include.js", {
+    statusCode: 200
+    headers: { "Content-Type": "text/javascript" }
+    body: """
+      var handlers = {};
+      navigator.id = {
+        _shimmed: true,
+        _mocked: true,
+        request: function() { handlers.onlogin("faux-assertion"); },
+        watch: function(obj) { handlers = obj; },
+        logout: function() { handlers.onlogout(); }
+      };
+    """
+  }
+  browserid = require("../node_modules/node-intertwinkles/node_modules/browserid-consumer")
+  browserid.verify = (assertion, audience, callback, options) ->
+    callback(null, _.extend {
+      status: "okay"
+      email: "test@mock"
+      audience: "http://localhost:9000"
+      expires: new Date().getTime() + 60*60*1000
+      issuer: "mock-stub"
+    }, browserid_response)
+
+module.exports = {stubBrowserID, loadFixture, startUp, shutDown, TestModel}

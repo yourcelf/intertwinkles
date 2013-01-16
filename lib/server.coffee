@@ -6,6 +6,9 @@ mongoose       = require 'mongoose'
 _              = require 'underscore'
 connect_assets = require 'connect-assets'
 stylus         = require 'stylus'
+log4js         = require 'log4js'
+
+# Logger
 
 # Allow express to look for views in app subfolders, and not just the one
 # top-level view folder.
@@ -24,8 +27,9 @@ enable_multiple_view_folders = (express) ->
     return lookup_proxy.call(express.view, view, options)
 enable_multiple_view_folders(express)
 
-
 start = (config) ->
+  log4js.configure(__dirname + '/../config/logging.json')
+  logger = log4js.getLogger()
   app = express.createServer()
   sessionStore = new RedisStore()
   io = socketio.listen(app, {"log level": 0})
@@ -42,12 +46,15 @@ start = (config) ->
     store: sessionStore
   app.set 'view engine', 'jade'
   app.set 'view options', {layout: false}
+  app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
 
   # node-intertwinkles static files
   app.configure 'development', ->
+    logger.setLevel(log4js.levels.DEBUG)
     app.use "/static/", express.static(
       __dirname + '/../node_modules/node-intertwinkles/assets')
   app.configure 'production', ->
+    logger.setLevel(log4js.levels.ERROR)
     app.use "/static/", express.static(
       __dirname + '/../node_modules/node-intertwinkles/assets',
       {maxAge: 1000*60*60*24})
@@ -76,6 +83,6 @@ start = (config) ->
   app.set "views", view_folders
 
   app.listen config.port
-  return {app, db}
+  return {app, db, logger}
 
 module.exports = {start}

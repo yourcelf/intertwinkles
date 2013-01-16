@@ -8,6 +8,7 @@ _              = require 'underscore'
 url            = require 'url'
 etherpadClient = require 'etherpad-lite-client'
 async          = require 'async'
+logger         = require('log4js').getLogger()
 
 start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
@@ -30,13 +31,13 @@ start = (config, app, io, sessionStore) ->
       etherpad.deleteSession {
         sessionID: session.etherpad_session_id
       }, (err, data) ->
-        console.error(err) if err?
+        logger.error(err) if err?
         delete session.etherpad_session_id
-        iorooms.saveSession session, (err) -> console.error(err) if err?
+        iorooms.saveSession session, (err) -> logger.error(err) if err?
 
   post_search_index = (doc, timeout=15000) ->
     etherpad.getText {padID: doc.pad_id}, (err, data) ->
-      return console.error(err) if err?
+      return logger.error(err) if err?
       text = data.text
       summary = text.substring(0, 200)
       if summary.length < text.length
@@ -82,7 +83,7 @@ start = (config, app, io, sessionStore) ->
     session = data.socket.session
     pad_id = data.room
     schema.TwinklePad.findOne {pad_id: pad_id}, (err, doc) ->
-      return console.error(err) if err?
+      return logger.error(err) if err?
       post_search_index(doc, 15000)
 
   #
@@ -102,7 +103,7 @@ start = (config, app, io, sessionStore) ->
 
   server_error = (req, res, err) ->
     res.statusCode = 500
-    console.error(err)
+    logger.error(err)
     return res.send("Server error") # TODO pretty 500 page
 
   not_found = (req, res) ->
@@ -242,7 +243,7 @@ start = (config, app, io, sessionStore) ->
         }, (err, data) ->
           return server_error(req, res, err) if err?
           req.session.etherpad_session_id = data.sessionID
-          console.log config.apps.twinklepad.etherpad.cookie_domain
+          logger.log config.apps.twinklepad.etherpad.cookie_domain
           cookie_params = {
             path: "/"
             maxAge: maxAge

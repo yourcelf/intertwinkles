@@ -13,8 +13,8 @@ attach = (config, iorooms) ->
   iorooms.onChannel 'backbone', (socket, data) ->
     session = socket.session
 
-    errorOut = (error) ->
-      logger.error(error)
+    errorOut = (error, level="error") ->
+      logger[level](error)
       socket.emit(data.signature.event, error: error)
 
     respond = (model) ->
@@ -39,8 +39,8 @@ attach = (config, iorooms) ->
         idea.taglist = data.model.taglist
       models.Dotstorm.findOne {_id: idea.dotstorm_id}, 'sharing', (err, dotstorm) ->
         return errorOut(err) if err?
-        return errorOut("Unknown dotstorm") unless dotstorm?
-        return errorOut("Permission denied") unless intertwinkles.can_edit(session, dotstorm)
+        return errorOut("Unknown dotstorm", "warn") unless dotstorm?
+        return errorOut("Permission denied", "warn") unless intertwinkles.can_edit(session, dotstorm)
         idea.save (err) ->
           return errorOut(err) if err?
           json = idea.serialize()
@@ -51,7 +51,7 @@ attach = (config, iorooms) ->
           events.post_search_index(dotstorm)
 
     saveDotstormAndRespond = (doc) ->
-      return errorOut("Permission denied") unless intertwinkles.can_edit(session, doc)
+      return errorOut("Permission denied", "warn") unless intertwinkles.can_edit(session, doc)
       event_type = if doc._id then "update" else "create"
       for key in ["slug", "name", "topic", "groups", "trash"]
         if data.model[key]?
@@ -60,7 +60,7 @@ attach = (config, iorooms) ->
       if intertwinkles.can_change_sharing(session, doc) and data.model.sharing?
         doc.sharing = data.model.sharing
         # Make sure we can still edit.
-        return errorOut("Permission denied") unless intertwinkles.can_edit(session, doc)
+        return errorOut("Permission denied", "warn") unless intertwinkles.can_edit(session, doc)
       doc.save (err) ->
         if err? then return errorOut(err)
         respond(doc.serialize())
@@ -100,17 +100,17 @@ attach = (config, iorooms) ->
               method = "findOne"
             models.Idea[method] query, (err, doc) ->
               return errorOut(err) if err?
-              return errorOut("Idea not found") unless doc?
+              return errorOut("Idea not found", "warn") unless doc?
               if query.dotstorm_id?
                 dotstorm_query = {_id: query.dotstorm_id}
               else if data.model.dotstorm_id?
                 dotstorm_query = {_id: data.model.dotstorm_id}
               else
-                return errorOut("Unknown dotstorm_id")
+                return errorOut("Unknown dotstorm_id", "warn")
               models.Dotstorm.findOne dotstorm_query, 'sharing', (err, dotstorm) ->
-                return errorOut("Dotstorm not found") unless dotstorm?
+                return errorOut("Dotstorm not found", "warn") unless dotstorm?
                 unless intertwinkles.can_view(session, dotstorm)?
-                  return errorOut("Permission denied")
+                  return errorOut("Permission denied", "warn")
                 if data.signature.isCollection
                   respond (m.serialize() for m in (doc or []))
                 else
@@ -125,13 +125,13 @@ attach = (config, iorooms) ->
             models.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->
               saveDotstormAndRespond(doc)
           when "delete"
-            return errorOut("Unsupported method `delete`")
+            return errorOut("Unsupported method `delete`", "warn")
           when "read"
             query = data.signature.query or data.model
             models.Dotstorm.find query, (err, docs) ->
               for doc in docs
                 unless intertwinkles.can_view(session, doc)
-                  return errorOut("Permission denied")
+                  return errorOut("Permission denied", "warn")
               if data.signature.isCollection
                 respond(docs or [])
               else

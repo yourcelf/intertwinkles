@@ -4,6 +4,7 @@ async       = require 'async'
 solr        = require 'solr-client'
 querystring = require 'querystring'
 url         = require 'url'
+logger      = require('log4js').getLogger()
 
 route = (config, app) ->
   schema = require('./schema').load(config)
@@ -16,7 +17,7 @@ route = (config, app) ->
     return query.replace(/[-+&|!(){}\[\]^"~*?:\\\/]/mg, "\\$1")
 
   server_error = (res, err) ->
-    console.error(err)
+    logger.error(err)
     res.statusCode = 500
     res.send({error: err})
 
@@ -74,7 +75,7 @@ route = (config, app) ->
           # Email recognized. Return the user object.
           if not doc.joined?
             # This is the first time they've logged in; but they've been previously invited.
-            console.log "First time login", doc
+            logger.log "First time login", doc
             doc.set("joined", new Date())
             doc.save (err, doc) ->
               fn({model: doc, message: "NEW_ACCOUNT"})
@@ -89,7 +90,7 @@ route = (config, app) ->
             fn({model: doc})
         else
           # Unknown user. Create a new account for them with random icon.
-          console.log "Unknown user, creating"
+          logger.warn "Unknown user, creating"
           doc = new schema.User({email: email, name: "", joined: new Date()})
           doc.save (err, doc) ->
             if err? then return server_error(res, err)
@@ -461,7 +462,7 @@ route = (config, app) ->
         solr_doc[key] = doc[key]
 
       solr_client.add solr_doc, (err, res) ->
-        console.error(err, res) if err? or res.responseHeader.status != 0
+        logger.error(err, res) if err? or res.responseHeader.status != 0
 
   app.del  "/api/search/", (req, res) ->
     return unless validate_request(req, res, [

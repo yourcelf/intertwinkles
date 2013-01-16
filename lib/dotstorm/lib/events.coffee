@@ -1,6 +1,7 @@
 intertwinkles = require 'node-intertwinkles'
 schema        = require './schema'
 _             = require 'underscore'
+logger        = require('log4js').getLogger()
 
 module.exports = (config) ->
   return {
@@ -24,17 +25,17 @@ module.exports = (config) ->
     post_search_index: (doc, callback) =>
       unless doc?
         error = "Can't post search index for `#{doc}`"
-        console.error(error)
+        logger.error(error)
         return callback?(error)
 
 
       schema.Dotstorm.withLightIdeas {_id: doc._id}, (err, dotstorm) ->
         if err?
-          console.error(err)
+          logger.error(err)
           return callback?(err)
         unless dotstorm?
           error = "Dotstorm #{doc._id} not found."
-          console.error(error)
+          logger.error(error)
           return callback?(error)
 
         stuff = []

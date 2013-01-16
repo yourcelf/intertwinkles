@@ -6,6 +6,7 @@ config        = require './test_config'
 schema        = require('../lib/www/lib/schema').load(config)
 common        = require './common'
 intertwinkles = require 'node-intertwinkles'
+logger        = require('log4js').getLogger()
 
 describe "api", ->
   before (done) ->
@@ -158,7 +159,7 @@ describe "api", ->
         data: {test: "data"}
         user: "one@mockmyid.com"
       }, config, (err, data) ->
-        console.error(err) if err?
+        logger.error(err) if err?
         expect(err).to.be(null)
         schema.Event.findOne {'application': 'firestarter'}, (err, doc) ->
           expect(doc).to.not.be(null)
