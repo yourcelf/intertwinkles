@@ -44,16 +44,22 @@ clear_test_docs_from_solr = (done) ->
 
 describe "solr search", ->
   before (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     common.startUp (server, browser) =>
       @server = server
       @browser = browser
       clear_test_docs_from_solr(done)
 
   after (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     clear_test_docs_from_solr (err) =>
       common.shutDown(@server, done)
 
   it "Posts and retrieves documents via api", (done) ->
+      if process.env.SKIP_SOLR_TESTS
+        return done()
       intertwinkles.post_search_index {
         api_key: config.api_key
         application: "test"
@@ -96,6 +102,8 @@ describe "solr search", ->
             done()
 
   it "Constrains based on sharing", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
       expect(err).to.be(null)
       expect(user).to.not.be(null)

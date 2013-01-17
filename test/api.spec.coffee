@@ -388,6 +388,8 @@ describe "api", ->
             done()
 
   it "Posts a search index", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       intertwinkles.post_search_index {
@@ -412,6 +414,8 @@ describe "api", ->
           done()
 
   it "Updates a search index", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       intertwinkles.post_search_index {
@@ -437,6 +441,8 @@ describe "api", ->
           done()
     
   it "Removes a search index", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       intertwinkles.remove_search_index {
