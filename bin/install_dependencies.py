@@ -14,6 +14,7 @@ import random
 import tarfile
 import urllib2
 import tempfile
+import argparse
 import subprocess
 
 SOLR_VERSION = "4.0.0"
@@ -25,11 +26,26 @@ CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
 SECRETS_DIR = os.path.join(CONFIG_DIR, "secrets")
 SECRET_LENGTH = 64
 
+parser = argparse.ArgumentParser(
+        description="Install prerequisites for InterTwinkles.")
+parser.add_argument("include", metavar='APP', nargs='*',
+        help="List tasks to complete: ['node', 'secrets', 'solr', 'etherpad']")
+
 def install_all():
-    create_secrets()
-    install_node_dependencies()
-    install_solr()
-    install_etherpad()
+    args = parser.parse_args()
+    include = set(args.include or ["node", "secrets", "solr", "etherpad"])
+    if "secrets" in include:
+        print("Creating secrets")
+        create_secrets()
+    if "node" in include:
+        print("Installing node dependencies")
+        install_node_dependencies()
+    if "solr" in include:
+        print("Installing solr")
+        install_solr()
+    if "etherpad" in include:
+        print("Installing etherpad")
+        install_etherpad()
 
 def create_secrets():
     if not os.path.exists(SECRETS_DIR):

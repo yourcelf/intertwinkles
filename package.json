@@ -4,7 +4,8 @@
   "description": "Web application for group collaboration and decision making",
   "scripts": {
       "start": "bin/run.js",
-      "test": "mocha --compilers coffee:coffee-script --globals css,js,img,lineno --timeout 10000 test/*.spec.coffee"
+      "test": "mocha --compilers coffee:coffee-script --globals css,js,img,lineno --timeout 10000 test/*.spec.coffee",
+      "postinstall": "bin/install_dependencies.py secrets"
   },
   "repository": "",
   "author": "Charlie DeTar",
