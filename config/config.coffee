@@ -6,8 +6,12 @@
 fs = require 'fs'
 SECRET = fs.readFileSync(__dirname + "/secrets/SECRET.txt", 'utf-8').trim()
 API_KEY = fs.readFileSync(__dirname + "/secrets/API_KEY.txt", 'utf-8').trim()
-ETHERPAD_API_KEY = fs.readFileSync(
-  __dirname + "/../vendor/etherpad-lite/APIKEY.txt", 'utf-8').trim()
+try
+  ETHERPAD_API_KEY = fs.readFileSync(
+    __dirname + "/../vendor/etherpad-lite/APIKEY.txt", 'utf-8').trim()
+catch e
+  console.error "Etherpad API key not found.  Etherpad will not be available."
+  ETHERPAD_API_KEY = ""
 domains = require './domains'
 email_config = require './email'
 base_url = domains.front_end_url
