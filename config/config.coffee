@@ -9,11 +9,15 @@ API_KEY = fs.readFileSync(__dirname + "/secrets/API_KEY.txt", 'utf-8').trim()
 ETHERPAD_API_KEY = fs.readFileSync(
   __dirname + "/../vendor/etherpad-lite/APIKEY.txt", 'utf-8').trim()
 domains = require './domains'
+email_config = require './email'
 base_url = domains.front_end_url
 
 config = {
   # The port on which intertwinkles listens.
   port: domains.base_port
+  # Email configuration
+  email: email_config
+  from_email: domains.from_email
   # Make this unique, secret, and complex.  It's used for signing session cookies.
   secret: SECRET
   # Mongodb host and port

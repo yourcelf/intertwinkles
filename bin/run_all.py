@@ -10,10 +10,11 @@ probably want to run each part separately via supervisord or similar.
 from __future__ import print_function
 import os
 import sys
+import tty
 import select
+import termios
 import argparse
 import subprocess
-from threading import Thread
 
 parser = argparse.ArgumentParser(description="""Run all the things.  Possible apps include: [www, proxy, etherpad, solr].  Runs everything unless you list specific apps or --exclude them.""")
 # Include
@@ -23,19 +24,6 @@ parser.add_argument("include", metavar='APP', nargs='*',
 parser.add_argument("--exclude", metavar="APP", dest="exclude", action='append',
                     help="Run everything except the given app label (one of www, proxy, etherpad, or solr). Multiple --exclude args allowed.")
 
-args = parser.parse_args()
-
-apps = [
-    # Tag, executable, cwd (relative to this file)
-    ("www", "node bin/run.js", ".."),
-    ("solr", "./start.sh", "../vendor/solr/"),
-    ("etherpad", "./bin/run.sh", "../vendor/etherpad-lite"),
-    ("proxy", "node bin/proxy.js", ".."),
-]
-if args.include:
-    apps = [app for app in apps if app[0] in args.include]
-if args.exclude:
-    apps = [app for app in apps if app[0] not in args.exclude]
 
 class bcolors:
     HEADER = '\033[95m'
@@ -45,53 +33,101 @@ class bcolors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
 
-tasks = []
-pollc = 0
-poll = select.poll()
-exclude = args.exclude or []
+class OutputTagger(object):
+    def __init__(self):
+        self.task_map = {}
+        self.pollc = 0
+        self.poll = select.poll()
+        self.apps = {}
 
-for app, cmd, cwd in apps:
-    print(bcolors.OKGREEN + "starting", app + bcolors.ENDC)
-    tsk = subprocess.Popen(cmd.split(),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=os.path.join(os.path.dirname(__file__), cwd)
-    )
-    tasks.append(tsk)
+    def start(self, app, cmd, cwd):
+        print(bcolors.OKGREEN + "starting", app + bcolors.ENDC)
+        proc = subprocess.Popen(cmd.split(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=os.path.join(os.path.dirname(__file__), cwd)
+        )
+        self.task_map[app] = proc
+        self.apps[app] = (cmd, cwd)
 
-    poll.register(tsk.stdout,select.POLLIN | select.POLLHUP)
-    poll.register(tsk.stderr,select.POLLIN | select.POLLHUP)
-    pollc += 2
+        self.poll.register(proc.stdout, select.POLLIN | select.POLLHUP)
+        self.poll.register(proc.stderr, select.POLLIN | select.POLLHUP)
+        self.pollc += 2
 
+    def poll_output(self):
+        events = self.poll.poll()
+        while self.pollc > 0 and len(events) > 0:
+            for event in events:
+                (rfd,event) = event
+                if event & select.POLLIN:
+                    for (app, tsk) in self.task_map.iteritems():
+                        tag = "{0}{1:<5}{2}".format(
+                                bcolors.HEADER,
+                                app[0:5].upper(),
+                                bcolors.ENDC,
+                            )
+                        if rfd == tsk.stdout.fileno():
+                            line = tsk.stdout.readline()
+                            if len(line) > 0:
+                                print(tag, line[:-1])
+                        if rfd == tsk.stderr.fileno():
+                            line = tsk.stderr.readline()
+                            if len(line) > 0:
+                                print(
+                                    tag,
+                                    bcolors.FAIL +
+                                    line[:-1] + bcolors.ENDC
+                                )
+                if event & select.POLLHUP:
+                    self.poll.unregister(rfd)
+                    self.pollc -= 1 
+                if self.pollc > 0:
+                    events = self.poll.poll()
 
-events = poll.poll()
-while pollc > 0 and len(events) > 0:
-    for event in events:
-        (rfd,event) = event
-        if event & select.POLLIN:
-            for (app, cmd, cwd), tsk in zip(apps, tasks):
-                tag = "{0}{1:<5}{2}".format(
-                        bcolors.HEADER,
-                        app[0:5].upper(),
-                        bcolors.ENDC,
-                    )
-                if rfd == tsk.stdout.fileno():
-                    line = tsk.stdout.readline()
-                    if len(line) > 0:
-                        print(tag, line[:-1])
-                if rfd == tsk.stderr.fileno():
-                    line = tsk.stderr.readline()
-                    if len(line) > 0:
-                        print(
-                            tag,
-                            bcolors.FAIL +
-                            line[:-1] + bcolors.ENDC
-                        )
-        if event & select.POLLHUP:
-            poll.unregister(rfd)
-            pollc = pollc - 1
-        if pollc > 0:
-            events = poll.poll()
+    def restart(self, app):
+        if app in self.apps:
+            self.kill(app)
+            self.start(app, *self.apps[app])
 
-for task in tasks:
-    task.communicate()
+    def kill(self, app):
+        if app in self.apps:
+            print(bcolors.OKGREEN + "killing", app + bcolors.ENDC)
+            proc = self.task_map.pop(app, None)
+            proc.kill()
+
+    def killall(self):
+        for app in self.apps:
+            self.kill(app)
+
+    def block(self):
+        for key,proc in self.task_map.iteritems():
+            proc.communicate()
+
+def main(apps):
+    args = parser.parse_args()
+    include = args.include or apps.keys()
+    apps = dict([(k, v) for k,v in apps.iteritems() if k in include])
+    if args.exclude:
+        for k in args.exclude:
+            apps.pop(k, None)
+
+    tagger = OutputTagger()
+    for key, (exe, cwd) in apps.iteritems():
+        tagger.start(key, exe, cwd)
+    try:
+        tagger.poll_output()
+    except KeyboardInterrupt:
+        tagger.killall()
+
+    # Read last exit status if any.
+    tagger.block()
+
+if __name__ == "__main__":
+    apps = {
+        # Tag, executable, cwd (relative to this file)
+        "www": ("node bin/run.js", ".."),
+        "solr": ("./start.sh", "../vendor/solr/"),
+        "etherpad": ("./bin/run.sh", "../vendor/etherpad-lite"),
+        "proxy": ("node bin/proxy.js", ".."),
+    }
+    main(apps)

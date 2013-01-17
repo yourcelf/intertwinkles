@@ -27,24 +27,28 @@ load = (config) ->
       }
     }
     notifications: {
+      activity_summaries: {
+        sms:   {type: Boolean, default: false}
+        email: {type: Boolean, default: true}
+      }
+      invitation: {
+        sms:   {type: Boolean, default: false}
+        email: {type: Boolean, default: true}
+      }
       needs_my_response: {
         sms:   {type: Boolean, default: false}
         email: {type: Boolean, default: true}
       }
-      recent_activity: {
-        sms:   {type: Boolean, default: false}
-        email: {type: Boolean, default: true}
-      }
-      group_members_added_or_removed: {
-        sms:   {type: Boolean, default: false}
-        email: {type: Boolean, default: true}
-      }
-      twinkles: {
+      group_members_changed: {
         sms:   {type: Boolean, default: false}
         email: {type: Boolean, default: true}
       }
     }
   }
+  UserSchema.virtual('sms_address').get ->
+    if @mobile.carrier? and @mobile.number?
+      return carriers[@mobile.carrier].sms.replace("{number}", @mobile.number)
+    return null
   UserSchema.virtual('icon.tiny').get ->
     "#{config.api_url}/static/#{@icon.sizes["16"]}"
   UserSchema.virtual('icon.small').get ->
@@ -179,20 +183,23 @@ load = (config) ->
     application: String # Application label, if any
     entity: String      # Object ID or other identifier of notice event, if any
     type: String        # Type of notification (e.g. twinkle, invitation, etc)
-    group: {type: Schema.ObjectId, ref: 'Group'}
+    recipient: {type: Schema.ObjectId, ref: 'User', required: true}
+    sender: {type: Schema.ObjectId, ref: 'User'} # User causing notification, if any
 
     url: String         # To where should this notification resolve when clicked?
     date: Date          # When was this notification made?
-    recipient: {type: Schema.ObjectId, ref: 'User'} # Recipient of notification
-    sender: {type: Schema.ObjectId, ref: 'User'}    # User causing notification, if any
     formats: {
       web: String       # For display in lists of notifications on the web
       sms: String       # For display in text messages
       email: {          # For display in emails
         subject: String
-        body_text: String
-        body_html: String
+        text: String
+        html: String
       }
+    }
+    sent: {
+      sms: Date
+      email: Date
     }
     cleared: {type: Boolean} # Has this been read?
     suppressed: {type: Boolean}
@@ -200,8 +207,19 @@ load = (config) ->
   NotificationSchema.pre "save", (next) ->
     @cleared = false if not @cleared?
     @suppressed = false if not @suppressed?
-    @date= new Date() if not @date?
+    @date = new Date() if not @date?
     next()
+
+  NotificationSchema.static 'findSendable', (constraint, callback) ->
+    @find(_.extend({
+      $or: [
+        {"sent.email": null, "formats.email": {$exists: true}}
+        {"sent.sms":   null, "formats.sms":   {$exists: true}}
+      ],
+      cleared: {$ne: true}
+      suppressed: {$ne: true}
+    }, constraint)).populate("recipient").exec(callback)
+
   Notification = mongoose.model("Notification", NotificationSchema)
 
   SearchIndexSchema = new Schema {

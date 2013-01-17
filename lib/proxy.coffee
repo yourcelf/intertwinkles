@@ -1,3 +1,8 @@
+#
+# This is a proxy based on node-http-proxy which routes requests as specified
+# in config/proxy.  It's useful for resolving disparate apps (e.g. etherpad
+# and InterTwinkles) running on different domains to their backends.
+#
 http      = require 'http'
 httpProxy = require 'http-proxy'
 url       = require 'url'

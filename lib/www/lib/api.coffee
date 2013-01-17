@@ -1,13 +1,15 @@
-_           = require 'underscore'
-icons       = require './icons'
-async       = require 'async'
-solr        = require 'solr-client'
-querystring = require 'querystring'
-url         = require 'url'
-logger      = require('log4js').getLogger()
+_             = require 'underscore'
+icons         = require './icons'
+async         = require 'async'
+solr          = require 'solr-client'
+querystring   = require 'querystring'
+url           = require 'url'
+email_notices = require './email_notices'
+logger        = require('log4js').getLogger()
 
 route = (config, app) ->
   schema = require('./schema').load(config)
+  email_notices = require('./email_notices').load(config)
   solr_client = solr.createClient(config.solr)
   solr_client.autoCommit = true
 
@@ -261,12 +263,13 @@ route = (config, app) ->
       # change without creating a new notification).
       notice_conditions = {}
       notice_update = {}
-      for key in ["application", "entity", "type", "group"]
+      for key in ["application", "entity", "type"]
         if params[key]?
           notice_conditions[key] = params[key]
       for key in ["date", "url", "formats"]
         notice_update[key] = params[key] if params[key]?
       notice_update.cleared = false
+      notice_update.date = new Date() unless notice_update.date?
 
       # Add user id's
       async.parallel [
@@ -324,13 +327,13 @@ route = (config, app) ->
     return unless validate_request(req, res, ["api_key"], 'POST')
 
     if not (
-        (req.body.notification_id? and req.body.user) or
+        (req.body.notification_id?) or
         (req.body.application? and req.body.entity? and req.body.type?) or
-        (req.body.group and (req.body.user or req.body.recipient)))
+        (req.body.user or req.body.recipient))
       res.statusCode = 400
       return res.send({
-        error: "Notifications insufficiently specified. Requires either (user, " +
-               "notification_id) or (application, entity, type) or (group, user)."
+        error: "Notifications insufficiently specified. Requires either " +
+               "(notification_id), (application, entity, type) or (user)."
         status: 400
       })
 
@@ -339,7 +342,6 @@ route = (config, app) ->
     query.application = req.body.application if req.body.application?
     query.entity = req.body.entity if req.body.entity?
     query.type = req.body.type if req.body.type?
-    query.group = req.body.group if req.body.group?
     query.recipient = req.body.recipient if req.body.recipient?
 
     async.series [
@@ -354,7 +356,8 @@ route = (config, app) ->
         schema.Notification.find query, (err, docs) ->
           mark_cleared = (doc, cb) ->
             doc.cleared = true
-            doc.save(cb)
+            doc.save (err, doc) ->
+              cb(err, doc)
           async.map docs, mark_cleared, (err, results) ->
             return server_error(res, err) if err?
             return res.send({notifications: results})

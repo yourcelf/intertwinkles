@@ -30,6 +30,9 @@
     "solr-client": "~0",
     "etherpad-lite-client": "*",
     "log4js": "~0",
+    "emailjs": "~0",
+    "simplesmtp": "~0",
+    "mailparser": "~0",
     "connect-assets": "git://github.com/yourcelf/connect-assets.git",
     "node-iorooms": "git+https://github.com/yourcelf/node-iorooms.git",
     "node-intertwinkles": "git+https://github.com/yourcelf/node-intertwinkles.git"

@@ -1,0 +1,63 @@
+async = require 'async'
+
+load = (config) ->
+  client = require("emailjs").server.connect(config.email)
+  schema = require("./schema").load(config)
+
+  send_notifications = (callback=(->)) ->
+    schema.Notification.findSendable {}, (err, docs) ->
+      email_queue = []
+      sms_queue = []
+
+      for doc in docs
+        if doc.formats.sms?
+          if doc.recipient.notifications[doc.type].sms and doc.recipient.mobile.number?
+            sms_queue.push(doc)
+          doc.sent.sms = new Date()
+        if doc.formats.email?
+          if doc.recipient.notifications[doc.type].email
+            email_queue.push(doc)
+          doc.sent.email = new Date()
+
+      # Save the sent status of the documents first -- better to not send a
+      # notice than to double-send if there's an error.
+      async.map docs, ((doc, done) -> doc.save(done)), (err) ->
+        callback(err) if err?
+        # ... then send the notification emails.
+        async.parallel [
+          # Send sms
+          (done) ->
+            async.map sms_queue, (doc) ->
+                params = {
+                  from: config.from_email
+                  to: doc.recipient.sms_address
+                  subject: doc.formats.sms
+                  text: " "
+                }
+                client.send(params, done)
+              , done
+
+          # Send email
+          (done) ->
+            async.map email_queue, (doc, done) ->
+              params = {
+                from: config.from_email
+                to: doc.recipient.email
+                subject: doc.formats.email.subject
+              }
+              if doc.formats.email.text
+                params.text = doc.formats.email.text
+              if doc.formats.email.html
+                params.attachment = [{
+                  data: doc.formats.email.html
+                  alternative: true
+                }]
+              client.send(params, done)
+            , done
+        ], (err) ->
+          callback(err, docs)
+
+  return { send_notifications }
+
+module.exports = { load }
+

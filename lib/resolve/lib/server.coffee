@@ -437,9 +437,8 @@ start = (config, app, io, sessionStore) ->
               web = """#{group.name} needs your response to a proposal! """
             notices.push({
               application: "resolve"
-              type: "proposal"
+              type: "needs_my_response"
               entity: proposal._id
-              group: proposal.sharing.group_id
               recipient: user_id
               url: "/resolve/p/#{proposal._id}/"
               sender: proposal.revisions[0].user_id

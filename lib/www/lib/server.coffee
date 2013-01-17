@@ -384,7 +384,6 @@ start = (config, app, io, sessionStore) ->
               application: "www"
               type: "invitation"
               entity: group.id
-              group: group.id
               recipient: id
               url: "/groups/join/#{group.slug}"
               sender: req.session.auth.user_id
@@ -563,8 +562,8 @@ start = (config, app, io, sessionStore) ->
             intertwinkles.post_event event, config
 
             intertwinkles.clear_notices {
-              recipient: req.session.auth.user_id
-              group: group.id
+              user: req.session.auth.user_id
+              entity: group.id
               type: "invitation"
             }, config, (err, result) ->
               return handle_error(req, res, err) if err?

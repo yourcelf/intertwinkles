@@ -238,48 +238,44 @@ describe "api", ->
   it "Posts notifications", (done) ->
     url = "http://localhost:8888/api/notifications/"
     # Add several notifications
-    schema.Group.findOne {slug: "two-members"}, (err, group) ->
-      expect(err).to.be(null)
-      expect(group).to.not.be(null)
-      add_notice = (data, cb) ->
-        intertwinkles.post_data url, {
-          api_key: config.api_key
-          params: _.extend({
-            application: "resolve"
-            entity: "one"
-            type: "please_respond"
-            url: "http://localhost:8888/f/one"
-            group: group.id
-            recipient: "one@mockmyid.com"
-            sender: "two@mockmyid.com"
-            formats: {
-              web: "Your response is needed for a proposal."
-              sms: "Your response is needed for a proposal. http://someurl.com"
-              email: {
-                subject: "Your response needed"
-                body_text: "Here's a proposal, please respond. http://someurl.com"
-                body_html: "<p>Here's a proposal, please respond. <a href='http://someurl.com'>http://someurl.com</a></p>"
-              }
+    add_notice = (data, cb) ->
+      intertwinkles.post_data url, {
+        api_key: config.api_key
+        params: _.extend({
+          application: "resolve"
+          entity: "one"
+          type: "please_respond"
+          url: "http://localhost:8888/f/one"
+          recipient: "one@mockmyid.com"
+          sender: "two@mockmyid.com"
+          formats: {
+            web: "Your response is needed for a proposal."
+            sms: "Your response is needed for a proposal. http://someurl.com"
+            email: {
+              subject: "Your response needed"
+              body_text: "Here's a proposal, please respond. http://someurl.com"
+              body_html: "<p>Here's a proposal, please respond. <a href='http://someurl.com'>http://someurl.com</a></p>"
             }
-          }, data)
-        }, (err, result) ->
-          expect(err).to.be(null)
-          notice = result.notifications[0]
-          expect(notice.group).to.be(group.id)
-          expect(notice.application).to.be("resolve")
-          expect(notice.formats.web).to.not.be(null)
-          expect(notice.formats.sms).to.not.be(null)
-          expect(notice.formats.email.subject).to.not.be(null)
-          expect(notice.formats.email.body_text).to.not.be(null)
-          expect(notice.formats.email.body_html).to.not.be(null)
-          cb()
-      async.mapSeries([
-        {entity: "one"},
-        {entity: "two"},
-        {entity: "three"},
-        {entity: "four"},
-        {recipient: "two@mockmyid.com"}
-      ], add_notice, done)
+          }
+        }, data)
+      }, (err, result) ->
+        expect(err).to.be(null)
+        notice = result.notifications[0]
+        expect(notice.application).to.be("resolve")
+        expect(notice.formats.web).to.not.be(null)
+        expect(notice.formats.sms).to.not.be(null)
+        expect(notice.formats.email.subject).to.not.be(null)
+        expect(notice.formats.email.body_text).to.not.be(null)
+        expect(notice.formats.email.body_html).to.not.be(null)
+        cb()
+
+    async.mapSeries([
+      {entity: "one"},
+      {entity: "two"},
+      {entity: "three"},
+      {entity: "four"},
+      {recipient: "two@mockmyid.com"}
+    ], add_notice, done)
 
   it "Got the notifications into the DB", (done) ->
     schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
@@ -300,16 +296,19 @@ describe "api", ->
     }, (err, result) ->
       expect(err).to.be(null)
       expect(result.notifications.length).to.be(4)
-      expect(result.notifications[0].entity).to.be("one")
+      expect(n.entity for n in result.notifications).to.eql(
+        ["four", "three", "two", "one"]
+      )
       done()
 
   it "Clears notifications by ID", (done) ->
     url = "http://localhost:8888/api/notifications/clear"
     schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
       expect(err).to.be(null)
-      schema.Notification.find {recipient: user._id}, (err, notices) ->
+      schema.Notification.find({recipient: user._id}).sort('date').exec (err, notices) ->
         expect(err).to.be(null)
         expect(notices.length).to.be(4)
+        expect(notices[0].entity).to.be("one")
 
         intertwinkles.post_data url, {
           api_key: config.api_key

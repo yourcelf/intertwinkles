@@ -21,6 +21,8 @@ module.exports = {
   etherpad_cookie_domain: "localhost"
   # Domain for the alpha warning cookie.
   alpha_cookie_domain: "localhost"
+  # Email address for the 'From' header in server-generated emails
+  from_email: "notices@dev.intertwinkles.org"
   # Port on which the included proxy listens (e.g. `bin/proxy.js`).
   proxy_port: 8080
 }

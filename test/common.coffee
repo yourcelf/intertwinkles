@@ -14,6 +14,8 @@ www_schema = require('../lib/www/lib/schema').load(config)
 ds_schema  = require('../lib/dotstorm/lib/schema')
 server  = require '../lib/server'
 fixture = require './fixture'
+email_server = require "../lib/email_server"
+email        = require "emailjs"
 
 TestModelSchema = new Schema
   name: String
@@ -29,23 +31,38 @@ TestModel = mongoose.model("TestModel", TestModelSchema)
 
 startUp = (done) ->
   srv = server.start(config)
+  # Squelch logging to preserve mocha's reporter
   logger.setLevel(log4js.levels.FATAL)
   browser = new Browser()
+  # Prepare mail server
+  mail = {
+    server: null
+    client: null
+    callback: (->)
+    outbox: []
+  }
   async.series([
     (done) -> clearDb(done)
     (done) -> loadFixture(done)
+    (done) ->
+      mail.server = email_server.start( (message) ->
+          mail.outbox.push(message)
+          mail.callback(message)
+        , config.email.port
+        , ->
+          mail.client = email.server.connect(config.email)
+          done()
+      )
   ], (res) ->
-    done(srv, browser))
+    done(srv, browser, mail))
 
 shutDown = (srv, done) ->
   async.series([
+    (done) -> email_server.stop(done)
     (done) -> srv.app.close() ; done()
     (done) -> clearDb(done)
     (done) -> srv.db.disconnect(done)
-  ], (err) ->
-    expect(err).to.be(null)
-    done()
-  )
+  ], done)
 
 deleteIcons = (cb) ->
   www_schema.User.find {}, (err, docs) ->

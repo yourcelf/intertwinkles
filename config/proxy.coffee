@@ -6,7 +6,7 @@
 #
 
 domains           = require './domains'
-etherpad_settings = require './_read_etherpad_settings'
+etherpad_settings = require './etherpad/_read_etherpad_settings'
 
 module.exports = {
   listen: domains.proxy_port
