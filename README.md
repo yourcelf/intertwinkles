@@ -1,6 +1,6 @@
 # InterTwinkles
 
-![](https://github.com/yourcelf/intertwinkles/blob/master/lib/www/assets/www/img/inspire.png)
+![](https://raw.github.com/yourcelf/intertwinkles/master/lib/www/assets/www/img/inspire.png)
 
 InterTwinkles is a collection of tools to help small, democratic groups to make
 decisions by consensus online.  The tools are designed from the ground up to
