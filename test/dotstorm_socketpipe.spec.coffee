@@ -28,8 +28,11 @@ describe "socket pipeline", ->
 
   it "visits the front page", (done) ->
     @browser.visit(config.apps.dotstorm.url + "/")
-      .then ->
-        done()
+      .then =>
+        await =>
+          if @browser.querySelector("#id_join")?
+            done()
+            return true
       .fail (err) ->
         done(new Error(err))
   
