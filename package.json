@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "mocha": "~1",
-    "zombie": "2.0.0-alpha9",
+    "zombie": "~1",
     "expect.js": "~0.1",
     "backbone": "~0.9"
   }
