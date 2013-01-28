@@ -131,7 +131,3 @@ describe "Notifications", ->
           done()
     ], done
 
-
-
-
-
