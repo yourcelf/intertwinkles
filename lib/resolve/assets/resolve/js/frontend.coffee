@@ -636,7 +636,7 @@ class Router extends Backbone.Router
     if @view?
       # Re-fetch proposal list if this isn't a first load.
       resolve.socket.once("proposal_list", (data) =>
-        intertwinkles.listed_proposals = data.proposals
+        resolve.listed_proposals = data.proposals
         view.render()
       )
       resolve.socket.emit "get_proposal_list", {callback: "proposal_list"}

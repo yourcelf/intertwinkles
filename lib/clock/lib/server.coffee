@@ -24,7 +24,7 @@ start = (config, app, io, sessionStore) ->
       return res.send(500) if err?
       for doc in docs
         doc.sharing = intertwinkles.clean_sharing(req.session, doc)
-      res.render 'clock/index', context(req, {
+      res.render 'clock/index', {
         title: "Progressive Clock"
         initial_data: _.extend(
           {application: "clock", listed_progtimes: docs},
@@ -33,11 +33,10 @@ start = (config, app, io, sessionStore) ->
         )
         conf: intertwinkles.clean_conf(config)
         flash: req.flash()
-      }, initial_data)
+      }
 
   app.get /\/clock$/, (req, res) -> res.redirect "/clock/" # add slash
-  app.get '/clock/', (req, res) ->
-    res.render 'clock/index', context(req)
+  app.get '/clock/', (req, res) -> index_res(req, res)
 
   app.get /\/clock\/c\/([^/]+)$/, (req, res) -> res.redirect "/clock/c/#{req.params[0]}/"
   app.get '/clock/c/:id/', (req, res) ->
@@ -166,3 +165,5 @@ start = (config, app, io, sessionStore) ->
         return respond(null, doc, true)
       # Action taken, save and respond.
       return doc.save(respond)
+
+module.exports = { start }

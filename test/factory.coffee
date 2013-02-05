@@ -5,7 +5,7 @@ events = require "events"
 mongoose = require("mongoose")
 
 #
-# Create factories based on given config.
+# Create factory based on given config.
 #
 module.exports.run = (config, done) ->
   db = mongoose.connect(
@@ -13,7 +13,6 @@ module.exports.run = (config, done) ->
   )
   www_schema = require("../lib/www/lib/schema").load(config)
   res_schema = require("../lib/resolve/lib/schema").load(config)
-
 
   day_zero = new Date().getTime() - (1000 * 60 * 60 * 24) * 7
   day = (plus_days) ->
@@ -159,6 +158,21 @@ module.exports.run = (config, done) ->
         }
       }, (err) -> done(err, doc))
 
+  visit_proposal = (name, proposal, date, done) ->
+    logger.info "#{name} visiting proposal \"#{proposal.revisions[0].text}\""
+    create_event name, {
+        application: "resolve"
+        type: "visit"
+        entity_url: "/resolve/p/#{proposal._id}"
+        entity: proposal._id
+        user: cache.users[name]?.id
+        date: date
+        data: {
+          name: name
+        }
+    }, done
+
+
   revise_proposal = (name, proposal, attributes, done) ->
     logger.info("#{name} Revising proposal #{proposal.revisions[0].text}")
     proposal.revisions.unshift({
@@ -169,6 +183,7 @@ module.exports.run = (config, done) ->
     })
     proposal.save (err, doc) ->
       done(err, doc)
+
 
   create_opinion = (name, proposal, attributes, done) ->
     logger.info "Creating opinion on \"#{proposal.revisions[0].text}\" for #{name}"
@@ -188,41 +203,34 @@ module.exports.run = (config, done) ->
       text: attributes.text
       date: attributes.date
     }
-    proposal.save (err, doc) ->
-      throw err if err?
-      create_event name, {
-        application: "resolve"
-        type: "append"
-        entity_url: "/resolve/p/#{doc._id}"
-        entity: doc._id
-        user: cache.users[name]?.id
-        date: attributes.date
-        data: {
-          name: name
-          opinion: {
-            user_id: cache.users[name]?.id
-            name: name
-            revisions: opa.revisions
-          }
-        }
-      }, done
+    # Save the proposal, and also add a visit.
+    async.parallel [
+      (done) ->
+        proposal.save (err, doc) ->
+          throw err if err?
+          create_event name, {
+            application: "resolve"
+            type: "append"
+            entity_url: "/resolve/p/#{doc._id}"
+            entity: doc._id
+            user: cache.users[name]?.id
+            date: attributes.date
+            data: {
+              name: name
+              opinion: {
+                user_id: cache.users[name]?.id
+                name: name
+                revisions: opa.revisions
+              }
+            }
+          }, done
 
-  visit_proposal = (name, proposal, date, done) ->
-    logger.info "#{name} visiting proposal \"#{proposal.revisions[0].text}\""
-    create_event name, {
-        application: "resolve"
-        type: "visit"
-        entity_url: "/resolve/p/#{proposal._id}"
-        entity: proposal._id
-        user: cache.users[name]?.id
-        date: date
-        data: {
-          name: name
-        }
-    }, done
+      (done) ->
+        visit_proposal(name, proposal, attributes.date, done)
+    ], done
 
   #
-  # Run a time series.
+  # Execute the factory.  Run a time series to create data.
   #
 
   async.waterfall [
@@ -288,6 +296,7 @@ module.exports.run = (config, done) ->
     (prop, done) -> create_opinion "Hexie", prop, {
         date: day(3.0), vote: "yes", text: "Sounds good"
       }, (err) -> done(err, prop)
+
     (prop, done) -> create_opinion "Trey", prop, {
         date: day(3.1), vote: "yes", text: "Sounds good"
       }, (err) -> done(err, prop)

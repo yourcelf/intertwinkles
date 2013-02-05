@@ -1,17 +1,34 @@
-# What is the difference between browser now() and server now()?
-browser_server_time_offset = 0
-correct_date = (date) ->
-  time = if date.getTime? then date.getTime() else date
-  time += browser_server_time_offset
-  return new Date(time)
+intertwinkles.connect_socket()
+intertwinkles.build_toolbar($("header"), {applabel: "clock"})
+intertwinkles.build_footer($("footer"))
 
-class Router extends Backbone.Router
-
+BROWSER_CLOCK_SKEW = 0
 
 class ProgTime extends Backbone.Model
+  idAttribute: "_id"
   initialize: (socket) ->
-    @socket = socket
     super()
+    @socket = socket
+    @socket.on "progtime", @_load
+
+  _load: (data) =>
+    if data.error?
+      flash "error", "Server error"
+      console.log data.error
+      return false
+    else
+      @set data.model
+      if data.now?
+        BROWSER_CLOCK_SKEW = new Date(data.now).getTime() - new Date().getTime()
+      return true
+
+  fetch: (cb) =>
+    return unless @id
+    @socket.once "fetch_progtime", (data) ->
+      if @_load(data)
+        cb(null, this)
+    @socket.emit "fetch_progtime", {_id: @id}
+
   send_stop: =>
   send_start: =>
   send_update: =>
@@ -99,11 +116,11 @@ class CategoryView extends Backbone.View
       active: @active
     }
 
-class Settings extends Backbone.View
+class SettingsView extends Backbone.View
   template: _.template $("#settings").html()
   max_num_categories: 8
   events:
-    'click a.save': 'save'
+    'submit form': 'save'
     'click .cancel': 'cancel'
 
   initialize: (model) ->
@@ -133,7 +150,7 @@ class Settings extends Backbone.View
   cancel: =>
     @trigger "done"
 
-class TimeKeeper extends Backbone.View
+class TimeKeeperView extends Backbone.View
   template: _.template $("#timekeeper").html()
   events:
     'click .settings': 'settings'
@@ -169,7 +186,7 @@ class TimeKeeper extends Backbone.View
     for cat,i in @model.get("categories")
       if cat.name
         catview = new CategoryView(model, i)
-        @$(".categorylist").append(catview.el)
+        @$(".category-list").append(catview.el)
         catview.render()
         @catviews.push(catview)
     
@@ -181,3 +198,84 @@ class TimeKeeper extends Backbone.View
       @$(".meeting-start").html("Start: #{correct_date(min).toLocaleString()}")
     else
       @$(".meeting-start").html("&nbsp;")
+
+class SplashView extends Backbone.View
+
+class Router extends Backbone.Router
+  routes:
+    "c/:id/settings": "settings"
+    "c/:id/graph":    "graph"
+    "c/:id/about":    "about"
+    "c/:id/":         "timekeeper"
+    "":               "index"
+
+  initialize: (socket) ->
+    @model = new ProgTime(socket)
+    @model.set(INITIAL_DATA.progtime or {})
+    @_join_room(@model) if @model.id?
+    super()
+
+  timekeeper: (id) => @_open(new TimeKeeperView(@model), id)
+  settings: (id) =>   @_open(new SettingsView(@model), id)
+  graph: (id) =>      @_open(new GraphView(@model), id)
+  about: (id) =>      @_open(new AboutView(@model), id)
+  index: =>
+    view = new SplashView()
+    if @view?
+      # Re-fetch list if this isn't a first load.
+      @model.fetch_progtime_list (data) =>
+        view.set_progtime_list(data.progtimes)
+    @_open(view, null)
+
+  _open: (view, id) =>
+    if model.id != id
+      @_leave_room()
+      if id?
+        model.set({_id: id})
+        return model.fetch =>
+          @_join_room(model)
+          @_show_view(view)
+    @_show_view(view)
+    
+  _show_view: (view) =>
+    @view?.remove()
+    $("#app").html(view.el)
+    view.render()
+    @view = view
+
+  _leave_room: =>
+    @room_view?.remove()
+    @sharing_view?.remove()
+
+  _join_room: (model) =>
+    @_leave_room()
+
+    @room_view = new intertwinkles.RoomUsersMenu(room: @model.id)
+    $(".sharing-online-group .room-users").replaceWith(@room_view.el)
+    room_view.render()
+
+    @sharing_view = new intertwinkles.SharingSettingsButton(model: @model)
+    $(".sharing-online-group .sharing").html(@sharing_view.el)
+    @sharing_view.render()
+    @sharing_view.on "save", (sharing_settings) =>
+      @model.set { sharing: sharing_settings }
+      @model.send_update()
+      @sharing_view.close()
+
+correct_date = (date) ->
+  time = if date.getTime? then date.getTime() else date
+  time += browser_server_time_offset
+  return new Date(time)
+  
+app = null
+socket.on "error", (data) ->
+  flash "error", "Socket server error, sorrry!"
+  console.log(data)
+socket.on "connect", ->
+  unless app?
+    app = intertwinkles.app = new Router(socket)
+    Backbone.history.start({ pushState: true, root: "/clock/"})
+  
+socket = io.connect("/io-clock")
+
+

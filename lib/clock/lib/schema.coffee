@@ -34,3 +34,5 @@ ProgTimeSchema.pre 'save', (next) ->
     ]
   next()
 ProgTime = mongoose.model("ProgTime", ProgTimeSchema)
+
+module.exports = { ProgTime }

@@ -1,8 +1,7 @@
 _             = require 'underscore'
 icons         = require './icons'
 async         = require 'async'
-solr          = require 'solr-client'
-querystring   = require 'querystring'
+solr_helper   = require './solr_helper'
 url           = require 'url'
 email_notices = require './email_notices'
 logger        = require('log4js').getLogger()
@@ -10,13 +9,7 @@ logger        = require('log4js').getLogger()
 route = (config, app) ->
   schema = require('./schema').load(config)
   email_notices = require('./email_notices').load(config)
-  solr_client = solr.createClient(config.solr)
-  solr_client.autoCommit = true
-
-  solr_escape = (query) ->
-    # List of special chars: 
-    # https://lucene.apache.org/core/4_0_0/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#Escaping_Special_Characters
-    return query.replace(/[-+&|!(){}\[\]^"~*?:\\\/]/mg, "\\$1")
+  solr = solr_helper(config)
 
   server_error = (res, err) ->
     logger.error(err)
@@ -366,69 +359,12 @@ route = (config, app) ->
   app.get "/api/search/", (req, res) ->
     return unless validate_request(req, res, ["api_key"])
     if not req.query.user? and req.query.public != 'true'
-      res.statusCode = 400
-      return res.send({error: "Must set `public=true` or specify user"})
-
-    query_and = []
-    if req.query.q # exclude falsy strings like ""
-      query_and.push(solr_escape(req.query.q))
-    for param in ["application", "entity", "type"]
-      if req.query[param]?
-        obj = {}
-        obj[param] = req.query[param]
-        query_and.push(querystring.stringify(obj, "%20AND%20", ":"))
-
-    async.waterfall [
-      (done) ->
-        return done(null, null) unless req.query.user?
-        if req.query.user?.indexOf('@') != -1
-          q = {email: req.query.user}
-        else
-          q = {_id: req.query.user}
-        schema.User.findOne(q, (err, doc) -> done(err, doc))
-
-      (user, done) ->
-        if user?._id
-          schema.Group.find {"members.user": user._id}, '_id', (err, groups) ->
-            done(err, user, (solr_escape(g._id.toString()) for g in groups))
-        else
-          done(null, user, [])
-
-      (user, groups, done) ->
-        # Build that sharing awesomeness query.
-        sharing_or = []
-        if req.query.public == 'true'
-          sharing_or.push("(sharing_advertise:true AND (" +
-            "sharing_public_view_until:[NOW TO *] OR " +
-            "sharing_public_edit_until:[NOW TO *]" +
-          "))")
-        if groups.length > 0
-          sharing_or.push("sharing_group_id:(#{groups.join(" OR ")})")
-        if user?.email?
-          sharing_or.push("sharing_extra_editors:#{solr_escape(user.email)}")
-          sharing_or.push("sharing_extra_viewers:#{solr_escape(user.email)}")
-        if sharing_or.length == 0
-          res.statusCode = 404
-          return done("Bad user, groups, or public.")
-
-        query_and.push("(#{sharing_or.join(" OR ")})")
-        query = solr_client.createQuery()
-        query.q(query_and.join(" AND "))
-        query.set("hl=true")
-        if req.query.sort?
-          query.set("sort=#{querystring.stringify(solr_escape(req.query.sort))}")
-        done(null, query)
-
-    ], (err, query) ->
+      return res.send({error: "Must set `public=true` or specify user"}, 400)
+    solr.execute_search req.query, req.query.user, (err, obj) ->
       if err?
-        if res.statusCode == 404
-          return res.send({error: "None found.", status: 404})
-        else
-          return server_error(res, err) if err?
-
-      solr_client.search query, (err, obj) ->
-        return server_error(res, err) if err?
-        res.send(obj)
+        logger.debug(err)
+        return res.send({error: err})
+      res.send(obj)
 
   app.post "/api/search/", (req, res) ->
     return unless validate_request(req, res, [
@@ -438,36 +374,18 @@ route = (config, app) ->
     conditions = {}
     update = {}
     options = {upsert: true, 'new': true}
-
     for key in ["application", "entity", "type"]
       conditions[key] = req.body[key]
-
     for key in ["title", "summary", "text", "url"]
       update[key] = req.body[key]
-
     if req.body.sharing?
       update.sharing = req.body.sharing
-
     schema.SearchIndex.findOneAndUpdate conditions, update, options, (err, doc) ->
       return server_error(res, err) if err?
       res.send { searchindex: doc }
-    
-      solr_doc = {
-        modified: new Date()
-        sharing_group_id: doc.sharing?.group_id
-        sharing_public_view_until: doc.sharing?.public_view_until
-        sharing_public_edit_until: doc.sharing?.public_edit_until
-        sharing_extra_viewers: doc.sharing?.extra_viewers?.join("\n")
-        sharing_extra_editors: doc.sharing?.extra_editors?.join("\n")
-        sharing_advertise: doc.sharing?.advertise == true
-      }
-      for key in ["application", "entity", "type", "url", "title", "summary", "text"]
-        solr_doc[key] = doc[key]
+      solr.post_search_index(doc)
 
-      solr_client.add solr_doc, (err, res) ->
-        logger.error(err, res) if err? or res.responseHeader.status != 0
-
-  app.del  "/api/search/", (req, res) ->
+  app.del "/api/search/", (req, res) ->
     return unless validate_request(req, res, [
       "api_key", "application", "entity", "type"
     ], 'DELETE')
@@ -478,10 +396,8 @@ route = (config, app) ->
     }
     schema.SearchIndex.findOneAndRemove conditions, (err, doc) ->
       return server_error(res, err) if err?
-      
-      solr_client.delete "entity", conditions.entity, (err, obj) ->
+      solr.delete_search_index {entity: conditions.entity}, (err) ->
         return server_error(res, err) if err?
-        return server_error(res, obj) if obj.responseHeader.status != 0
         res.send { result: "OK" }
 
   app.get "/api/twinkles/", (req, res) ->

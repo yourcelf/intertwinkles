@@ -79,6 +79,12 @@ config = {
         cookie_domain: domains.etherpad_cookie_domain
       }
     }
+#    clock: {
+#      name: "Progressive Clock"
+#      about: "Keep time in meetings by identity category"
+#      url: "#{base_url}/clock"
+#      image: "#{base_url}/static/clock/img/clock.png"
+#    }
   }
 }
 module.exports = config
