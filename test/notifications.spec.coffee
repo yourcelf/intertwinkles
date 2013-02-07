@@ -2,8 +2,8 @@ async  = require 'async'
 expect = require 'expect.js'
 config = require './test_config'
 common = require './common'
-schema = require('../plugins/www/lib/schema').load(config)
-notifier = require("../plugins/www/lib/email_notices").load(config)
+schema = require('../lib/schema').load(config)
+notifier = require("../lib/email_notices").load(config)
 intertwinkles = require '../lib/intertwinkles'
 
 describe "Notifications", ->

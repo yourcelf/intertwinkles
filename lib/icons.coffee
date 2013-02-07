@@ -1,5 +1,5 @@
 im        = require 'imagemagick'
-name_list = require '../../../assets/js/intertwinkles_icon_chooser.json'
+name_list = require '../assets/js/intertwinkles_icon_chooser.json'
 path      = require 'path'
 fs        = require 'fs'
 _         = require 'underscore'
@@ -32,7 +32,7 @@ render_icon = (pk, color, cb) ->
           cb(errors)
 
   for size in sizes
-    dest_icon = __dirname + "/../assets/user_icons/#{color}-#{name_map[pk]}-#{size}.png"
+    dest_icon = __dirname + "/../uploads/user_icons/#{color}-#{name_map[pk]}-#{size}.png"
     paths[size] = path.relative(__dirname + "/../assets/", dest_icon)
 
     do (size, dest_icon) ->

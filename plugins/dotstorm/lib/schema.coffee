@@ -92,13 +92,13 @@ IdeaSchema.virtual('photoURLs').get ->
     photos = {}
     if @photoVersion?
       for size in ["small", "medium", "large", "full"]
-        photos[size] = "/dotstorm/uploads/idea/#{@id}/photo/#{size}#{@photoVersion}.png"
+        photos[size] = "/uploads/dotstorm/idea/#{@id}/photo/#{size}#{@photoVersion}.png"
     return photos
 IdeaSchema.virtual('drawingURLs').get ->
     thumbs = {}
     if @imageVersion?
       for size in ["small", "medium", "large", "full"]
-        thumbs[size] = "/dotstorm/uploads/idea/#{@id}/drawing/#{size}#{@imageVersion}.png"
+        thumbs[size] = "/uploads/dotstorm/idea/#{@id}/drawing/#{size}#{@imageVersion}.png"
     return thumbs
 IdeaSchema.virtual('taglist').get(
   -> return @tags.join(", ")
@@ -115,11 +115,11 @@ Idea.prototype.incImageVersion = ->
 Idea.prototype.DIMS = { x: 600, y: 600 }
 Idea.prototype.getDrawingPath = (size) ->
   if @drawingURLs[size]?
-    return thumbnails.BASE_PATH + @drawingURLs[size]
+    return thumbnails.UPLOAD_PATH + @drawingURLs[size]
   return null
 Idea.prototype.getPhotoPath = (size) ->
   if @photoURLs[size]?
-    return thumbnails.BASE_PATH + @photoURLs[size]
+    return thumbnails.UPLOAD_PATH + @photoURLs[size]
   return null
 Idea.prototype.serialize = ->
   json = @toJSON()

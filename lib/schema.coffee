@@ -50,13 +50,13 @@ load = (config) ->
       return carriers[@mobile.carrier].sms.replace("{number}", @mobile.number)
     return null
   UserSchema.virtual('icon.tiny').get ->
-    "#{config.api_url}/static/#{@icon.sizes["16"]}"
+    "#{config.api_url}/uploads/#{@icon.sizes["16"]}"
   UserSchema.virtual('icon.small').get ->
-    "#{config.api_url}/static/#{@icon.sizes["32"]}"
+    "#{config.api_url}/uploads/#{@icon.sizes["32"]}"
   UserSchema.virtual('icon.medium').get ->
-    "#{config.api_url}/static/#{@icon.sizes["64"]}"
+    "#{config.api_url}/uploads/#{@icon.sizes["64"]}"
   UserSchema.virtual('icon.large').get ->
-    "#{config.api_url}/static/#{@icon.sizes["64"]}"
+    "#{config.api_url}/uploads/#{@icon.sizes["64"]}"
   UserSchema.path('mobile.number').validate (val) ->
     # Ensure that both exist, or neither.
     return @mobile?.carrier? == @mobile?.number?
@@ -124,11 +124,11 @@ load = (config) ->
     next()
   GroupSchema.virtual('logo.large').get ->
     if @logo.full?
-      return "#{config.api_url}/static/#{@logo.full}"
+      return "#{config.api_url}/uploads/#{@logo.full}"
     return null
   GroupSchema.virtual('logo.small').get ->
     if @logo.thumb?
-      return "#{config.api_url}/static/#{@logo.thumb}"
+      return "#{config.api_url}/uploads/#{@logo.thumb}"
     return null
   GroupSchema.set('toObject', {virtuals: true})
   GroupSchema.options.toObject.transform = (doc, ret, options) ->

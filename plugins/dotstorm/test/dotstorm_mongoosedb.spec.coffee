@@ -50,7 +50,7 @@ describe "Mongoose connector", ->
       idea.background = "#ffffff"
       idea.save (err) ->
         expect(err).to.be null
-        expect(idea.drawingURLs.small).to.be "/dotstorm/uploads/idea/#{idea._id}/drawing/small#{idea.imageVersion}.png"
+        expect(idea.drawingURLs.small).to.be "/uploads/dotstorm/idea/#{idea._id}/drawing/small#{idea.imageVersion}.png"
         expect(fs.existsSync idea.getDrawingPath("small")).to.be true
         done()
 

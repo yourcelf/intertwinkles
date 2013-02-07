@@ -11,9 +11,7 @@ import subprocess
 server_writable_directories = [
     "vendor/solr/apache-solr-4.0.0/example/solr/collection1/data/",
     "vendor/solr/apache-solr-4.0.0/example/solr-webapp/",
-    "lib/dotstorm/assets/dotstorm/uploads/",
-    "lib/www/assets/group_logos/",
-    "lib/www/assets/user_icons/",
+    "uploads/",
     "builtAssets/",
 ]
 BASE = os.path.join(os.path.dirname(__file__), "..")

@@ -58,10 +58,26 @@ start = (config) ->
     app.use "/static/", express.static(
       __dirname + '/../assets',
       {maxAge: 1000*60*60*24})
+  app.configure 'development', ->
+    logger.setLevel(log4js.levels.DEBUG)
+    app.use "/uploads/", express.static(
+      __dirname + '/../uploads')
+  app.configure 'production', ->
+    logger.setLevel(log4js.levels.ERROR)
+    app.use "/uploads/", express.static(
+      __dirname + '/../uploads',
+      {maxAge: 1000*60*60*24})
 
   view_folders = [__dirname + "/../views"]
   asset_folders = [__dirname + "/../assets"]
+
+  # API routes
+  require("./api_routes").route(config, app)
+  # Base routes for home page, auth, groups, profiles, search
+  require("./www_routes").route(config, app, io, sessionStore)
+
   for key, appconf of config.apps
+    continue if key == "www"
     # App-specific routes
     require("../plugins/#{key}/lib/server").start(config, app, io, sessionStore)
 

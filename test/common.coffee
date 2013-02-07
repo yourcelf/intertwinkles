@@ -10,7 +10,7 @@ expect  = require 'expect.js'
 mongoose= require 'mongoose'
 Schema  = mongoose.Schema
 config  = require './test_config'
-www_schema = require('../plugins/www/lib/schema').load(config)
+www_schema = require('../lib/schema').load(config)
 ds_schema  = require('../plugins/dotstorm/lib/schema')
 server  = require '../lib/server'
 fixture = require './fixture'
@@ -42,8 +42,10 @@ startUp = (done) ->
     outbox: []
   }
   async.series([
-    (done) -> clearDb(done)
-    (done) -> loadFixture(done)
+    (done) ->
+      clearDb(done)
+    (done) ->
+      loadFixture(done)
     (done) ->
       mail.server = email_server.start( (message) ->
           mail.outbox.push(message)
@@ -53,7 +55,8 @@ startUp = (done) ->
           mail.client = email.server.connect(config.email)
           done()
       )
-  ], (res) ->
+  ], (err, res) ->
+    expect(err).to.be(null)
     done(srv, browser, mail))
 
 shutDown = (srv, done) ->
@@ -70,7 +73,7 @@ deleteIcons = (cb) ->
     _.each docs, (doc) ->
       _.each ["16", "32", "64"], (size) ->
         deletions.push (done) ->
-          fs.unlink(__dirname + '/../plugins/www/assets/' + doc.icon.sizes[size], done)
+          fs.unlink(__dirname + '/../uploads/' + doc.icon.sizes[size], done)
     async.parallel(deletions, cb)
 
 clearDb = (cb) ->

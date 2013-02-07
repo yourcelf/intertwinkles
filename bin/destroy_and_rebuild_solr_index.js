@@ -1,11 +1,10 @@
 #!/usr/bin/env node
+
 require('coffee-script');
 var config = require("../config/config")
 var mongoose = require("mongoose");
-var solr = require("../plugins/www/lib/solr_helper")(config)
-var async = require("async");
+var solr = require("../lib/solr_helper")(config)
 var logger = require("log4js").getLogger()
-
 var db = mongoose.connect(
     "mongodb://" + config.dbhost + ":" + config.dbport + "/" + config.dbname
 );

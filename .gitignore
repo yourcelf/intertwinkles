@@ -8,3 +8,4 @@ plugins/www/assets/group_logos/
 node_modules
 vendor
 config/secrets
+uploads/

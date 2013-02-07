@@ -1,23 +1,17 @@
 express       = require 'express'
 socketio      = require 'socket.io'
-intertwinkles = require '../../../lib/intertwinkles'
+intertwinkles = require './intertwinkles'
 RoomManager   = require('iorooms').RoomManager
 RedisStore    = require('connect-redis')(express)
 _             = require 'underscore'
 async         = require 'async'
-api           = require './api'
 carriers      = require './carriers'
 thumbnails    = require './thumbnails'
 logger        = require('log4js').getLogger()
 
-start = (config, app, io, sessionStore) ->
+route = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
   iorooms = new RoomManager("/io-www", io, sessionStore)
-
-  #
-  # API
-  #
-  api.route(config, app)
 
   #
   # Routes
@@ -85,7 +79,7 @@ start = (config, app, io, sessionStore) ->
             docs: results[2]
           }
 
-      res.render 'index', context(req, {
+      res.render 'home/index', context(req, {
         title: "InterTwinkles: Twinkling all over the InterWebs"
         hero_apps: ["firestarter", "twinklepad", "dotstorm", "resolve"]
         activity: activity
@@ -93,31 +87,31 @@ start = (config, app, io, sessionStore) ->
       })
 
   app.get '/about/', (req, res) ->
-    res.render 'about/index', context(req, {
+    res.render 'home/about/index', context(req, {
       title: "About InterTwinkles"
     })
   app.get '/about', (req, res) -> res.redirect("/about/")
 
   app.get '/about/terms/', (req, res) ->
-    res.render 'about/terms', context(req, {
+    res.render 'home/about/terms', context(req, {
       title: "Terms of Use"
     })
   app.get '/about/terms', (req, res) -> res.redirect("/about/terms/")
 
   app.get '/about/privacy/', (req, res) ->
-    res.render 'about/privacy', context(req, {
+    res.render 'home/about/privacy', context(req, {
       title: "Privacy Policy"
     })
   app.get '/about/privacy', (req, res) -> res.redirect("/about/privacy/")
 
   app.get '/about/related/', (req, res) ->
-    res.render 'about/related', context(req, {
+    res.render 'home/about/related', context(req, {
       title: "Related Work"
     })
   app.get '/about/related', (req, res) -> res.redirect("/about/related/")
 
   app.get '/test/', (req, res) ->
-    res.render 'test', context(req, { title: "Test" })
+    res.render 'home/test', context(req, { title: "Test" })
 
   #
   # Search
@@ -141,7 +135,7 @@ start = (config, app, io, sessionStore) ->
       docs = results?.response.docs or []
       for doc in docs
         doc.url = "#{config.apps[doc.application].url}" + doc.url
-      res.render 'search', context(req, {
+      res.render 'home/search', context(req, {
         authenticated: intertwinkles.is_authenticated(req.session)
         title: "Search",
         docs: docs
@@ -179,7 +173,7 @@ start = (config, app, io, sessionStore) ->
           medium: doc.icon.medium, large: doc.icon.large
         }
       }
-      res.render 'profiles/edit', context(req, {
+      res.render 'home/profiles/edit', context(req, {
         title: "Profile settings"
         user: user
         carrier_list: _.keys(carriers)
@@ -215,7 +209,7 @@ start = (config, app, io, sessionStore) ->
   app.post '/profiles/edit', (req, res) -> res.redirect("/profiles/edit/")
 
   app.get '/profiles/icon_attribution/', (req, res) ->
-    res.render 'profiles/icon_attribution', context(req, {
+    res.render 'home/profiles/icon_attribution', context(req, {
       title: "Icon Attribution"
     })
   app.get '/profiles/icon_attribution', (req, res) ->
@@ -224,7 +218,7 @@ start = (config, app, io, sessionStore) ->
   app.get '/profiles/login/', (req, res) ->
     if intertwinkles.is_authenticated(req.session)
       return res.redirect(req.query.next or "/")
-    res.render 'profiles/login', context(req, {
+    res.render 'home/profiles/login', context(req, {
       title: "Sign in"
       next: req.query.next
     })
@@ -232,7 +226,7 @@ start = (config, app, io, sessionStore) ->
 
   app.get '/profiles/logout/', (req, res) ->
     intertwinkles.clear_auth_session(req.session)
-    res.render 'profiles/logout', context(req, {
+    res.render 'home/profiles/logout', context(req, {
       title: "Logging out..."
     })
   app.get '/profiles/logout', (req, res) -> res.redirect("/profiles/logout/")
@@ -413,7 +407,7 @@ start = (config, app, io, sessionStore) ->
     unless intertwinkles.is_authenticated(req.session)
       return redirect_to_login(req, res)
 
-    res.render 'groups/edit', context(req, {
+    res.render 'home/groups/edit', context(req, {
       title: "New group"
       group: {}
     })
@@ -470,7 +464,7 @@ start = (config, app, io, sessionStore) ->
       membership = _.find doc.members, (m) -> m.user.email == req.session.auth.email
       unless membership?
         return res.send("Permission denied", 403)
-      res.render 'groups/edit', context(req, {
+      res.render 'home/groups/edit', context(req, {
         title: "Edit " + doc.name
         group: doc
       })
@@ -523,7 +517,7 @@ start = (config, app, io, sessionStore) ->
 
   app.get '/groups/join/:slug/', (req, res) ->
     verify_invitation req, res, (group) ->
-      return res.render 'groups/join', context(req, {
+      return res.render 'home/groups/join', context(req, {
         title: "Join " + group.name
         group: group
       })
@@ -587,7 +581,7 @@ start = (config, app, io, sessionStore) ->
 
       ], (err, results) ->
         [search_indexes] = results
-        res.render "groups/show", context(req, {
+        res.render "home/groups/show", context(req, {
           title: doc.name
           group: doc
           docs: search_indexes
@@ -596,4 +590,4 @@ start = (config, app, io, sessionStore) ->
 
   return {app}
 
-module.exports = {start}
+module.exports = {route}

@@ -4,7 +4,7 @@ path     = require 'path'
 logger   = require './logging'
 im       = require 'imagemagick'
 
-BASE_PATH = __dirname + "/../assets"
+UPLOAD_PATH = __dirname + "/../../../uploads"
 
 sizes =
   # Sizes allow for 1px border, and fit well on mobile screens (240px, 480px)
@@ -243,4 +243,4 @@ remove = (model, callback) ->
                 error = err
               callback(error)
 
-module.exports = { drawingThumbs, photoThumbs, remove, BASE_PATH }
+module.exports = { drawingThumbs, photoThumbs, remove, UPLOAD_PATH }

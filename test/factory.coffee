@@ -11,7 +11,7 @@ module.exports.run = (config, done) ->
   db = mongoose.connect(
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
-  www_schema = require("../plugins/www/lib/schema").load(config)
+  www_schema = require("../lib/schema").load(config)
   res_schema = require("../plugins/resolve/lib/schema").load(config)
 
   day_zero = new Date().getTime() - (1000 * 60 * 60 * 24) * 7

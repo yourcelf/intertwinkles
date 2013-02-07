@@ -6,7 +6,7 @@ _     = require 'underscore'
 upload = (filePath, dest, callback) ->
   # Write the original.
   ext = path.extname(filePath)
-  base = __dirname + "/../assets"
+  base = __dirname + "/../uploads"
   fullSizePath = base + dest + "/" + path.basename(filePath)
   thumbPath    = path.dirname(fullSizePath) + "/" + path.basename(filePath, ext) + "_thumb" + ext
   fs.readFile filePath, (err, data) ->
@@ -24,7 +24,7 @@ upload = (filePath, dest, callback) ->
       }
 
 remove = (files, assetBase, callback) ->
-  base = __dirname + "/../assets/"
+  base = __dirname + "/../uploads"
   safety_base = path.normalize(base + assetBase)
   count = files.length
   errors = []
