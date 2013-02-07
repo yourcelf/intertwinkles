@@ -51,21 +51,14 @@ start = (config) ->
   # static files
   app.configure 'development', ->
     logger.setLevel(log4js.levels.DEBUG)
-    app.use "/static/", express.static(
-      __dirname + '/../assets')
+    app.use "/static/", express.static(__dirname + '/../assets')
+    app.use "/uploads/", express.static(__dirname + '/../uploads')
+
   app.configure 'production', ->
     logger.setLevel(log4js.levels.ERROR)
-    app.use "/static/", express.static(
-      __dirname + '/../assets',
+    app.use "/static/", express.static(__dirname + '/../assets',
       {maxAge: 1000*60*60*24})
-  app.configure 'development', ->
-    logger.setLevel(log4js.levels.DEBUG)
-    app.use "/uploads/", express.static(
-      __dirname + '/../uploads')
-  app.configure 'production', ->
-    logger.setLevel(log4js.levels.ERROR)
-    app.use "/uploads/", express.static(
-      __dirname + '/../uploads',
+    app.use "/uploads/", express.static(__dirname + '/../uploads',
       {maxAge: 1000*60*60*24})
 
   view_folders = [__dirname + "/../views"]
