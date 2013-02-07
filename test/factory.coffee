@@ -11,8 +11,8 @@ module.exports.run = (config, done) ->
   db = mongoose.connect(
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
-  www_schema = require("../lib/www/lib/schema").load(config)
-  res_schema = require("../lib/resolve/lib/schema").load(config)
+  www_schema = require("../plugins/www/lib/schema").load(config)
+  res_schema = require("../plugins/resolve/lib/schema").load(config)
 
   day_zero = new Date().getTime() - (1000 * 60 * 60 * 24) * 7
   day = (plus_days) ->
@@ -106,18 +106,14 @@ module.exports.run = (config, done) ->
       done(err, doc)
 
   create_event = (name, attributes, done) ->
+    logger.info "Creating event: #{attributes.type} #{attributes.application} #{attributes.entity}"
     attrs = _.extend {}, attributes
     attrs.user = cache.users[name].id
     attrs.via_user = cache.users[attrs.via_user].id if attrs.via_user?
     attrs.group = cache.groups[attrs.group].id if attrs.group?
-    www_schema.Event.findOne {
-      application: attrs.application, type: attrs.type, entity: attrs.entity
-    }, (err, doc) ->
+    new www_schema.Event(attrs).save (err, doc) ->
       throw err if err?
       return done(null, doc) if doc?
-      new www_schema.Event(attrs).save (err, doc) ->
-        throw err if err?
-        return done(null, doc) if doc?
 
   create_proposal = (name, attributes, done) ->
     # Since there's no simple "natural key" (e.g. a name or slug) for a
@@ -159,7 +155,6 @@ module.exports.run = (config, done) ->
       }, (err) -> done(err, doc))
 
   visit_proposal = (name, proposal, date, done) ->
-    logger.info "#{name} visiting proposal \"#{proposal.revisions[0].text}\""
     create_event name, {
         application: "resolve"
         type: "visit"
@@ -172,7 +167,6 @@ module.exports.run = (config, done) ->
         }
     }, done
 
-
   revise_proposal = (name, proposal, attributes, done) ->
     logger.info("#{name} Revising proposal #{proposal.revisions[0].text}")
     proposal.revisions.unshift({
@@ -181,9 +175,9 @@ module.exports.run = (config, done) ->
       date: attributes.date
       text: attributes.text
     })
-    proposal.save (err, doc) ->
-      done(err, doc)
-
+    visit_proposal name, proposal, attributes.date, (err) ->
+      proposal.save (err, doc) ->
+        done(err, doc)
 
   create_opinion = (name, proposal, attributes, done) ->
     logger.info "Creating opinion on \"#{proposal.revisions[0].text}\" for #{name}"
@@ -204,30 +198,25 @@ module.exports.run = (config, done) ->
       date: attributes.date
     }
     # Save the proposal, and also add a visit.
-    async.parallel [
-      (done) ->
-        proposal.save (err, doc) ->
-          throw err if err?
-          create_event name, {
-            application: "resolve"
-            type: "append"
-            entity_url: "/resolve/p/#{doc._id}"
-            entity: doc._id
-            user: cache.users[name]?.id
-            date: attributes.date
-            data: {
+    visit_proposal name, proposal, attributes.date, (err) ->
+      proposal.save (err, doc) ->
+        throw err if err?
+        create_event name, {
+          application: "resolve"
+          type: "append"
+          entity_url: "/resolve/p/#{doc._id}"
+          entity: doc._id
+          user: cache.users[name]?.id
+          date: attributes.date
+          data: {
+            name: name
+            opinion: {
+              user_id: cache.users[name]?.id
               name: name
-              opinion: {
-                user_id: cache.users[name]?.id
-                name: name
-                revisions: opa.revisions
-              }
+              revisions: opa.revisions
             }
-          }, done
-
-      (done) ->
-        visit_proposal(name, proposal, attributes.date, done)
-    ], done
+          }
+        }, done
 
   #
   # Execute the factory.  Run a time series to create data.
@@ -278,7 +267,7 @@ module.exports.run = (config, done) ->
       )
 
     (done) -> create_proposal "Trey", {
-        group: "Digits", cache: "one", text: "Tea", on: day(3)
+        group: "Digits", cache: "one", text: "Tea", on: day(2.2)
       }, (err, doc) ->
         done(err, doc)
 

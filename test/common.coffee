@@ -10,8 +10,8 @@ expect  = require 'expect.js'
 mongoose= require 'mongoose'
 Schema  = mongoose.Schema
 config  = require './test_config'
-www_schema = require('../lib/www/lib/schema').load(config)
-ds_schema  = require('../lib/dotstorm/lib/schema')
+www_schema = require('../plugins/www/lib/schema').load(config)
+ds_schema  = require('../plugins/dotstorm/lib/schema')
 server  = require '../lib/server'
 fixture = require './fixture'
 email_server = require "../lib/email_server"
@@ -70,7 +70,7 @@ deleteIcons = (cb) ->
     _.each docs, (doc) ->
       _.each ["16", "32", "64"], (size) ->
         deletions.push (done) ->
-          fs.unlink(__dirname + '/../lib/www/assets/' + doc.icon.sizes[size], done)
+          fs.unlink(__dirname + '/../plugins/www/assets/' + doc.icon.sizes[size], done)
     async.parallel(deletions, cb)
 
 clearDb = (cb) ->
@@ -150,5 +150,21 @@ stubBrowserID = (browser, browserid_response) ->
       expires: new Date().getTime() + 60*60*1000
       issuer: "mock-stub"
     }, browserid_response)
+
+session_stub = (user, done) ->
+  if user.indexOf("@") != -1
+    query = {email: user}
+  else
+    query = {_id: user}
+  www_schema.User.objects.findOne query, (err, doc) ->
+    expect(err).to.be(null)
+    expect(doc).to.not.be(null)
+ 
+    session = {
+
+    }
+
+
+    done(session)
 
 module.exports = {stubBrowserID, loadFixture, startUp, shutDown, TestModel}

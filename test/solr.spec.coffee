@@ -14,7 +14,7 @@ _             = require 'underscore'
 
 common        = require './common'
 config        = require './test_config'
-schema        = require('../lib/www/lib/schema').load(config)
+schema        = require('../plugins/www/lib/schema').load(config)
 solr_client   = require('solr-client').createClient(config.solr)
 
 clear_test_docs_from_solr = (done) ->

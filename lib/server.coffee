@@ -63,17 +63,17 @@ start = (config) ->
   asset_folders = [__dirname + "/../node_modules/node-intertwinkles/assets"]
   for key, appconf of config.apps
     # App-specific routes
-    require("./#{key}/lib/server").start(config, app, io, sessionStore)
+    require("../plugins/#{key}/lib/server").start(config, app, io, sessionStore)
 
     app.configure 'development', ->
-      app.use "/static/", express.static("#{__dirname}/#{key}/assets")
+      app.use "/static/", express.static("#{__dirname}/../plugins/#{key}/assets")
 
     app.configure 'production', ->
-      app.use "/static/", express.static("#{__dirname}/#{key}/assets", {
+      app.use "/static/", express.static("#{__dirname}/../plugins/#{key}/assets", {
         maxAge: 1000*60*60*24
       })
-    view_folders.push("#{__dirname}/#{key}/views")
-    asset_folders.push("#{__dirname}/#{key}/assets")
+    view_folders.push("#{__dirname}/../plugins/#{key}/views")
+    asset_folders.push("#{__dirname}/../plugins/#{key}/assets")
 
   app.use connect_assets(src: asset_folders)
   # Don't prefix connect-assets' css and js paths by default.

@@ -2,7 +2,7 @@
 require('coffee-script');
 var config = require("../config/config")
 var mongoose = require("mongoose");
-var solr = require("../lib/www/lib/solr_helper")(config)
+var solr = require("../plugins/www/lib/solr_helper")(config)
 var async = require("async");
 var logger = require("log4js").getLogger()
 
