@@ -1,6 +1,6 @@
 express        = require 'express'
 socketio       = require 'socket.io'
-intertwinkles  = require 'node-intertwinkles'
+intertwinkles  = require './intertwinkles'
 RedisStore     = require('connect-redis')(express)
 mongoose       = require 'mongoose'
 _              = require 'underscore'
@@ -48,19 +48,19 @@ start = (config) ->
   app.set 'view options', {layout: false}
   app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
 
-  # node-intertwinkles static files
+  # static files
   app.configure 'development', ->
     logger.setLevel(log4js.levels.DEBUG)
     app.use "/static/", express.static(
-      __dirname + '/../node_modules/node-intertwinkles/assets')
+      __dirname + '/../assets')
   app.configure 'production', ->
     logger.setLevel(log4js.levels.ERROR)
     app.use "/static/", express.static(
-      __dirname + '/../node_modules/node-intertwinkles/assets',
+      __dirname + '/../assets',
       {maxAge: 1000*60*60*24})
 
   view_folders = [__dirname + "/../views"]
-  asset_folders = [__dirname + "/../node_modules/node-intertwinkles/assets"]
+  asset_folders = [__dirname + "/../assets"]
   for key, appconf of config.apps
     # App-specific routes
     require("../plugins/#{key}/lib/server").start(config, app, io, sessionStore)

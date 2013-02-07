@@ -7,7 +7,7 @@
 #   mocha --compilers coffee:coffee-script --globals css,js,img test/solr.coffee
 #
 
-intertwinkles = require 'node-intertwinkles'
+intertwinkles = require '../lib/intertwinkles'
 expect        = require 'expect.js'
 async         = require 'async'
 _             = require 'underscore'

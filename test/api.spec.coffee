@@ -5,7 +5,7 @@ http          = require 'http'
 config        = require './test_config'
 schema        = require('../plugins/www/lib/schema').load(config)
 common        = require './common'
-intertwinkles = require 'node-intertwinkles'
+intertwinkles = require '../lib/intertwinkles'
 logger        = require('log4js').getLogger()
 
 describe "api", ->

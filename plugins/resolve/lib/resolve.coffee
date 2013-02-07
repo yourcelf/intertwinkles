@@ -1,4 +1,4 @@
-intertwinkles = require 'node-intertwinkles'
+intertwinkles = require '../../../lib/intertwinkles'
 _             = require 'underscore'
 async         = require 'async'
 logger        = require('log4js').getLogger()

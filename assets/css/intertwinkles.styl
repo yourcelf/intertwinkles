@@ -1,0 +1,400 @@
+@import "nib"
+@import "./flash"
+@import "./IndieFlower.css"
+@import "./utils"
+
+.green-glow
+  green-glow()
+
+.subtle
+  color: #aaa
+
+.cursive
+  cursive-font()
+
+.small-green
+  small-green()
+
+/*
+  Bootstrap overrides
+*/
+.typeahead
+  z-index: 1051
+
+.btn.loading
+  background-image: url("/static/img/spinner.gif")
+  background-repeat: no-repeat
+  &:hover
+    background-position: 0 0
+
+.help-inline
+  color: #999
+
+.nav li a.brand
+  color: #000
+
+.dropdown-menu li.linkless
+  padding: 3px 20px
+
+.navbar .pull-right > li > .dropdown-menu.search
+  right: -80px
+  &:after, &:before
+    right: 92px
+
+.pull-right .dropdown-menu:after
+  left: auto
+  right: 13px
+.pull-right .dropdown-menu
+  left: auto
+  right: 0
+
+
+/*
+  Basic styles
+*/
+
+body
+  background: url("/static/img/whitegrain.png") repeat
+  min-width: 320px
+  color: #210700
+  line-height: 1.5em
+
+#app
+  position: relative
+
+a
+  //transition-property: color
+  //transition-duration: 1s
+  color: #05f
+  &:hover
+    text-decoration: none
+
+a:visited
+  color: #0af
+a.btn, a.btn:visited
+  color: inherit
+  &.btn-primary, &.btn-info, &.btn-success, &.btn-warning, &.btn-danger, &.btn-inverse
+    color: white
+
+a.twinkles, a.twinkles:visited
+  color: #ddd
+
+h1
+  text-align: center
+h1,h3
+  cursive-font()
+
+header
+  // Set to avoid page movement when toolbar loads.
+  min-height: 45px
+
+:-moz-placeholder
+  color: #bbb !important
+::-webkit-input-placeholder
+  color: #bbb !important
+
+it-color = #ff0287
+.intertwinkles
+  color: it-color
+  &.twunkled
+    position: relative
+  &.twunkled
+    span
+      pointer-events: none
+      position: relative
+      top: 0
+      transition-property: top
+      transition-duration: 100ms
+    span.bump
+      top: -5px
+
+.date
+  font-size: 80%
+  color: #aaa
+  font-family: sans-serif
+
+.form-hint
+  font-size: 80%
+  color: #060
+  font-family: sans-serif
+
+/****************************************************************
+  Components
+*****************************************************************/
+
+/*
+  Toolbar
+*/
+.room-users
+  li.self
+    font-size: 120%
+  .dropdown-menu a
+    pointer-events: none
+
+#auth_frame
+  margin-top: 8px
+
+.navbar .brand
+  color: black
+.navbar-top .navbar-inner
+  box-shadow: 0 1px 3px rgba(200, 200, 200, 0.25), -1px 0 rgba(200, 200, 200, 0.1) inset
+  border: none
+  background: rgba(255, 255, 255, 0.2)
+.subnav .navbar-inner
+  background-color: #fafafa
+  background-image: linear-gradient(top, #fff, #f2f2f2)
+  #group_menu .group-name
+    cursive-font()
+    font-size: 200%
+
+.invite-helper
+  input
+    cursor: text
+
+
+/*
+  App menu
+*/
+.appmenu
+  .active
+    font-size: 120%
+.nav-collapse .nav > li > a
+  font-weight: normal
+.nav-collapse .nav li
+  width: 100%
+.nav .brand.dropdown-toggle .caret
+  border-bottom-color: #777
+  border-top-color: #777
+  color: #777
+  margin-top: 8px
+
+
+/*
+  User menu
+*/
+
+.user-menu
+  background-image: none
+//  transform: rotate(2deg)
+.btn-group > .btn-small.user-menu
+  color: black
+//  font-size: 16px
+
+/*
+  Icon chooser
+*/
+.new-profile-form
+  .modal-body
+    text-align: center
+
+input.color
+  font-size: 0px
+.profile-image-chooser
+  .profile-image
+    float: left
+    width: 32px
+    height: 32px
+    border: 1px solid #eee
+    position: relative
+    font-size: 0px
+    &:hover
+      border: 1px solid #ff9900
+    &.chosen
+      background-color: #ff9900
+
+/*
+  Sharing widget
+*/
+.sharing-controls
+  .summary
+    padding: 0.5em 1.5em
+    background: rgba(200, 200, 200, 0.1)
+    border-radius: 1em
+    display: inline-block
+    h4
+      font-family: inherit
+      font-weight: normal
+      font-style: italic
+      color: black
+      font-size: 1.2em
+    .summary-content
+      font-family: sans-serif
+      font-size: 0.8em
+  select
+    width: inherit
+.url-to-share input
+  width: 300px
+  cursor: text
+
+.sharing-settings-button .popover
+  width: 350px
+.pull-right .sharing-settings-button .popover
+  left: -150px !important
+  .arrow
+    left: 250px !important
+
+ul.sharing-online-group
+  
+  li
+    display: inline-block
+    &:first-child a
+      border-radius: 4px 0px 0px 4px
+    &:last-child a
+      border-radius: 0px 4px 4px 0px
+
+/*
+  Timeline
+*/
+
+.timeline
+  .ruled
+    border-top: 1px solid #ddd
+  .timeline-bump 
+    position: absolute
+    background-repeat: no-repeat
+    top: 0.5em
+  .date-legend
+    position: absolute
+    white-space: nowrap
+
+/*
+  Notifications
+*/
+
+.notification-menu, .navbar .nav > li.notification-menu
+  position: relative
+  a.notification-trigger, a.notification-trigger:hover
+    background-col
+    border-radius: 1.5em
+  a.notification-trigger, a.notification-trigger:hover
+    background-color: rgba(200, 200, 200, 0.2)
+    &.unread
+      background-color: orangered
+  a.notification-trigger.unread
+    color: white
+    text-shadow: #000 1px 1px 2px
+    font-weight: bold
+  a.notification-trigger.unread:hover
+    color: white
+    text-shadow: #999 1px 1px
+
+  .notifications
+    width: 25em
+  .message
+    max-width: 100%
+    white-space: normal
+    padding: 0.5em
+    border: 1px solid #eee
+  li:hover .message
+    border: none
+
+  .sender
+    padding: 0.2em
+    background: #eee
+  li:hover .sender
+    background: inherit
+
+/*
+  Search
+*/
+.search-result
+  em
+    font-style: normal
+    font-weight: bold
+    background-color: #ffe
+  .applabel
+    small-green()
+
+.group-label
+  font-weight: bold
+  font-family: sans-serif
+  font-size: 0.8em
+  color: black
+  white-space: nowrap
+
+.search-menu.dropdown form
+  margin: 0px
+.search.dropdown-menu
+  right: -150px
+
+
+  
+/*
+ Sticky footer, a la http://ryanfait.com/sticky-footer/
+ */
+footer-height = 370px
+footer-height-narrow = 600px
+
+html,body { height: 100% }
+#page
+  min-height: 100%
+  height: auto !important
+  height: 100%
+  margin: 0 auto (0px - footer-height)
+
+@media (max-width: 767px)
+  #page
+    margin: 0 auto (0px - footer-height-narrow)
+
+footer, #push
+  height: footer-height
+
+@media (max-width: 767px)
+  footer, #push 
+    height: footer-height-narrow
+
+// Footer styles other than stickyness
+@media (max-width: 767px)
+  footer
+    .footer-content
+      height: footer-height-narrow - 2px
+footer
+  opacity: 0.3
+  transition-property: 'opacity'
+  transition-duration: 500ms
+  &:hover
+    opacity: 1
+  background: linear-gradient(top, rgba(2,255,135,0), rgba(2,255,135,0.3))
+  position: relative
+  .ramp
+    background: linear-gradient(top, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.5))
+    position: absolute
+    top: 0
+    left: 0
+    width: 100%
+    height: 100%
+
+  .footer-content
+    border-color: #EEE
+    border-color: #EEE -moz-use-text-color #fff
+    border-image: none
+    border-left: 0 none
+    border-right: 0 none
+    border-style: solid none
+    border-width: 1px 0
+    -moz-border-bottom-colors: none
+    -moz-border-left-colors: none
+    -moz-border-right-colors: none
+    -moz-border-top-colors: none
+    height: footer-height - 2px
+    position: relative
+
+  .sponsors, .about-links, .community
+    h2
+      font-size: 120%
+    padding: 1em
+    border-radius: 0.5em
+    li
+      list-style-type: none
+  .bg
+    position: absolute
+    bottom: 0px
+    left: 0
+    width: 100%
+    text-align: center
+  h2
+    cursive-font()
+    text-align: center
+    white-space: nowrap
+    margin-bottom: 0.5em !important
+

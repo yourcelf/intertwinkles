@@ -1,7 +1,7 @@
 logger        = require './logging'
 models        = require './schema'
 thumbnails    = require './thumbnails'
-intertwinkles = require 'node-intertwinkles'
+intertwinkles = require '../../../lib/intertwinkles'
 
 
 #

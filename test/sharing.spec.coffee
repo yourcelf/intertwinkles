@@ -4,7 +4,7 @@ async         = require 'async'
 config        = require './test_config'
 schema        = require('../plugins/www/lib/schema').load(config)
 common        = require './common'
-intertwinkles = require 'node-intertwinkles'
+intertwinkles = require '../lib/intertwinkles'
 
 describe "sharing", ->
   before (done) ->

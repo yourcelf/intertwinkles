@@ -3,7 +3,7 @@ RoomManager   = require('iorooms').RoomManager
 schema        = require './schema'
 _             = require 'underscore'
 async         = require 'async'
-intertwinkles = require 'node-intertwinkles'
+intertwinkles = require '../../../lib/intertwinkles'
 
 start = (config, app, io, sessionStore) ->
   io.of("/io-firestarter").setMaxListeners(15)

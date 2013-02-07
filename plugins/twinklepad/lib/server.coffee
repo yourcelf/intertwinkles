@@ -1,7 +1,7 @@
 express        = require 'express'
 socketio       = require 'socket.io'
 mongoose       = require 'mongoose'
-intertwinkles  = require 'node-intertwinkles'
+intertwinkles  = require '../../../lib/intertwinkles'
 RoomManager    = require('iorooms').RoomManager
 RedisStore     = require('connect-redis')(express)
 _              = require 'underscore'

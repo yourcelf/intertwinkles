@@ -36,7 +36,7 @@
     "mailparser": "~0",
     "connect-assets": "git://github.com/yourcelf/connect-assets.git",
     "node-iorooms": "git+https://github.com/yourcelf/node-iorooms.git",
-    "node-intertwinkles": "git+https://github.com/yourcelf/node-intertwinkles.git"
+    "node-browserid-consumer": "git+https://github.com/yourcelf/node-browserid-consumer.git"
   },
   "devDependencies": {
     "mocha": "~1",

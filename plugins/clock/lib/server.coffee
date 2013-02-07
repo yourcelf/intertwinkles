@@ -3,7 +3,7 @@ async         = require 'async'
 express       = require 'express'
 RoomManager   = require('iorooms').RoomManager
 schema        = require './schema'
-intertwinkles = require 'node-intertwinkles'
+intertwinkles = require '../../../lib/intertwinkles'
 
 start = (config, app, io, sessionStore) ->
   iorooms = new RoomManager("/io-clock", io, sessionStore)

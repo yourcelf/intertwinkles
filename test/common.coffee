@@ -141,7 +141,7 @@ stubBrowserID = (browser, browserid_response) ->
       };
     """
   }
-  browserid = require("../node_modules/node-intertwinkles/node_modules/browserid-consumer")
+  browserid = require("../node_modules/browserid-consumer")
   browserid.verify = (assertion, audience, callback, options) ->
     callback(null, _.extend {
       status: "okay"

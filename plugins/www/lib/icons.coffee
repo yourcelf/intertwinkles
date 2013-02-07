@@ -1,5 +1,5 @@
 im        = require 'imagemagick'
-name_list = require '../../../node_modules/node-intertwinkles/assets/js/intertwinkles_icon_chooser.json'
+name_list = require '../../../assets/js/intertwinkles_icon_chooser.json'
 path      = require 'path'
 fs        = require 'fs'
 _         = require 'underscore'
