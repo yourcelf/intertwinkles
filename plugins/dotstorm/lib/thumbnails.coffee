@@ -4,7 +4,7 @@ path     = require 'path'
 logger   = require './logging'
 im       = require 'imagemagick'
 
-UPLOAD_PATH = __dirname + "/../../../uploads"
+UPLOAD_PATH = __dirname + "/../../../" # /uploads/ root is added.
 
 sizes =
   # Sizes allow for 1px border, and fit well on mobile screens (240px, 480px)
