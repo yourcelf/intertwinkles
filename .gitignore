@@ -3,9 +3,8 @@
 *.swp
 *.pyc
 server.log
-plugins/www/assets/user_icons/
-plugins/www/assets/group_logos/
 node_modules
 vendor
+!assets/js/vendor
 config/secrets
 uploads/
