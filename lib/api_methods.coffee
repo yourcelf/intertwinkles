@@ -126,6 +126,16 @@ module.exports = (config) ->
         return callback(err) if err?
         callback(null)
 
+  m.get_notifications = (email, callback) ->
+    retrieve_user email, (err, user) ->
+      return callback(err) if err?
+      schema.Notification.find({
+        recipient: user._id
+        cleared: {$ne: true}
+        suppressed: {$ne: true}
+        "formats.web": {$ne: null}
+      }).sort('-date').limit(51).exec(callback)
+
   m.clear_notifications = (params, callback) ->
     query = {}
     query._id = {$in: params.notification_id.split(",")} if params.notification_id?
@@ -133,7 +143,6 @@ module.exports = (config) ->
     query.entity = params.entity if params.entity?
     query.type = params.type if params.type?
     query.recipient = params.recipient if params.recipient?
-
     async.series [
       (done) ->
         if params.user?
@@ -163,4 +172,21 @@ module.exports = (config) ->
         callback(err, doc)
       )
 
+  m.edit_profile = (params, callback) ->
+    unless params.name
+      return callback("Invalid name")
+    if isNaN(params.icon_id)
+      return callback("Invalid icon id #{data.model.icon.id}")
+
+    retrieve_user params.user, (err, user) ->
+      return callback(err) if err?
+      user.name = params.name if params.name?
+      if params.icon_id?
+        user.icon.pk = params.icon_id
+        user.icon.name = icons.get_icon_name(user.icon.pk)
+        user.icon.color = params.icon_color
+      user.mobile.number = params.mobile_number if params.mobile_number?
+      user.mobile.carrier = params.mobile_carrier if params.mobile_carrier?
+      user.save(callback)
+  
   return m

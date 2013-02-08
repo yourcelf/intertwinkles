@@ -158,29 +158,18 @@ route = (config, app) ->
 
   app.post "/api/profiles/", (req, res) ->
     return unless validate_request(req, res, ["api_key", "user"], 'POST')
-    retrieve_user req, res, req.body.user, (data) ->
-      user = data.model
-      user.name = req.body.name if req.body.name # exclude falsey things like ''
-      if req.body.icon_id?
-        user.icon.pk = req.body.icon_id if req.body.icon_id?
-        user.icon.name = icons.get_icon_name(user.icon.pk)
-      user.icon.color = req.body.icon_color if req.body.icon_color?
-      user.mobile.number = req.body.mobile_number if req.body.mobile_number?
-      user.mobile.carrier = req.body.mobile_carrier if req.body.mobile_carrier?
-      user.save (err, doc) ->
-        return server_error(res, err) if err?
-        res.send {status: 200, model: user}
+    query = {}
+    for key in ["user", "name", "icon_id", "icon_color",
+                "mobile_number", "mobile_carrier"]
+      if req.body[key]?
+        query[key] = req.body[key]
+    api_methods.edit_profile query, (err, doc) ->
+      return server_error(res, err) if err?
+      res.send {status: 200, model: doc}
 
   app.get "/api/notifications/", (req, res) ->
     return unless validate_request(req, res, ["api_key", "user"], 'GET')
-    retrieve_user req, res, req.query.user, (data) ->
-      user = data.model
-      schema.Notification.find({
-        recipient: user._id
-        cleared: {$ne: true}
-        suppressed: {$ne: true}
-        "formats.web": {$ne: null}
-      }).sort('-date').limit(51).exec (err, docs) ->
+    api_methods.get_notifications req.query.user, (err, docs) ->
         return server_error(res, err) if err?
         res.send({
           notifications: docs

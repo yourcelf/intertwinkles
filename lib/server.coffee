@@ -1,12 +1,14 @@
 express        = require 'express'
 socketio       = require 'socket.io'
-intertwinkles  = require './intertwinkles'
 RedisStore     = require('connect-redis')(express)
 mongoose       = require 'mongoose'
 _              = require 'underscore'
 connect_assets = require 'connect-assets'
 stylus         = require 'stylus'
 log4js         = require 'log4js'
+
+intertwinkles  = require './intertwinkles'
+socket_routes  = require './socket_routes'
 
 # Logger
 
@@ -33,7 +35,7 @@ start = (config) ->
   app = express.createServer()
   sessionStore = new RedisStore()
   io = socketio.listen(app, {"log level": 0})
-  intertwinkles.attach(config, app, io, sessionStore)
+  socket_routes.route(config, io, sessionStore)
   db = mongoose.connect(
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
