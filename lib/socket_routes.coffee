@@ -28,7 +28,7 @@ route = (config, io, sessionStore) ->
   api_methods = require("./api_methods")(config)
 
   iorooms.onChannel 'verify', (socket, reqdata) ->
-    api_methods.authenticate session, reqdata.assertion, (err, session) ->
+    api_methods.authenticate socket.session, reqdata.assertion, (err, session) ->
       iorooms.saveSession session, (err) ->
         return socket.emit "error", {error: err} if err?
 
@@ -63,7 +63,7 @@ route = (config, io, sessionStore) ->
     # Update all room's user lists to remove our logged-in name
     rooms = iorooms.sessionRooms[socket.session.sid] or []
     _.each rooms, (room) ->
-      build_room_users_list_for_user iorooms, session, room, (err, users) ->
+      build_room_users_list_for_user iorooms, socket.session, room, (err, users) ->
         socket.emit "room_users", users
         socket.broadcast.to(room).emit "room_users", users
 

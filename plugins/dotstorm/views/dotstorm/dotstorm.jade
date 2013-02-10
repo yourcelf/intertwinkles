@@ -84,7 +84,7 @@ block postapp
     div.tag-links
 
   script#dotstormSmallIdea(type='text/template')
-    <img src='/static<%= drawingURLs.medium %>' alt='<%= description %>' />
+    <img src='<%= drawingURLs.medium %>' alt='<%= description %>' />
     div.tags
       <%= tags.join(", ") %>
     div.votes
@@ -117,7 +117,7 @@ block postapp
             span.vote-widget
             a.close(title='close') &#10006;
           div.canvasHolder
-            <img src='/static<%= drawingURLs.full %>' alt='<%= description %>' />
+            <img src='<%= drawingURLs.full %>' alt='<%= description %>' />
             <% if (hasPrev) { %>
             div.nav.prevHolder
               div.navlink.prev(title='previous') &laquo;

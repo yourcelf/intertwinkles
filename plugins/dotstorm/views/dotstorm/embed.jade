@@ -35,7 +35,7 @@ html(lang="en")
               div.ideas
                 each idea in group.ideas
                   div.smallIdea
-                    img(src="/static" + idea.drawingURLs.medium, alt=idea.description)
+                    img(src=idea.drawingURLs.medium, alt=idea.description)
                     div.tags= idea.tags.join(", ")
                     div.vote-widget
                       div.votes
