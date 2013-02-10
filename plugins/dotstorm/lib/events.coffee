@@ -4,6 +4,8 @@ _             = require 'underscore'
 logger        = require('log4js').getLogger()
 
 module.exports = (config) ->
+  api_methods = require("../../../lib/api_methods")(config)
+
   return {
     post_event: (session, dotstorm, type, opts) =>
       opts or= {}
@@ -20,7 +22,7 @@ module.exports = (config) ->
             title: dotstorm.name or "Untitled"
           }, opts.data or {}
         }, opts.overrides or {}
-      intertwinkles.post_event(event, config, opts.callback or (->), opts.timeout)
+      api_methods.post_event(event, opts.timeout, opts.callback or (->))
 
     post_search_index: (doc, callback) =>
       unless doc?
@@ -63,5 +65,5 @@ module.exports = (config) ->
             text: stuff.join("\n")
             sharing: dotstorm.sharing
           }
-          intertwinkles.post_search_index(search_data, config, callback)
+          api_methods.add_search_index(search_data, callback)
   }

@@ -7,6 +7,7 @@ schema        = require('../lib/schema').load(config)
 common        = require './common'
 intertwinkles = require '../lib/intertwinkles'
 logger        = require('log4js').getLogger()
+api_methods   = require("../lib/api_methods")(config)
 
 describe "api", ->
   before (done) ->
@@ -49,70 +50,65 @@ describe "api", ->
   it "Gets success with correct user and api key", (done) ->
     url = "http://localhost:8888/api/groups/?api_key=test-key-one&user=one%40mockmyid.com"
     browser = @browser
-    browser.visit(url).then( =>
-      json = JSON.parse(browser.text())
-      # We have our groups...
-      expect(_.keys(json.groups).length).to.be(2)
-      expect(_.find json.groups, (g) -> g.name == "Two Members").to.not.be(null)
-      # And our users...
-      expect(json.users[json.user_id].email).to.be("one@mockmyid.com")
-      # The icons use 'large' and 'small'
-      user = json.users[json.user_id]
-      expect(user.icon.small).to.not.be(null)
-      expect(user.icon.sizes).to.be(undefined)
-      # Mobile phone numbers are not included.
-      expect(user.mobile).to.be(undefined)
-      # Groups have 'object id' as their user param
-      for id, group of json.groups
-        for member in [].concat group.members, group.past_members
-          expect(member.user).to.not.be(undefined)
-          expect(/^[A-F0-9a-f]+$/.test(member.user)).to.be(true)
-        for member in group.invited_members
-          expect(member.email).to.be(undefined)
-          expect(member.user).to.not.be(undefined)
-      done()
-    ).fail (err) -> done(err)
+    schema.User.findOne {email: "one@mockmyid.com"}, (err, doc) ->
+      expect(err).to.be(null)
+      expect(doc).to.not.be(null)
+      browser.visit(url).then( =>
+        json = JSON.parse(browser.text())
+        # We have our groups...
+        expect(_.keys(json.groups).length).to.be(2)
+        expect(_.find json.groups, (g) -> g.name == "Two Members").to.not.be(null)
+        # And our users...
+        expect(json.users[doc.id].email).to.be("one@mockmyid.com")
+        # The icons use 'large' and 'small'
+        user = json.users[doc.id]
+        expect(user.icon.small).to.not.be(null)
+        expect(user.icon.sizes).to.be(undefined)
+        # Mobile phone numbers are not included.
+        expect(user.mobile).to.be(undefined)
+        # Groups have 'object id' as their user param
+        for id, group of json.groups
+          for member in [].concat group.members, group.past_members
+            expect(member.user).to.not.be(undefined)
+            expect(/^[A-F0-9a-f]+$/.test(member.user)).to.be(true)
+          for member in group.invited_members
+            expect(member.email).to.be(undefined)
+            expect(member.user).to.not.be(undefined)
+        done()
+      ).fail (err) -> done(err)
 
   #
   # Email change request
   #
   it "Returns old users authenticating with old addresses unchanged", (done) ->
-    url = "http://localhost:8888/api/groups/?api_key=test-key-one&user=old_address@mockmyid.com"
-    @browser.visit(url).then( =>
-      json = JSON.parse(@browser.text())
-      expect(json.users[json.user_id].email).to.be("old_address@mockmyid.com")
-      expect(json.users[json.user_id].email_change_request).to.be("new_address@mockmyid.com")
-      expect(json.message).to.be(undefined)
-      expect(_.keys(json.groups).length).to.be(1)
-      expect(json.groups[_.keys(json.groups)[0]].name).to.be("Change requester")
+    api_methods.get_authenticating_user "old_address@mockmyid.com", (err, res) ->
+      expect(err).to.be(null)
+      {user, message} = res
+      expect(user.email).to.be("old_address@mockmyid.com")
+      expect(user.email_change_request).to.be("new_address@mockmyid.com")
+      expect(message).to.be(undefined)
       done()
-    ).fail (err) -> done(err)
 
   it "Changes email when authenticating with a change_request address", (done) ->
-    url = "http://localhost:8888/api/groups/?api_key=test-key-one&user=new_address@mockmyid.com"
-    @browser.visit(url).then( =>
-      json = JSON.parse(@browser.text())
-      expect(json.users[json.user_id].email).to.be("new_address@mockmyid.com")
-      expect(json.users[json.user_id].email_change_request).to.be(null)
-      expect(json.message).to.be("CHANGE_EMAIL")
-      expect(_.keys(json.groups).length).to.be(1)
-      expect(json.groups[_.keys(json.groups)[0]].name).to.be("Change requester")
+    api_methods.get_authenticating_user "new_address@mockmyid.com", (err, res) ->
+      expect(err).to.be(null)
+      {user, message} = res
+      expect(user.email).to.be("new_address@mockmyid.com")
+      expect(user.email_change_request).to.be(null)
+      expect(message).to.be("CHANGE_EMAIL")
       done()
-    ).fail (err) -> done(err)
 
   #
   # Create users
   #
   it "Creates a new user when a request comes for a non-existent one", (done) ->
-    url = "http://localhost:8888/api/groups/?api_key=test-key-one&user=new_user%40mockmyid.com"
-    @browser.visit(url).then( =>
-      json = JSON.parse(@browser.text())
-      expect(json.users[json.user_id].email).to.be("new_user@mockmyid.com")
-      expect(typeof json.users[json.user_id].icon.large).to.be("string")
-      expect(json.groups).to.eql({})
-      expect(json.message).to.be("NEW_ACCOUNT")
+    api_methods.get_authenticating_user "new_user@mockmyid.com", (err, res) ->
+      expect(err).to.be(null)
+      {user, message} = res
+      expect(user.email).to.be("new_user@mockmyid.com")
+      expect(typeof user.icon.large).to.be("string")
+      expect(message).to.be("NEW_ACCOUNT")
       done()
-    ).fail (err) -> done(err)
 
   it "Edit initial profile", (done) ->
     url = "http://localhost:8888/api/profiles/"
@@ -150,62 +146,67 @@ describe "api", ->
   #
   it "Posts and retrieves an event", (done) ->
     schema.Group.findOne {'slug': 'two-members'}, (err, group) ->
-      intertwinkles.post_event {
-        application: "firestarter"
-        entity: "one"
-        type: "create"
-        entity_url: "/f/cheese/"
-        group: group._id
-        data: {test: "data"}
-        user: "one@mockmyid.com"
-      }, config, (err, data) ->
+      intertwinkles.post_data config.api_url + "/api/events/", {
+        event: JSON.stringify({
+          application: "firestarter"
+          entity: "one"
+          type: "create"
+          entity_url: "/f/cheese/"
+          group: group._id
+          data: {test: "data"}
+          user: "one@mockmyid.com"
+        })
+        api_key: config.api_key
+      }, (err, data) ->
         logger.error(err) if err?
         expect(err).to.be(null)
         schema.Event.findOne {'application': 'firestarter'}, (err, doc) ->
           expect(doc).to.not.be(null)
           expect(doc.entity).to.eql("one")
 
-          intertwinkles.get_events {
-            application: "firestarter"
-          }, config, (err, data) ->
+          url = config.api_url + "/api/events/"
+          intertwinkles.get_json url, {
+            event: JSON.stringify({application: "firestarter"})
+            api_key: config.api_key
+          }, (err, data) ->
             expect(err).to.be(null)
             expect(data.events.length).to.be(1)
             expect(data.events[0]._id).to.eql("" + doc._id)
             done()
 
   it "Refuses posting events with invalid API key", (done) ->
-    intertwinkles.post_event {
-      application: "firestarter", entity: "one", type: "create",
-      entity_url: "/f/cheese/",
-      user: "one@mockmyid.com"
-    }, {
-        api_url: config.api_url
-        api_key: 'invalid'
+    url = config.api_url + "/api/events/"
+    intertwinkles.post_data url, {
+      event: JSON.stringify({
+        application: "firestarter", entity: "one", type: "create",
+        entity_url: "/f/cheese/",
+        user: "one@mockmyid.com"
+      })
+      api_key: 'invalid'
     }, (err, data) ->
       expect(err.error).to.eql("Intertwinkles status 403")
       done()
 
   it "Refuses retrieving events with invalid API key", (done) ->
-    intertwinkles.get_events {
-      application: "firestarter"
-    }, {
-      api_url: config.api_url
+    url = config.api_url + "/api/events/"
+    intertwinkles.get_json url, {
+      event: JSON.stringify({application: "firestarter"})
       api_key: 'invalid'
     }, (err, data) ->
       expect(err.error).to.eql("Intertwinkles status 403")
       done()
 
   it "Avoids posting multiple events when timeouts are given", (done) ->
+    api_methods = require("../lib/api_methods")(config)
     post_with_timeout = (entity, timeout, cb) ->
-      intertwinkles.post_event {
+      api_methods.post_event {
         application: "firestarter", entity: entity, type: "view"
         entity_url: "/f/fabulous/",
         user: "one@mockmyid.com"
-      }, config, (err, data) ->
+      }, timeout, (err, event) ->
         expect(err).to.be(null)
-        expect(data.event.entity).to.eql(entity)
+        expect(event.entity).to.eql(entity)
         cb()
-      , timeout
 
     async.series([
       # Only the first posts.
@@ -392,7 +393,9 @@ describe "api", ->
       return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
-      intertwinkles.post_search_index {
+      url = config.api_url + "/api/search/"
+      intertwinkles.post_data url, {
+        api_key: config.api_key
         application: "firestarter"
         entity: "123"
         type: "firestarter"
@@ -403,7 +406,7 @@ describe "api", ->
         sharing: {
           group_id: group.id
         }
-      }, config, (err, result) ->
+      }, (err, result) ->
         expect(err).to.be(null)
         expect(result.searchindex.entity).to.be("123")
 
@@ -418,7 +421,9 @@ describe "api", ->
       return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
-      intertwinkles.post_search_index {
+      url = config.api_url + "/api/search/"
+      intertwinkles.post_data url, {
+        api_key: config.api_key
         application: "firestarter"
         entity: "123"
         type: "firestarter"
@@ -429,7 +434,7 @@ describe "api", ->
         sharing: {
           group_id: group.id
         }
-      }, config, (err, result) ->
+      }, (err, result) ->
         expect(err).to.be(null)
         expect(result.searchindex.entity).to.be("123")
         expect(result.searchindex.summary.indexOf("4 responses")).to.not.be(-1)
@@ -445,11 +450,13 @@ describe "api", ->
       return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
-      intertwinkles.remove_search_index {
+      url = config.api_url + "/api/search/"
+      intertwinkles.post_data url, {
+        api_key: config.api_key
         application: "firestarter"
         entity: "123"
         type: "firestarter"
-      }, config, (err, response) ->
+      }, (err, response) ->
         expect(err).to.be(null)
         expect(response.result).to.be("OK")
 
@@ -457,6 +464,7 @@ describe "api", ->
           expect(err).to.be(null)
           expect(docs.length).to.be(0)
           done()
+      , 'DELETE'
   
   it "Posts a twinkle", (done) ->
     schema.User.findOne {email: 'one@mockmyid.com'}, (err, user1) ->
@@ -464,7 +472,9 @@ describe "api", ->
       schema.User.findOne {email: 'two@mockmyid.com'}, (err, user2) ->
         expect(err).to.be(null)
         post_twinkle = (subentity, sender, recipient, cb) ->
-          intertwinkles.post_twinkle {
+          url = config.api_url + "/api/twinkles/"
+          intertwinkles.post_data url, {
+            api_key: config.api_key
             application: "test"
             entity: "123"
             subentity: subentity
@@ -472,7 +482,7 @@ describe "api", ->
             sender_anon_id: "anon_one"
             sender: sender
             recipient: recipient
-          }, config, (err, results) ->
+          }, (err, results) ->
             expect(err).to.be(null)
             expect(results.twinkle).to.not.be(null)
             expect(results.twinkle.subentity).to.be(subentity)
@@ -503,9 +513,10 @@ describe "api", ->
                         done()
 
   it "Retrieves some twinkles, and removes them", (done) ->
-    intertwinkles.get_twinkles {
-      application: "test", entity: "123"
-    }, config, (err, results) ->
+    url = config.api_url + "/api/twinkles/"
+    intertwinkles.get_json url, {
+      api_key: config.api_key, application: "test", entity: "123"
+    }, (err, results) ->
       expect(err).to.be(null)
       expect(results.twinkles.length).to.be(4)
       expect(_.map(results.twinkles, (t) -> t.subentity)).to.eql(["1", "2", "3", "4"])
@@ -513,11 +524,13 @@ describe "api", ->
       count = 4
 
       queue = async.queue (twinkle, done) ->
-        intertwinkles.remove_twinkle {
+        url = config.api_url + "/api/twinkles/"
+        intertwinkles.post_data url, {
+          api_key: config.api_key
           twinkle_id: twinkle._id
           sender: twinkle.sender
           sender_anon_id: twinkle.sender_anon_id
-        }, config, (err, results) ->
+        }, (err, results) ->
           expect(err).to.be(null)
           expect(results.result).to.be("OK")
           count -= 1
@@ -525,14 +538,18 @@ describe "api", ->
             expect(err).to.be(null)
             expect(docs.length).to.be(count)
             done()
+        , 'DELETE'
       , 1
       queue.drain = done
       queue.push(results.twinkles)
 
   it "Creates and resolves short URLs", (done) ->
-    intertwinkles.get_short_url {
-      application: "firestarter", path: "/firestarter/this/is/awesome"
-    }, config, (err, results) ->
+    url = config.api_url + "/api/shorten/"
+    intertwinkles.post_data  url, {
+      api_key: config.api_key
+      application: "firestarter"
+      path: "/firestarter/this/is/awesome"
+    }, (err, results) ->
       expect(err).to.be(null)
       expect(results.short_url).to.not.be(undefined)
       expect(config.short_url_base).to.be("http://rly.shrt/r")

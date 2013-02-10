@@ -20,11 +20,13 @@ solr_client   = require('solr-client').createClient(config.solr)
 clear_test_docs_from_solr = (done) ->
   #return done()
   # Try it with the api first.
-  intertwinkles.remove_search_index {
+  url = config.api_url + "/api/search/"
+  intertwinkles.post_data url, {
+    api_key: config.api_key
     entity: "test1"
     application: "test"
     type: "test"
-  }, config, (err) ->
+  }, (err) ->
     expect(err).to.be(null)
 
     # Now jump to the client directly, so we can do a more permissive mass
@@ -41,6 +43,7 @@ clear_test_docs_from_solr = (done) ->
           expect(err).to.be(null)
           expect(obj.response.numFound).to.be(0)
           done()
+  , 'DELETE'
 
 describe "solr search", ->
   before (done) ->
@@ -58,52 +61,55 @@ describe "solr search", ->
       common.shutDown(@server, done)
 
   it "Posts and retrieves documents via api", (done) ->
-      if process.env.SKIP_SOLR_TESTS
-        return done()
-      intertwinkles.post_search_index {
-        api_key: config.api_key
-        application: "test"
-        entity: "test1"
-        type: "test"
-        url: "/fun"
-        title: "This is a test"
-        summary: "This is only a test"
-        text: "This is a test this is only a test dial 123"
-        sharing: {
-          group_id: ""
-          public_view_until: new Date(3000,1,1)
-          public_edit_until: null
-          sharing_extra_viewers: []
-          sharing_extra_editors: []
-          advertise: true
-        }
-      }, config, (err, result) ->
+    api_methods = require("../lib/api_methods")(config)
+    if process.env.SKIP_SOLR_TESTS
+      return done()
+    api_methods.add_search_index {
+      application: "test"
+      entity: "test1"
+      type: "test"
+      url: "/fun"
+      title: "This is a test"
+      summary: "This is only a test"
+      text: "This is a test this is only a test dial 123"
+      sharing: {
+        group_id: ""
+        public_view_until: new Date(3000,1,1)
+        public_edit_until: null
+        sharing_extra_viewers: []
+        sharing_extra_editors: []
+        advertise: true
+      }
+    }, (err, result) ->
+      expect(err).to.be(null)
+      expect(result.entity).to.be("test1")
+
+      solr_client.commit {}, (err, obj) ->
         expect(err).to.be(null)
-        expect(result.searchindex.entity).to.be("test1")
 
-        solr_client.commit {}, (err, obj) ->
-          expect(err).to.be(null)
-
-          async.map [
-            {q: "dial", public: true}
-            {application: "test", public: true}
-            {entity: "test1", public: true}
-            {type: "test", public: true}
-            {application: "test", type: "test", entity: "test1", public: true}
-          ], (query, done) ->
-            intertwinkles.search query, config, (err, result) ->
-              expect(err).to.be(null)
-              expect(result.responseHeader.status).to.be(0)
-              expect(result.response.numFound).to.be(1)
-              expect(result.response.docs[0].entity).to.be("test1")
-              done()
-          , (err) ->
+        async.map [
+          {q: "dial", public: true}
+          {application: "test", public: true}
+          {entity: "test1", public: true}
+          {type: "test", public: true}
+          {application: "test", type: "test", entity: "test1", public: true}
+        ], (query, done) ->
+          url = config.api_url + "/api/search/"
+          query.api_key = config.api_key
+          intertwinkles.get_json url, query, (err, result) ->
             expect(err).to.be(null)
+            expect(result.responseHeader.status).to.be(0)
+            expect(result.response.numFound).to.be(1)
+            expect(result.response.docs[0].entity).to.be("test1")
             done()
+        , (err) ->
+          expect(err).to.be(null)
+          done()
 
   it "Constrains based on sharing", (done) ->
     if process.env.SKIP_SOLR_TESTS
       return done()
+    api_methods = require("../lib/api_methods")(config)
     schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
       expect(err).to.be(null)
       expect(user).to.not.be(null)
@@ -141,22 +147,24 @@ describe "solr search", ->
         }
         defs = (_.extend({sharing, entity}, default_doc) for entity,sharing of test_docs)
         async.map defs, (def, done) ->
-          intertwinkles.post_search_index(def, config, done)
+          api_methods.add_search_index(def, done)
         , (err, results) ->
           solr_client.commit (err, obj) ->
             expect(err).to.be(null)
             docs = {}
             for result in results
-              docs[result.searchindex.entity] = result.searchindex
+              docs[result.entity] = result
 
+            solr = require("../lib/solr_helper")(config)
             expect_docs = (params, done) ->
-              intertwinkles.search params.query, config, (err, results) ->
+              {query, expected} = params
+              solr.execute_search query, query.user, (err, results) ->
                 expect(err).to.be(null)
                 found = {}
                 wanted = {}
                 for doc in results.response.docs
                   found[doc.entity] = true
-                for entity in params.expected
+                for entity in expected
                   wanted[entity] = true
                 expect(found).to.eql(wanted)
                 done()

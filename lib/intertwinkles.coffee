@@ -7,39 +7,11 @@ https       = require 'https'
 async       = require 'async'
 RoomManager = require('iorooms').RoomManager
 
-
 #
 # Authorize a request originating from the browser with Mozilla persona and the
 # InterTwinkles api server.
 #
 auth = {}
-auth.verify = (assertion, config, callback) ->
-  unless config.api_url?
-    throw "Missing required config parameter: intertwinkles api_url"
-  unless config.api_key?
-    throw "Missing required config parameter: intertwinkles api_key"
-
-  # Two-step operation: first, verify the assertion with Mozilla Persona.
-  # Second, authorize the user with the InterTwinkles api server.
-  #audience = "#{config.host}:#{config.port}"
-  audience = url.parse(config.api_url).host
-  browserid.verify assertion, audience, (err, persona_response) ->
-    if (err)
-      callback({'error': err})
-    else
-      # BrowserID success; now authorize with InterTwinkles.
-      auth.get_groups persona_response.email, config, (err, groups) ->
-        callback(err, persona_response, groups)
-
-auth.get_groups = (user, config, callback) ->
-  query = { api_key: config.api_key, user: user }
-  utils.get_json(config.api_url + "/api/groups/", query, callback)
-
-# Clear all session properties that intertwinkles adds when we log in.
-auth.clear_auth_session = (session) ->
-  delete session.auth
-  delete session.groups
-  delete session.users
 
 auth.is_authenticated = (session) -> return session.auth?.email?
 
@@ -205,161 +177,6 @@ mongo.list_accessible_documents = (schema, session, cb, condition={}, sort="modi
     cb(err, { group: res[0], public: res[1] })
 
 #
-# Events
-#
-
-events = {}
-
-events.get_events = (query, config, callback) ->
-  events_api_url = config.api_url + "/api/events/"
-  get_data = {
-    event: JSON.stringify(query),
-    api_key: config.api_key
-  }
-  utils.get_json(events_api_url, get_data, callback)
-
-events.timeout_queue = {}
-events.post_event = (query, config, callback, timeout) ->
-  # If we are passed a timeout argument, store the results of the event posting
-  # for the duration of that time, and return that data while it's stored.
-  # The event is considered the same if it shares the same properties with the
-  # exception of "data" and "date".
-  key = null
-  if timeout?
-    key = [
-      query.application,
-      query.entity,
-      query.type,
-      query.user,
-      query.anon_id,
-      query.group
-    ].join(":")
-    if events.timeout_queue[key]
-      return callback?(null, events.timeout_queue[key])
-
-  # Prepare the event data.
-  events_api_url = config.api_url + "/api/events/"
-  post = {
-    event: query
-    api_key: config.api_key
-  }
-
-  # Post the event, and respond.
-  utils.post_data(events_api_url, post, (err, data) ->
-    if timeout? and not err?
-      events.timeout_queue[key] = data
-      setTimeout (-> delete events.timeout_queue[key]), timeout
-    callback?(err, data)
-  )
-
-#
-# Notifications
-#
-
-notifications = {}
-
-notifications.post_notices = (params, config, callback) ->
-  notice_api_url = config.api_url + "/api/notifications/"
-  data = {
-    params: params
-    api_key: config.api_key
-  }
-  utils.post_data(notice_api_url, data, callback)
-
-notifications.get_notices = (user, config, callback) ->
-  utils.get_json(
-    config.api_url + "/api/notifications/",
-    {user: user, api_key: config.api_key},
-    callback
-  )
-
-notifications.clear_notices = (params, config, callback) ->
-  data = _.extend({
-    api_key: config.api_key
-  }, params)
-  utils.post_data(
-    config.api_url + "/api/notifications/clear", data, callback
-  )
-
-notifications.suppress_notice = (user, notification_id, config, callback) ->
-  utils.post_data(
-    config.api_url + "/api/notifications/suppress",
-    {api_key: config.api_key, user: user, notification_id: notification_id},
-    callback
-  )
-
-notifications.broadcast_notices = (socket, notices) ->
-  user_id = socket.session.auth?.user_id
-  for notice in notices
-    #XXX: Could optimize this by packing notices per-user before emitting
-    payload = {notifications: [notice]}
-    socket.broadcast.to(notice.recipient.toString()).emit "notifications", payload
-    if user_id == notice.recipient.toString()
-      socket.emit "notifications", payload
-
-#
-# Search
-#
-
-search = {}
-
-_search_index_timeout_queue = {}
-_post_search = (params, config, callback, method) ->
-  search_url = config.api_url + "/api/search/"
-  data = _.extend({ api_key: config.api_key }, params)
-  if method == 'GET'
-    utils.get_json(search_url, data, callback)
-  else
-    utils.post_data(search_url, data, callback, method)
-
-search.search = (params, config, callback) ->
-  _post_search(params, config, callback, 'GET')
-
-search.post_search_index = (params, config, callback, timeout) ->
-  # If we are passed a timeout argument, wait before posting a search.
-  # (Note that this is the opposite strategy from "event" timeouts -- the
-  # assumption being that for events, we want the earliest instance, but with
-  # search indexing, we want the latest).
-  if timeout?
-    key = [params.application, params.entity, params.type].join(":")
-    if _search_index_timeout_queue[key]?
-        delete _search_index_timeout_queue[key]
-
-    _search_index_timeout_queue[key] = setTimeout ->
-      console.info "Posting timeout search index: ", key
-      _post_search(params, config, null, 'POST')
-    , timeout
-    callback?(null, {status: "enqueued"})
-
-  else
-    _post_search(params, config, callback, 'POST')
-
-search.remove_search_index = (params, config, callback) ->
-  _post_search(params, config, callback, 'DELETE')
-#
-# Twinkles
-#
-
-twinkles = {}
-_post_twinkle = (params, config, callback, method) ->
-  twinkle_url = "#{config.api_url}/api/twinkles/"
-  data = _.extend { api_key: config.api_key }, params
-  if method == 'GET'
-    utils.get_json twinkle_url, data, callback
-  else
-    utils.post_data twinkle_url, data, callback, method
-
-twinkles.post_twinkle = (params, config, callback) ->
-  _post_twinkle(params, config, callback, 'POST')
-
-twinkles.get_twinkles = (params, config, callback) ->
-  _post_twinkle(params, config, callback, 'GET')
-
-twinkles.remove_twinkle = (params, config, callback) ->
-  _post_twinkle(params, config, callback, 'DELETE')
-
-
-#
 # Utilities
 #
 utils = {}
@@ -434,17 +251,6 @@ utils.clean_conf = (config) ->
     apps: config.apps
   }
 
-#
-# Short URLs
-#
-
-short = {}
-
-short.get_short_url = (params, config, callback) ->
-  shortenify = "#{config.api_url}/api/shorten/"
-  params = _.extend {api_key: config.api_key}, params
-  utils.post_data(shortenify, params, callback)
-
 module.exports = _.extend(
-  {}, auth, sharing, mongo, events, notifications, search, utils, twinkles, short
+  {}, auth, sharing, mongo, utils
 )

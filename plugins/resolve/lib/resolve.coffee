@@ -5,6 +5,7 @@ logger        = require('log4js').getLogger()
 
 module.exports = (config) ->
   schema = require('./schema').load(config)
+  api_methods = require("../../../lib/api_methods")(config)
 
   #
   # Post an event for the given proposal.
@@ -25,7 +26,7 @@ module.exports = (config) ->
           action: opts.data
         }
       }, opts.overrides or {}
-    intertwinkles.post_event(event, config, opts.callback or (->), opts.timeout)
+    api_methods.post_event(event, config, opts.callback or (->), opts.timeout)
 
   #
   # Post a search index for the given proposal
@@ -57,7 +58,7 @@ module.exports = (config) ->
       text: parts.join("\n")
       sharing: doc.sharing
     }
-    intertwinkles.post_search_index(search_data, config, callback)
+    api_methods.add_search_index(search_data, callback)
 
   #
   # Add a twinkle for a proposal with given proposal ID, and subentity
@@ -90,7 +91,7 @@ module.exports = (config) ->
           return done(null, doc, recipient_id)
 
       (doc, recipient_id, done) ->
-        intertwinkles.post_twinkle {
+        api_methods.post_twinkle {
           application: "resolve"
           entity: doc._id
           subentity: data.subentity
@@ -98,14 +99,14 @@ module.exports = (config) ->
           sender: session.auth?.user_id
           sender_anon_id: session.anon_id
           recipient: recipient_id
-        }, config, (err, results) ->
+        }, (err, results) ->
           done(err, results, doc)
 
     ], (err, results, doc) ->
-      callback(err, results?.twinkle, doc)
+      callback(err, twinkle, doc)
       return socket.emit "error", {error: err} if err?
-      socket.broadcast.to(doc.id).emit "twinkles", { twinkles: [results.twinkle] }
-      socket.emit "twinkles", { twinkles: [results.twinkle] }
+      socket.broadcast.to(doc.id).emit "twinkles", { twinkles: [twinkle] }
+      socket.emit "twinkles", { twinkles: [twinkle] }
 
   #
   # Update notifications for a proposal
@@ -120,11 +121,11 @@ module.exports = (config) ->
     notices_to_broadcast = []
     
     # 1. remove all notifications associated with this entity.
-    intertwinkles.clear_notices {
+    api_methods.clear_notifications {
       application: "resolve",
       type: "proposal"
       entity: proposal._id
-    }, config, (err, results) ->
+    }, (err, results) ->
       if err?
         callback?(err)
         return logger.error(err)
@@ -166,12 +167,12 @@ module.exports = (config) ->
             formats: { web }
           })
         if notices.length > 0
-          intertwinkles.post_notices notices, config, (err, results) ->
+          api_methods.post_notifications notices, (err, notifications) ->
             if err?
               logger.error err
               return callback(err)
             notices_to_broadcast = notices_to_broadcast.concat(
-              results.notifications)
+              notifications)
             callback(null, notices_to_broadcast)
 
   #
@@ -192,15 +193,15 @@ module.exports = (config) ->
           unless intertwinkles.can_view(session, doc)
             return done("Permission denied")
 
-          intertwinkles.remove_twinkle {
+          api_methods.remove_twinkle {
             twinkle_id: data.twinkle_id
             entity: data.entity
             sender: session.auth?.user_id or null
             sender_anon_id: session.anon_id
-          }, config, (err, results) ->
+          }, (err, results) ->
             return done(err, results, doc)
-    ], (err, results, doc) ->
-      callback(err, results.twinkles, doc)
+    ], (err, twinkles, doc) ->
+      callback(err, twinkles, doc)
 
   #
   # Update proposals -- create, update, append, trim.

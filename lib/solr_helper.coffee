@@ -67,7 +67,7 @@ module.exports = (config) ->
       (user, groups, done) ->
         # Build that sharing awesomeness query.
         sharing_or = []
-        if query.public == 'true'
+        if query.public == true
           sharing_or.push("(sharing_advertise:true AND (" +
             "sharing_public_view_until:[NOW TO *] OR " +
             "sharing_public_edit_until:[NOW TO *]" +

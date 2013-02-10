@@ -3,7 +3,6 @@ intertwinkles = require './intertwinkles'
 RoomManager   = require('iorooms').RoomManager
 uuid          = require 'node-uuid'
 logger        = require('log4js').getLogger()
-api_methods   = require './api_methods'
 
 build_room_users_list_for_user = (iorooms, user_session, room, callback) ->
   iorooms.getSessionsInRoom room, (err, sessions) ->
@@ -19,40 +18,19 @@ build_room_users_list_for_user = (iorooms, user_session, room, callback) ->
       room_list.push(info)
     callback(null, { room: room, list: room_list })
 
-set_anonymous_id = (session, callback) ->
-  if not session.anon_id?
-    session.anon_id = uuid.v4()
-    iorooms.saveSession(session, callback)
-  callback()
-
-clear_session_auth = (session) ->
-  session.auth = null
-  session.groups = null
-  session.users = null
-
-verify_and_authenticate = (config, session, reqdata, callback) ->
-  intertwinkles.verify reqdata.assertion, config, (err, auth, groupdata) ->
-    if err?
-      logger.info "error", err, auth, groupdata
-      clear_session_auth(session)
-      callback(err, session, groupdata.message)
-    else
-      session.auth = auth
-      session.auth.user_id = _.find(groupdata.users, (u) -> u.email == auth.email).id
-      session.groups = groupdata.groups
-      session.users = groupdata.users
-      callback(null, session, groupdata.message)
-
-
-
 route = (config, io, sessionStore) ->
   iorooms = new RoomManager("/io-intertwinkles", io, sessionStore)
-  iorooms.authorizeConnection = set_anonymous_id
+  iorooms.authorizeConnection = set_anonymous_id = (session, callback) ->
+    if not session.anon_id?
+      session.anon_id = uuid.v4()
+      iorooms.saveSession(session, callback)
+    callback()
+  api_methods = require("./api_methods")(config)
 
   iorooms.onChannel 'verify', (socket, reqdata) ->
-    verify_and_authenticate config, socket.session, reqdata, (err, session, message) ->
+    api_methods.authenticate session, reqdata.assertion, (err, session) ->
       iorooms.saveSession session, (err) ->
-        if (err) then return socket.emit "error", {error: err}
+        return socket.emit "error", {error: err} if err?
 
         socket.emit reqdata.callback, {
           user_id: session.auth.user_id
@@ -78,7 +56,7 @@ route = (config, io, sessionStore) ->
       # Leave our self-referential utility room.
       socket.leave(socket.session.auth.user_id)
 
-    clear_session_auth(socket.session)
+    api_methods.clear_session_auth(socket.session)
     iorooms.saveSession socket.session, ->
       socket.emit(data.callback, {status: "success"})
 
@@ -154,5 +132,5 @@ route = (config, io, sessionStore) ->
       data.socket.broadcast.to(room).emit "room_users", users
 
 module.exports = {
-  route, verify_and_authenticate, clear_session_auth
+  route
 }

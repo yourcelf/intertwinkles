@@ -44,7 +44,7 @@ start = (config, app, io, sessionStore) ->
       return res.send("Server Error", 500) if err?
       return res.send("Not found", 404) unless doc?
       return res.send("Permission denied", 403) unless intetwinkles.can_view(req.session, doc)
-      intertwinkles.post_event {
+      api_methods.post_event {
         type: "visit"
         application: "clock"
         entity: doc.id
@@ -53,7 +53,7 @@ start = (config, app, io, sessionStore) ->
         anon_id: req.session.anon_id
         group: doc.sharing.group_id
         data: { name: doc.name }
-      }, config, (->), 1000 * 60 * 5
+      }, 1000 * 60 * 5, (->)
 
       doc.sharing = intertwinkles.clean_sharing(req.session, doc)
       index_res(req, res, {

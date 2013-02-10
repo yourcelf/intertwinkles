@@ -11,6 +11,8 @@ logger        = require('log4js').getLogger()
 
 route = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
+  api_methods = require("./api_methods")(config)
+  solr = require("./solr_helper")(config)
   iorooms = new RoomManager("/io-www", io, sessionStore)
 
   #
@@ -126,7 +128,7 @@ route = (config, app, io, sessionStore) ->
           params.public = true unless req.query.public == 'false'
           if intertwinkles.is_authenticated(req.session)
             params.user = req.session.auth.user_id
-          intertwinkles.search params, config, (err, results) ->
+          solr.execute_search params, params.user, (err, results) ->
             done(err, results)
         else
           done(null, null)
@@ -225,7 +227,7 @@ route = (config, app, io, sessionStore) ->
   app.get '/profiles/login', (req, res) -> res.redirect("/profiles/login/")
 
   app.get '/profiles/logout/', (req, res) ->
-    intertwinkles.clear_auth_session(req.session)
+    api_methods.clear_session_auth(req.session)
     res.render 'home/profiles/logout', context(req, {
       title: "Logging out..."
     })
@@ -367,10 +369,10 @@ route = (config, app, io, sessionStore) ->
             return done() unless clear_group_notices.length > 0
             # Clear group-related notices from anyone who was removed from the
             # group.
-            intertwinkles.clear_notices({
+            api_methods.clear_notifications({
               recipient: {$in: clear_group_notices}
               group: group.id
-            }, config, done)
+            }, done)
           (done) ->
             # Add invitation notices for any new invitees.
             return done() unless add_invitation_notices.length > 0
@@ -388,15 +390,16 @@ route = (config, app, io, sessionStore) ->
                 """
               }
             } for id in add_invitation_notices)
-            intertwinkles.post_notices(notice_params, config, done)
+            api_methods.post_notifications(notice_params, done)
           (done) ->
             # Refresh our session's definition of groups and users. This will
             # happen again anyway a few seconds after the next page load once
             # persona gets around to returning, but when we've just updated the
             # group, it's important to see the result immediately.
-            intertwinkles.get_groups(req.session.auth.email, config, (err, groups) ->
+            api_methods.get_groups(req.session.auth.email, (err, res) ->
               return done(err) if err?
-              req.session.groups = groups
+              req.session.groups = res.groups
+              req.session.users = res.users
               done()
             )
         ], (err, results) ->
@@ -428,7 +431,7 @@ route = (config, app, io, sessionStore) ->
       voting: true
     }]
     update_group req, res, group, (group, event_data) ->
-      intertwinkles.post_event {
+      api_methods.post_event {
         type: "create"
         application: "www"
         entity: group.id
@@ -439,7 +442,7 @@ route = (config, app, io, sessionStore) ->
           title: "group #{group.name}"
           action: event_data
         }
-      }, config
+      }, (->)
       return res.redirect("/groups/edit/#{group.slug}")
   app.post '/groups/new', (req, res) -> res.redirect("/groups/new/")
 
@@ -488,7 +491,7 @@ route = (config, app, io, sessionStore) ->
 
       user = _.find(req.session.users, (u) -> u.email == req.session.auth.email)
       update_group req, res, doc, (group, event_data) ->
-        intertwinkles.post_event {
+        api_methods.post_event {
           type: "update"
           application: "www"
           entity: group.id
@@ -499,7 +502,7 @@ route = (config, app, io, sessionStore) ->
             title: "group #{group.name}"
             action: event_data
           }
-        }, config
+        }, (->)
         return res.redirect("/groups/edit/#{group.slug}")
 
   verify_invitation = (req, res, next) ->
@@ -553,16 +556,17 @@ route = (config, app, io, sessionStore) ->
             else
               req.flash("success", "Invitation successfully declined.")
               event.type = "decline"
-            intertwinkles.post_event event, config
+            api_methods.post_event event, (->)
 
-            intertwinkles.clear_notices {
+            api_methods.clear_notifications {
               user: req.session.auth.user_id
               entity: group.id
               type: "invitation"
-            }, config, (err, result) ->
+            }, (err, results) ->
               return handle_error(req, res, err) if err?
               return res.redirect("/")
           break
+
   app.post '/groups/join/:slug', (req, res) -> res.redirect("/groups/join/#{req.params.slug}/")
 
   app.get '/groups/show/:slug/', (req, res) ->

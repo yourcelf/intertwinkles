@@ -10,6 +10,7 @@ logger        = require('log4js').getLogger()
 
 start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
+  api_methods = require("../../../lib/api_methods")(config)
   iorooms = new RoomManager("/io-resolve", io, sessionStore)
   
   #
@@ -104,14 +105,14 @@ start = (config, app, io, sessionStore) ->
           return done(err) if err?
           unless intertwinkles.can_view(socket.session, doc)
             return done("Permission denied")
-          intertwinkles.get_twinkles {
+          api_methods.get_twinkles {
             application: "resolve"
             entity: doc._id
-          }, config, done
+          }, done
 
     ], (err, twinkles) ->
       return socket.emit "error", {error: err} if err?
-      socket.emit "twinkles", twinkles
+      socket.emit "twinkles", {twinkles: twinkles}
 
   iorooms.onChannel "get_proposal_list", (socket, data) ->
     if not data?.callback?
@@ -148,11 +149,10 @@ start = (config, app, io, sessionStore) ->
     schema.Proposal.findOne {_id: data.proposal_id}, (err, doc) ->
       unless intertwinkles.can_view(socket.session, doc)
         return respond("Permission denied")
-      intertwinkles.get_events {
+      api_methods.get_events {
         application: "resolve"
         entity: doc._id
-      }, config, (err, results) ->
-        respond(err, results?.events)
+      }, respond
 
   iorooms.onChannel "save_proposal", (socket, data) ->
     respond = (err, proposal) ->
@@ -166,7 +166,12 @@ start = (config, app, io, sessionStore) ->
       if err?
         return socket.emit data.callback, {error: err} if data.callback?
         return socket.emit "error", {error: err}
-      intertwinkles.broadcast_notices(socket, notices)
+      user_id = socket.session.auth?.user_id
+      for notice in notices
+        payload = {notification: [notice]}
+        socket.broadcast.to(notice.recipient.toString()).emit "notifications", payload
+        if user_id == notice.recipient.toString()
+          socket.emit "notifications", payload
 
     if data.opinion? and not data.proposal?
       return respond("Missing {proposal: {_id: ..}}")

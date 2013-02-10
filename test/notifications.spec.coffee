@@ -29,9 +29,10 @@ describe "Notifications", ->
           expect(user.mobile.number).to.be(null)
           user.save(done)
       (done) ->
+        api_methods = require("../lib/api_methods")(config)
         schema.Group.findOne {slug: "two-members"}, (err, group) ->
           expect(err).to.be(null)
-          intertwinkles.post_notices [{
+          api_methods.post_notifications [{
             application: "www"
             entity: group.id
             type: "invitation"
@@ -46,8 +47,9 @@ describe "Notifications", ->
                 html: "<p>My html body</p>"
               }
             }
-          }], config, (err, doc) ->
+          }], (err, notifications) ->
             expect(err).to.be(null)
+            expect(notifications).to.not.be(null)
             done(err)
 
       (done) ->
@@ -82,7 +84,8 @@ describe "Notifications", ->
           user.save(done)
 
       (done) ->
-        intertwinkles.post_notices [{
+        api_methods = require("../lib/api_methods")(config)
+        api_methods.post_notifications [{
           application: "resolve"
           entity: "nonsense"
           type: "needs_my_response"
@@ -97,8 +100,9 @@ describe "Notifications", ->
               html: "<p>Needs yr response body</p>"
             }
           }
-        }], config, (err, doc) ->
+        }], (err, docs) ->
           expect(err).to.be(null)
+          expect(docs).to.not.be(null)
           done(err)
 
       (done) ->

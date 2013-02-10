@@ -12,6 +12,8 @@ logger         = require('log4js').getLogger()
 
 start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
+  api_methods = require('../../../lib/api_methods')(config)
+  solr = require("../../../lib/solr_helper")(config)
   #
   # Sockets
   #
@@ -42,7 +44,7 @@ start = (config, app, io, sessionStore) ->
       summary = text.substring(0, 200)
       if summary.length < text.length
         summary += "..."
-      intertwinkles.post_search_index {
+      api_methods.add_search_index {
         application: "twinklepad"
         entity: doc._id
         type: "etherpad"
@@ -51,7 +53,7 @@ start = (config, app, io, sessionStore) ->
         summary: summary
         text: text
         sharing: doc.sharing
-      }, config, null, timeout
+      }, timeout
 
   iorooms.onChannel "save_twinklepad", (socket, data) ->
     respond = (err, doc) ->
@@ -123,21 +125,21 @@ start = (config, app, io, sessionStore) ->
   app.get '/twinklepad/', (req, res) ->
     async.parallel [
       (done) ->
-        intertwinkles.search {
+        solr.execute_search {
           public: true
           application: "twinklepad"
           sort: "modified desc"
-        }, config, (err, results) ->
+        }, null, (err, results) ->
           done(err, results?.response?.docs)
 
       (done) ->
         if intertwinkles.is_authenticated(req.session)
-          intertwinkles.search {
+          solr.execute_search {
             public: false
-            user: req.session.auth.user_id
+            
             application: "twinklepad"
             sort: "modified desc"
-          }, config, (err, results) ->
+          }, req.session.auth.user_id, (err, results) ->
             done(err, results?.response?.docs)
         else
           done(null, [])
@@ -184,7 +186,7 @@ start = (config, app, io, sessionStore) ->
         return permission_denied(req, res)
 
       # Post a view event to intertwinkles.
-      intertwinkles.post_event {
+      api_methods.post_event {
         application: "twinklepad"
         type: "visit"
         entity_url: "/twinklepad/p/#{doc.pad_name}"
@@ -196,7 +198,7 @@ start = (config, app, io, sessionStore) ->
           title: doc.pad_name
           action: read_only
         }
-      }, config, (->), 1000 * 60 * 5
+      }, 1000 * 60 * 5, (->)
 
       doc.sharing = intertwinkles.clean_sharing(req.session, doc)
       title = "#{req.params.pad_name} | #{config.apps.twinklepad.name}"

@@ -17,6 +17,8 @@ start = (config, app, io, sessionStore) ->
       else
         callback("Permission denied")
 
+  api_methods = require("../../../lib/api_methods")(config)
+
   #
   # Routes
   #
@@ -45,7 +47,7 @@ start = (config, app, io, sessionStore) ->
       #FIXME: Redirect to login instead.
       return res.send(403) if not intertwinkles.can_view(req.session, doc)
 
-      intertwinkles.post_event {
+      api_methods.post_event {
         type: "visit"
         application: "firestarter"
         entity: doc.id
@@ -56,7 +58,7 @@ start = (config, app, io, sessionStore) ->
         data: {
           title: doc.name
         }
-      }, config, (->), 5000 * 60
+      }, 5000 * 60, (->)
 
       doc.sharing = intertwinkles.clean_sharing(req.session, doc)
       index_res(req, res, {
@@ -110,7 +112,7 @@ start = (config, app, io, sessionStore) ->
       else
         socket.emit(data.callback, {model: model.toJSON()})
         url = "/firestarter/f/#{model.slug}"
-        intertwinkles.post_event {
+        api_methods.post_event {
           type: "create"
           application: "firestarter"
           entity: model.id
@@ -125,8 +127,8 @@ start = (config, app, io, sessionStore) ->
             }
             title: model.name
           }
-        }, config
-        intertwinkles.post_search_index {
+        }, (->)
+        api_methods.add_search_index {
           application: "firestarter"
           entity: model.id
           type: "firestarter"
@@ -135,7 +137,7 @@ start = (config, app, io, sessionStore) ->
           summary: model.prompt
           text: [model.name, model.prompt].join("\n")
           sharing: model.sharing
-        }, config
+        }
 
   # Edit a firestarter
   iorooms.onChannel 'edit_firestarter', (socket, data) ->
@@ -167,7 +169,7 @@ start = (config, app, io, sessionStore) ->
         
         # Add event and search index.
         url = "/firestarter/f/#{doc.slug}"
-        intertwinkles.post_event {
+        api_methods.post_event {
           type: "update"
           application: "firestarter"
           entity: doc.id
@@ -179,8 +181,8 @@ start = (config, app, io, sessionStore) ->
             title: doc.name
             action: updates
           }
-        }, config
-        intertwinkles.post_search_index({
+        }, (->)
+        api_methods.add_search_index({
           application: "firestarter"
           entity: doc.id
           type: "firestarter"
@@ -191,8 +193,7 @@ start = (config, app, io, sessionStore) ->
           text: [doc.name, doc.prompt].concat((
             res.response for res in doc.responses
           )).join("\n")
-        }, config)
-
+        })
 
   # Retrieve a firestarter with responses.
   iorooms.onChannel 'get_firestarter', (socket, data) ->
@@ -210,7 +211,7 @@ start = (config, app, io, sessionStore) ->
         socket.emit("firestarter", {
           model: model.toJSON()
         })
-        intertwinkles.post_event {
+        api_methods.post_event {
           type: "visit"
           application: "firestarter"
           entity: model.id
@@ -219,7 +220,7 @@ start = (config, app, io, sessionStore) ->
           anon_id: socket.session.anon_id
           group: model.sharing.group_id
           data: { title: model.name }
-        }, config, (->), 5000 * 60
+        }, 5000 * 60, (->)
   
   iorooms.onChannel "get_firestarter_list", (socket, data) ->
     if not data.callback?
@@ -239,12 +240,12 @@ start = (config, app, io, sessionStore) ->
     schema.Firestarter.findOne {_id: data.firestarter_id}, (err, doc) ->
       if not intertwinkles.can_view(socket.session, doc)
         return socket.emit "error", {error: "Permission denied"}
-      intertwinkles.get_events {
+      api_methods.get_events {
         application: "firestarter"
         entity: doc.id
-      }, config, (err, results) ->
+      }, (err, events) ->
         return socket.emit "error", {error: err} if err?
-        socket.emit data.callback, {events: results?.events}
+        socket.emit data.callback, {events: events}
 
   # Save a response to a firestarter.
   iorooms.onChannel "save_response", (socket, data) ->
@@ -313,17 +314,17 @@ start = (config, app, io, sessionStore) ->
 
       # Post search data
       url = "/firestarter/f/#{firestarter.slug}"
-      intertwinkles.post_search_index {
+      api_methods.add_search_index {
         application: "firestarter", entity: firestarter.id,
         type: "firestarter", url: url,
         title: firestarter.name, summary: firestarter.prompt,
         sharing: firestarter.sharing
         text: search_content
-      }, config, (err) ->
+      }, (err) ->
         socket.emit("error", {error: err}) if err?
 
       # Post an event if we're signed in.
-      intertwinkles.post_event {
+      api_methods.post_event {
         type: "append"
         application: "firestarter"
         entity: firestarter.id
@@ -336,7 +337,7 @@ start = (config, app, io, sessionStore) ->
           title: firestarter.name
           action: response.toJSON()
         }
-      }, config
+      }, (->)
 
   # Delete a response
   iorooms.onChannel "delete_response", (socket, data) ->
@@ -379,7 +380,7 @@ start = (config, app, io, sessionStore) ->
 
         # Post event
         url = "/firestarter/f/#{firestarter.slug}"
-        intertwinkles.post_event {
+        api_methods.post_event {
           type: "trim"
           application: "firestarter"
           entity: firestarter.id
@@ -391,16 +392,16 @@ start = (config, app, io, sessionStore) ->
             title: firestarter.name
             action: response?.toJSON()
           }
-        }, config, (err) ->
+        }, (err) ->
           socket.emit "error", {error: err} if err?
         
         # Post search index
-        intertwinkles.post_search_index {
+        api_methods.add_search_index {
             application: "firestarter", entity: firestarter.id,
             type: "firestarter", url: url,
             title: firestarter.name, summary: firestarter.prompt,
             text: search_content, sharing: firestarter.sharing,
-          }, config, (err) ->
+          }, (err) ->
             socket.emit "error", {error: err} if err?
 
     ], (err) ->
