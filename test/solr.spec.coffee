@@ -7,7 +7,7 @@
 #   mocha --compilers coffee:coffee-script --globals css,js,img test/solr.coffee
 #
 
-intertwinkles = require '../lib/intertwinkles'
+utils         = require '../lib/utils'
 expect        = require 'expect.js'
 async         = require 'async'
 _             = require 'underscore'
@@ -21,7 +21,7 @@ clear_test_docs_from_solr = (done) ->
   #return done()
   # Try it with the api first.
   url = config.api_url + "/api/search/"
-  intertwinkles.post_data url, {
+  utils.post_data url, {
     api_key: config.api_key
     entity: "test1"
     application: "test"
@@ -96,7 +96,7 @@ describe "solr search", ->
         ], (query, done) ->
           url = config.api_url + "/api/search/"
           query.api_key = config.api_key
-          intertwinkles.get_json url, query, (err, result) ->
+          utils.get_json url, query, (err, result) ->
             expect(err).to.be(null)
             expect(result.responseHeader.status).to.be(0)
             expect(result.response.numFound).to.be(1)

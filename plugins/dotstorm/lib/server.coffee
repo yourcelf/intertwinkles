@@ -2,7 +2,7 @@ express       = require 'express'
 RoomManager   = require('iorooms').RoomManager
 schema        = require './schema'
 _             = require 'underscore'
-intertwinkles = require '../../../lib/intertwinkles'
+utils         = require '../../../lib/utils'
 
 # See Cakefile for config definitions and defaults
 start = (config, app, io, sessionStore) ->
@@ -13,7 +13,7 @@ start = (config, app, io, sessionStore) ->
   iorooms.authorizeJoinRoom = (session, name, callback) ->
     schema.Dotstorm.findOne {_id: name}, 'sharing', (err, doc) ->
       return callback(err) if err?
-      if intertwinkles.can_view(session, doc)
+      if utils.can_view(session, doc)
         callback(null)
       else
         callback("Permission denied")
@@ -26,10 +26,10 @@ start = (config, app, io, sessionStore) ->
     return _.extend({
       initial_data: _.extend(
         {application: "dotstorm"},
-        intertwinkles.get_initial_data(req?.session, config),
+        utils.get_initial_data(req?.session, config),
         initial_data or {}
       )
-      conf: intertwinkles.clean_conf(config)
+      conf: utils.clean_conf(config)
       flash: req.flash()
     }, obj)
 
@@ -47,13 +47,13 @@ start = (config, app, io, sessionStore) ->
     error_check = (err, doc) ->
       return res.send("Server errror", 500) if err?
       return res.send("Not found", 404) unless doc?
-      return res.send("Permission denied", 403) unless intertwinkles.can_view(req.session, doc)
+      return res.send("Permission denied", 403) unless utils.can_view(req.session, doc)
       return true
 
     if req.params[1] == "/json/"
       schema.Dotstorm.withLightIdeas {slug: req.params[0]}, (err, doc) ->
         if error_check(err, doc) == true
-          doc.sharing = intertwinkles.clean_sharing(req.session, doc)
+          doc.sharing = utils.clean_sharing(req.session, doc)
           res.send(dotstorm: doc)
     else
       schema.Dotstorm.findOne {slug: req.params[0]}, (err, doc) ->
@@ -74,7 +74,7 @@ start = (config, app, io, sessionStore) ->
       return res.send("Not found", 404) if not idea?
       schema.Dotstorm.findOne {_id: doc.dotstorm_id}, 'sharing', (err, dotstorm) ->
         return res.send("Server error", 500) if err?
-        return res.send("Forbidden", 403) unless intertwinkles.can_view(req.session, dotstorm)
+        return res.send("Forbidden", 403) unless utils.can_view(req.session, dotstorm)
         return res.send("Not found", 404) if not dotstorm?
         res.send(idea: idea)
 
@@ -83,7 +83,7 @@ start = (config, app, io, sessionStore) ->
     constraint = embed_slug: req.params.embed_slug
     schema.Dotstorm.withLightIdeas constraint, (err, doc) ->
       return res.send("Server errror", 500) if err?
-      return res.send("Permission denied", 403) unless intertwinkles.can_view(req.session, doc)
+      return res.send("Permission denied", 403) unless utils.can_view(req.session, doc)
       return res.send("Not found", 404) unless doc?
       res.render 'dotstorm/embed', context(req, {
         title: doc.name or "DotStorm"
@@ -97,7 +97,7 @@ start = (config, app, io, sessionStore) ->
     constraint = "groups._id": req.params.group_id
     schema.Dotstorm.withLightIdeas constraint, (err, doc) ->
       return res.send("Server errror", 500) if err?
-      return res.send("Permission denied", 403) unless intertwinkles.can_view(req.session, doc)
+      return res.send("Permission denied", 403) unless utils.can_view(req.session, doc)
       return res.send("Not found", 404) unless doc?
       res.render 'dotstorm/embed', context(req, {
         title: doc.name or "DotStorm"

@@ -5,7 +5,7 @@ http          = require 'http'
 config        = require './test_config'
 schema        = require('../lib/schema').load(config)
 common        = require './common'
-intertwinkles = require '../lib/intertwinkles'
+utils         = require '../lib/utils'
 logger        = require('log4js').getLogger()
 api_methods   = require("../lib/api_methods")(config)
 
@@ -117,7 +117,7 @@ describe "api", ->
       expect(doc.mobile.number).to.be(null)
       expect(doc.mobile.carrier).to.be(null)
 
-      intertwinkles.post_data url, {
+      utils.post_data url, {
         api_key: config.api_key
         user: "one@mockmyid.com"
         icon_id: "7" # barking dog
@@ -146,7 +146,7 @@ describe "api", ->
   #
   it "Posts and retrieves an event", (done) ->
     schema.Group.findOne {'slug': 'two-members'}, (err, group) ->
-      intertwinkles.post_data config.api_url + "/api/events/", {
+      utils.post_data config.api_url + "/api/events/", {
         event: JSON.stringify({
           application: "firestarter"
           entity: "one"
@@ -165,7 +165,7 @@ describe "api", ->
           expect(doc.entity).to.eql("one")
 
           url = config.api_url + "/api/events/"
-          intertwinkles.get_json url, {
+          utils.get_json url, {
             event: JSON.stringify({application: "firestarter"})
             api_key: config.api_key
           }, (err, data) ->
@@ -176,7 +176,7 @@ describe "api", ->
 
   it "Refuses posting events with invalid API key", (done) ->
     url = config.api_url + "/api/events/"
-    intertwinkles.post_data url, {
+    utils.post_data url, {
       event: JSON.stringify({
         application: "firestarter", entity: "one", type: "create",
         entity_url: "/f/cheese/",
@@ -189,7 +189,7 @@ describe "api", ->
 
   it "Refuses retrieving events with invalid API key", (done) ->
     url = config.api_url + "/api/events/"
-    intertwinkles.get_json url, {
+    utils.get_json url, {
       event: JSON.stringify({application: "firestarter"})
       api_key: 'invalid'
     }, (err, data) ->
@@ -240,7 +240,7 @@ describe "api", ->
     url = "http://localhost:8888/api/notifications/"
     # Add several notifications
     add_notice = (data, cb) ->
-      intertwinkles.post_data url, {
+      utils.post_data url, {
         api_key: config.api_key
         params: _.extend({
           application: "resolve"
@@ -291,7 +291,7 @@ describe "api", ->
 
   it "Retrieves notifications", (done) ->
     url = "http://localhost:8888/api/notifications/"
-    intertwinkles.get_json url, {
+    utils.get_json url, {
       api_key: config.api_key
       user: "one@mockmyid.com"
     }, (err, result) ->
@@ -311,7 +311,7 @@ describe "api", ->
         expect(notices.length).to.be(4)
         expect(notices[0].entity).to.be("one")
 
-        intertwinkles.post_data url, {
+        utils.post_data url, {
           api_key: config.api_key
           user: "one@mockmyid.com"
           notification_id: [notices[0].id, notices[1].id].join(",")
@@ -322,7 +322,7 @@ describe "api", ->
 
   it "Clears notifications by application,entity,type", (done) ->
     url = "http://localhost:8888/api/notifications/clear"
-    intertwinkles.post_data url, {
+    utils.post_data url, {
       api_key: config.api_key
       application: "resolve"
       entity: "three"
@@ -336,7 +336,7 @@ describe "api", ->
 
   it "Retrieves uncleared notifications only", (done) ->
     url = "http://localhost:8888/api/notifications/"
-    intertwinkles.get_json url, {
+    utils.get_json url, {
       api_key: config.api_key
       user: "one@mockmyid.com"
     }, (err, result) ->
@@ -348,14 +348,14 @@ describe "api", ->
   it "Suppresses a notification", (done) ->
     get_post_url = "http://localhost:8888/api/notifications/"
     suppress_url = "http://localhost:8888/api/notifications/suppress"
-    intertwinkles.get_json get_post_url, {
+    utils.get_json get_post_url, {
       api_key: config.api_key
       user: "one@mockmyid.com"
     }, (err, result) ->
       expect(err).to.be(null)
       expect(result.notifications.length).to.be(1)
 
-      intertwinkles.post_data suppress_url, {
+      utils.post_data suppress_url, {
         api_key: config.api_key
         user: "one@mockmyid.com"
         notification_id: result.notifications[0]._id
@@ -365,7 +365,7 @@ describe "api", ->
         
         doc = result.notification
         # Update the notification again and see that it is suppressed.
-        intertwinkles.post_data get_post_url, {
+        utils.post_data get_post_url, {
           api_key: config.api_key
           params: {
             application: doc.application
@@ -380,7 +380,7 @@ describe "api", ->
           expect(err).to.be(null)
           expect(result.notifications[0].formats.web).to.be("Nothing doing")
 
-          intertwinkles.get_json get_post_url, {
+          utils.get_json get_post_url, {
             api_key: config.api_key
             user: "one@mockmyid.com"
           }, (err, result) ->
@@ -394,7 +394,7 @@ describe "api", ->
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       url = config.api_url + "/api/search/"
-      intertwinkles.post_data url, {
+      utils.post_data url, {
         api_key: config.api_key
         application: "firestarter"
         entity: "123"
@@ -422,7 +422,7 @@ describe "api", ->
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       url = config.api_url + "/api/search/"
-      intertwinkles.post_data url, {
+      utils.post_data url, {
         api_key: config.api_key
         application: "firestarter"
         entity: "123"
@@ -451,7 +451,7 @@ describe "api", ->
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       url = config.api_url + "/api/search/"
-      intertwinkles.post_data url, {
+      utils.post_data url, {
         api_key: config.api_key
         application: "firestarter"
         entity: "123"
@@ -473,7 +473,7 @@ describe "api", ->
         expect(err).to.be(null)
         post_twinkle = (subentity, sender, recipient, cb) ->
           url = config.api_url + "/api/twinkles/"
-          intertwinkles.post_data url, {
+          utils.post_data url, {
             api_key: config.api_key
             application: "test"
             entity: "123"
@@ -514,7 +514,7 @@ describe "api", ->
 
   it "Retrieves some twinkles, and removes them", (done) ->
     url = config.api_url + "/api/twinkles/"
-    intertwinkles.get_json url, {
+    utils.get_json url, {
       api_key: config.api_key, application: "test", entity: "123"
     }, (err, results) ->
       expect(err).to.be(null)
@@ -525,7 +525,7 @@ describe "api", ->
 
       queue = async.queue (twinkle, done) ->
         url = config.api_url + "/api/twinkles/"
-        intertwinkles.post_data url, {
+        utils.post_data url, {
           api_key: config.api_key
           twinkle_id: twinkle._id
           sender: twinkle.sender
@@ -545,7 +545,7 @@ describe "api", ->
 
   it "Creates and resolves short URLs", (done) ->
     url = config.api_url + "/api/shorten/"
-    intertwinkles.post_data  url, {
+    utils.post_data  url, {
       api_key: config.api_key
       application: "firestarter"
       path: "/firestarter/this/is/awesome"

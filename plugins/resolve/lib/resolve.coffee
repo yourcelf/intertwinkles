@@ -1,4 +1,4 @@
-intertwinkles = require '../../../lib/intertwinkles'
+utils         = require '../../../lib/utils'
 _             = require 'underscore'
 async         = require 'async'
 logger        = require('log4js').getLogger()
@@ -72,7 +72,7 @@ module.exports = (config) ->
         schema.Proposal.findOne {_id: data.entity}, (err, doc) ->
           return done(err) if err?
           return done("Not found") unless doc?
-          unless intertwinkles.can_view(socket.session, doc)
+          unless utils.can_view(socket.session, doc)
             return done("Permission denied")
 
           recipient_id = null
@@ -190,7 +190,7 @@ module.exports = (config) ->
         return done("Missing twinkle_id") unless twinkle_id?
         return done("Missing entity") unless entity?
         schema.Proposal.findOne {_id: data.entity}, 'sharing', (err, doc) ->
-          unless intertwinkles.can_view(session, doc)
+          unless utils.can_view(session, doc)
             return done("Permission denied")
 
           api_methods.remove_twinkle {
@@ -246,23 +246,23 @@ module.exports = (config) ->
     error_out = (err) ->
       (post_save_callback or post_events_callback)(err)
 
-    unless intertwinkles.can_edit(session, proposal)
+    unless utils.can_edit(session, proposal)
       return error_out("Permission denied.")
 
     event_data = {}
     # Update sharing
     if data.proposal?.sharing?
-      unless intertwinkles.can_change_sharing(socket.session, proposal)
+      unless utils.can_change_sharing(socket.session, proposal)
         return error_out("Not allowed to change sharing.")
       if (data.proposal.sharing.group_id? and
           not session.groups[data.proposal.sharing.group_id]?)
         return error_out("Unauthorized group")
       proposal.sharing = data.proposal.sharing
-      event_data.sharing = intertwinkles.clean_sharing({}, proposal)
+      event_data.sharing = utils.clean_sharing({}, proposal)
 
     # Add a revision.
     if data.proposal?.proposal?
-      if intertwinkles.is_authenticated(session)
+      if utils.is_authenticated(session)
         name = session.users[session.auth.user_id].name
       else
         name = data.proposal.name
@@ -300,7 +300,7 @@ module.exports = (config) ->
       (post_save_callback or post_events_callback)(err)
 
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
-      unless intertwinkles.can_edit(session, proposal)
+      unless utils.can_edit(session, proposal)
         return error_out("Permission denied.")
       return error_out("Missing opinion text") unless data.opinion?.text
       return error_out("Missing vote") unless data.opinion?.vote
@@ -367,7 +367,7 @@ module.exports = (config) ->
       (post_save_callback or post_events_callback)(err)
     event_data = {data: {}}
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
-      unless intertwinkles.can_edit(session, proposal)
+      unless utils.can_edit(session, proposal)
         return error_out("Permission denied.")
       found = false
       for opinion, i in proposal.opinions

@@ -1,5 +1,5 @@
 _             = require 'underscore'
-intertwinkles = require './intertwinkles'
+utils         = require './utils'
 RoomManager   = require('iorooms').RoomManager
 uuid          = require 'node-uuid'
 logger        = require('log4js').getLogger()
@@ -9,7 +9,7 @@ build_room_users_list_for_user = (iorooms, user_session, room, callback) ->
     if err? then return callback(err)
     room_list = []
     for session in sessions
-      if intertwinkles.is_authenticated(session)
+      if utils.is_authenticated(session)
         user = session.users[session.auth.user_id]
         info = { name: user.name, icon: user.icon }
       else
@@ -52,7 +52,7 @@ route = (config, io, sessionStore) ->
         socket.join(session.auth.user_id)
 
   iorooms.onChannel "logout", (socket, data) ->
-    if intertwinkles.is_authenticated(socket.session)
+    if utils.is_authenticated(socket.session)
       # Leave our self-referential utility room.
       socket.leave(socket.session.auth.user_id)
 
@@ -75,7 +75,7 @@ route = (config, io, sessionStore) ->
         socket.emit data.callback, response
 
     # Must be logged in.
-    unless intertwinkles.is_authenticated(socket.session)
+    unless utils.is_authenticated(socket.session)
       return respond("Not authorized")
     # Edit only yourself.
     if socket.session.auth.email != data.model.email

@@ -1,6 +1,6 @@
 express       = require 'express'
 socketio      = require 'socket.io'
-intertwinkles = require '../../../lib/intertwinkles'
+utils         = require '../../../lib/utils'
 RoomManager   = require('iorooms').RoomManager
 RedisStore    = require('connect-redis')(express)
 _             = require 'underscore'
@@ -38,15 +38,15 @@ start = (config, app, io, sessionStore) ->
     return _.extend({
       initial_data: _.extend(
         {application: "resolve"},
-        intertwinkles.get_initial_data(req?.session, config),
+        utils.get_initial_data(req?.session, config),
         initial_data or {}
       )
-      conf: intertwinkles.clean_conf(config)
+      conf: utils.clean_conf(config)
       flash: req.flash()
     }, obj)
 
   index_res = (req, res, extra_context, initial_data) ->
-    intertwinkles.list_accessible_documents schema.Proposal, req.session, (err, docs) ->
+    utils.list_accessible_documents schema.Proposal, req.session, (err, docs) ->
       return server_error(req, res, err) if err?
       res.render 'resolve/index', context(req, extra_context or {}, _.extend(initial_data or {}, {
         listed_proposals: docs
@@ -67,7 +67,7 @@ start = (config, app, io, sessionStore) ->
     schema.Proposal.findOne {_id: req.params.id}, (err, doc) ->
       return server_error(req, res, err) if err?
       return not_found(req, res) unless doc?
-      return permission_denied(req, res) unless intertwinkles.can_view(req.session, doc)
+      return permission_denied(req, res) unless utils.can_view(req.session, doc)
       index_res(req, res, {
         title: "Resolve: " + doc.title
       }, {
@@ -103,7 +103,7 @@ start = (config, app, io, sessionStore) ->
         return done("Missing entity") unless data.entity?
         schema.Proposal.findOne {_id: data.entity}, (err, doc) ->
           return done(err) if err?
-          unless intertwinkles.can_view(socket.session, doc)
+          unless utils.can_view(socket.session, doc)
             return done("Permission denied")
           api_methods.get_twinkles {
             application: "resolve"
@@ -118,7 +118,7 @@ start = (config, app, io, sessionStore) ->
     if not data?.callback?
       socket.emit "error", {error: "Missing callback parameter."}
     else
-      intertwinkles.list_accessible_documents(
+      utils.list_accessible_documents(
         schema.Proposal, socket.session, (err, proposals) ->
           if err? then return socket.emit data.callback, {error: err}
           socket.emit data.callback, {proposals}
@@ -129,10 +129,10 @@ start = (config, app, io, sessionStore) ->
       return socket.emit "error", {error: "Missing 'callback' parameter"}
     schema.Proposal.findOne data.proposal, (err, proposal) ->
       response = {}
-      unless intertwinkles.can_view(socket.session, proposal)
+      unless utils.can_view(socket.session, proposal)
         response.error = "Permission denied"
       else
-        proposal.sharing = intertwinkles.clean_sharing(socket.session, proposal)
+        proposal.sharing = utils.clean_sharing(socket.session, proposal)
         response.proposal = proposal
       socket.emit data.callback, response
       resolve.post_event(
@@ -147,7 +147,7 @@ start = (config, app, io, sessionStore) ->
     return respond("Missing proposal ID") unless data.proposal_id?
     return respond("Missing callback") unless data.callback?
     schema.Proposal.findOne {_id: data.proposal_id}, (err, doc) ->
-      unless intertwinkles.can_view(socket.session, doc)
+      unless utils.can_view(socket.session, doc)
         return respond("Permission denied")
       api_methods.get_events {
         application: "resolve"

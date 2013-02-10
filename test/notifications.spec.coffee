@@ -4,7 +4,6 @@ config = require './test_config'
 common = require './common'
 schema = require('../lib/schema').load(config)
 notifier = require("../lib/email_notices").load(config)
-intertwinkles = require '../lib/intertwinkles'
 
 describe "Notifications", ->
   mail = null

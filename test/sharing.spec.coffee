@@ -4,7 +4,7 @@ async         = require 'async'
 config        = require './test_config'
 schema        = require('../lib/schema').load(config)
 common        = require './common'
-intertwinkles = require '../lib/intertwinkles'
+utils = require '../lib/utils'
 
 describe "sharing", ->
   before (done) ->
@@ -86,20 +86,20 @@ describe "sharing", ->
       (done) =>
         # Verify that public documents work..
 
-        intertwinkles.list_public_documents common.TestModel, @session, (err, docs) =>
+        utils.list_public_documents common.TestModel, @session, (err, docs) =>
           doc_names = (doc.name for doc in docs).sort()
           expected_names = ["public_viewing", "public_editing", "just_advertise"].sort()
           expect(doc_names).to.eql(expected_names)
           done()
       (done) =>
         # Verify that group documents work..
-        intertwinkles.list_group_documents common.TestModel, @session, (err, docs) =>
+        utils.list_group_documents common.TestModel, @session, (err, docs) =>
           doc_names = (doc.name for doc in docs).sort()
           expected_names = ["explicit_viewer", "explicit_editor", "group_member"].sort()
           expect(doc_names).to.eql(expected_names)
           done()
       (done) =>
-        intertwinkles.list_accessible_documents common.TestModel, @session, (err, docs) =>
+        utils.list_accessible_documents common.TestModel, @session, (err, docs) =>
           expected = {
             group:  ["explicit_viewer", "explicit_editor", "group_member"].sort()
             public: ["public_viewing", "public_editing", "just_advertise"].sort()

@@ -1,6 +1,6 @@
 express       = require 'express'
 socketio      = require 'socket.io'
-intertwinkles = require './intertwinkles'
+utils         = require './utils'
 RoomManager   = require('iorooms').RoomManager
 RedisStore    = require('connect-redis')(express)
 _             = require 'underscore'
@@ -23,10 +23,10 @@ route = (config, app, io, sessionStore) ->
     return _.extend({
       initial_data: _.extend(
         {application: "www"},
-        intertwinkles.get_initial_data(req?.session, config),
+        utils.get_initial_data(req?.session, config),
         initial_data or {}
       )
-      conf: intertwinkles.clean_conf(config)
+      conf: utils.clean_conf(config)
       flash: req.flash(),
     }, obj)
 
@@ -43,7 +43,7 @@ route = (config, app, io, sessionStore) ->
   #
 
   app.get '/', (req, res) ->
-    is_authenticated = intertwinkles.is_authenticated(req.session)
+    is_authenticated = utils.is_authenticated(req.session)
     async.series [
       (done) ->
         return done() unless is_authenticated
@@ -63,7 +63,7 @@ route = (config, app, io, sessionStore) ->
 
           # Your docs
           (done) ->
-            intertwinkles.list_group_documents(
+            utils.list_group_documents(
               schema.SearchIndex, req.session, done, {}, "-modified", 0, 20, true
             )
 
@@ -126,7 +126,7 @@ route = (config, app, io, sessionStore) ->
         if req.query.q
           params.q = req.query.q
           params.public = true unless req.query.public == 'false'
-          if intertwinkles.is_authenticated(req.session)
+          if utils.is_authenticated(req.session)
             params.user = req.session.auth.user_id
           solr.execute_search params, params.user, (err, results) ->
             done(err, results)
@@ -138,7 +138,7 @@ route = (config, app, io, sessionStore) ->
       for doc in docs
         doc.url = "#{config.apps[doc.application].url}" + doc.url
       res.render 'home/search', context(req, {
-        authenticated: intertwinkles.is_authenticated(req.session)
+        authenticated: utils.is_authenticated(req.session)
         title: "Search",
         docs: docs
         highlighting: results?.highlighting
@@ -151,7 +151,7 @@ route = (config, app, io, sessionStore) ->
   #
 
   app.get '/profiles/edit/', (req, res) ->
-    if not intertwinkles.is_authenticated(req.session)
+    if not utils.is_authenticated(req.session)
       return redirect_to_login(req, res)
 
     schema.User.findOne {email: req.session.auth.email}, (err, doc) ->
@@ -183,7 +183,7 @@ route = (config, app, io, sessionStore) ->
   app.get "/profiles/edit", (req, res) -> res.redirect("/profiles/edit/")
 
   app.post '/profiles/edit/', (req, res) ->
-    if not intertwinkles.is_authenticated(req.session)
+    if not utils.is_authenticated(req.session)
       return res.send("Permission denied", 403)
 
     schema.User.findOne {email: req.session.auth.email}, (err, doc) ->
@@ -218,7 +218,7 @@ route = (config, app, io, sessionStore) ->
     res.redirect("/profiles/icon_attribution/")
 
   app.get '/profiles/login/', (req, res) ->
-    if intertwinkles.is_authenticated(req.session)
+    if utils.is_authenticated(req.session)
       return res.redirect(req.query.next or "/")
     res.render 'home/profiles/login', context(req, {
       title: "Sign in"
@@ -243,7 +243,7 @@ route = (config, app, io, sessionStore) ->
       group.name = req.body.name
       event_data.name = req.body.name
       # The URL slug. XXX: Should we allow this to change? Breaks URLs....
-      group.slug = intertwinkles.slugify(req.body.name)
+      group.slug = utils.slugify(req.body.name)
     
     # List of IDs of users we're removing, and need to clear all their
     # group-related notices
@@ -407,7 +407,7 @@ route = (config, app, io, sessionStore) ->
           callback(group, event_data)
 
   app.get '/groups/new/', (req, res) ->
-    unless intertwinkles.is_authenticated(req.session)
+    unless utils.is_authenticated(req.session)
       return redirect_to_login(req, res)
 
     res.render 'home/groups/edit', context(req, {
@@ -417,7 +417,7 @@ route = (config, app, io, sessionStore) ->
   app.get '/groups/new', (req, res) -> res.redirect('/groups/new/')
 
   app.post '/groups/new/', (req, res) ->
-    unless intertwinkles.is_authenticated(req.session)
+    unless utils.is_authenticated(req.session)
       return redirect_to_login(req, res)
 
     user = _.find(req.session.users, (u) -> u.email == req.session.auth.email)
@@ -447,16 +447,16 @@ route = (config, app, io, sessionStore) ->
   app.post '/groups/new', (req, res) -> res.redirect("/groups/new/")
 
   app.get '/groups/is_available/', (req, res) ->
-    unless intertwinkles.is_authenticated(req.session)
+    unless utils.is_authenticated(req.session)
       return res.send {error: 'Permission denied'}, 403
     unless req.query.slug?
       return res.send {error: "Missing required 'slug' param", status: 400}, 400
-    schema.Group.findOne {slug: intertwinkles.slugify(req.query.slug)}, "_id", (err, doc) ->
+    schema.Group.findOne {slug: utils.slugify(req.query.slug)}, "_id", (err, doc) ->
       return handle_error(req, res, {error: 'Server error'}) if err?
       res.send({available: (not doc?) or doc.id == req.query._id})
 
   app.get '/groups/edit/:slug/', (req, res) ->
-    unless intertwinkles.is_authenticated(req.session)
+    unless utils.is_authenticated(req.session)
       return redirect_to_login(req, res)
 
     schema.Group.findOne({slug: req.params.slug}).populate('members.user').exec (err, doc) ->
@@ -474,7 +474,7 @@ route = (config, app, io, sessionStore) ->
   app.get "/groups/edit/:slug", (req, res) -> res.redirect("/groups/edit/#{req.params.slug}/")
 
   app.post '/groups/edit/:slug/', (req, res) ->
-    unless intertwinkles.is_authenticated(req.session)
+    unless utils.is_authenticated(req.session)
       return res.send("Permission denied", 403)
 
     schema.Group.findOne({slug: req.params.slug}).populate(
@@ -506,7 +506,7 @@ route = (config, app, io, sessionStore) ->
         return res.redirect("/groups/edit/#{group.slug}")
 
   verify_invitation = (req, res, next) ->
-    unless intertwinkles.is_authenticated(req.session)
+    unless utils.is_authenticated(req.session)
       return redirect_to_login(req, res)
     schema.Group.findOne {slug: req.params.slug}, (err, group) ->
       unless group?
@@ -570,7 +570,7 @@ route = (config, app, io, sessionStore) ->
   app.post '/groups/join/:slug', (req, res) -> res.redirect("/groups/join/#{req.params.slug}/")
 
   app.get '/groups/show/:slug/', (req, res) ->
-    return redirect_to_login(req, res) unless intertwinkles.is_authenticated(req.session)
+    return redirect_to_login(req, res) unless utils.is_authenticated(req.session)
     schema.Group.findOne {slug: req.params.slug}, (err, doc) ->
       return handle_error(req, res, err) if err?
       return res.send("Not found", 404) if not doc?

@@ -3,7 +3,7 @@ RoomManager   = require('iorooms').RoomManager
 schema        = require './schema'
 _             = require 'underscore'
 async         = require 'async'
-intertwinkles = require '../../../lib/intertwinkles'
+utils         = require '../../../lib/utils'
 
 start = (config, app, io, sessionStore) ->
   io.of("/io-firestarter").setMaxListeners(15)
@@ -12,7 +12,7 @@ start = (config, app, io, sessionStore) ->
     # Only allow to join the room if we're allowed to view the firestarter.
     schema.Firestarter.findOne {'slug': name}, 'sharing', (err, doc) ->
       return callback(err) if err?
-      if intertwinkles.can_view(session, doc)
+      if utils.can_view(session, doc)
         callback(null)
       else
         callback("Permission denied")
@@ -24,16 +24,16 @@ start = (config, app, io, sessionStore) ->
   #
 
   index_res = (req, res, initial_data) ->
-    intertwinkles.list_accessible_documents schema.Firestarter, req.session, (err, docs) ->
+    utils.list_accessible_documents schema.Firestarter, req.session, (err, docs) ->
       return res.send(500) if err?
       res.render 'firestarter/index', {
         title: "Firestarter"
         initial_data: _.extend(
           {application: "firestarter"},
-          intertwinkles.get_initial_data(req.session, config), {
+          utils.get_initial_data(req.session, config), {
             listed_firestarters: docs
           }, initial_data)
-        conf: intertwinkles.clean_conf(config)
+        conf: utils.clean_conf(config)
         flash: req.flash()
       }
 
@@ -45,7 +45,7 @@ start = (config, app, io, sessionStore) ->
       return res.send(500) if err?
       return res.send(404) if not doc?
       #FIXME: Redirect to login instead.
-      return res.send(403) if not intertwinkles.can_view(req.session, doc)
+      return res.send(403) if not utils.can_view(req.session, doc)
 
       api_methods.post_event {
         type: "visit"
@@ -60,7 +60,7 @@ start = (config, app, io, sessionStore) ->
         }
       }, 5000 * 60, (->)
 
-      doc.sharing = intertwinkles.clean_sharing(req.session, doc)
+      doc.sharing = utils.clean_sharing(req.session, doc)
       index_res(req, res, {
         firestarter: doc.toJSON()
       })
@@ -90,7 +90,7 @@ start = (config, app, io, sessionStore) ->
       return socket.emit("error", {error: "Must specifiy callback."})
     unless data.model?
       return socket.emit("error", {error: "Missing required model attribute."})
-    unless intertwinkles.can_edit(socket.session, data.model)
+    unless utils.can_edit(socket.session, data.model)
       return socket.emit("error", {error: "Permission denied"})
 
     model = new schema.Firestarter(data.model)
@@ -153,15 +153,15 @@ start = (config, app, io, sessionStore) ->
       _id: data.model._id
     }).populate('responses').exec (err, doc) ->
       if err? then return socket.emit "error", {error: err}
-      unless intertwinkles.can_edit(socket.session, doc)
+      unless utils.can_edit(socket.session, doc)
         return socket.emit("error", {error: "Permission denied"})
-      unless intertwinkles.can_change_sharing(socket.session, doc)
+      unless utils.can_change_sharing(socket.session, doc)
         delete updates.sharing
       for key, val of updates
         doc[key] = val
       doc.save (err, doc) ->
         if err? then return socket.emit "error", {error: err}
-        doc.sharing = intertwinkles.clean_sharing(socket.session, doc)
+        doc.sharing = utils.clean_sharing(socket.session, doc)
         res = {model: doc.toJSON()}
         delete res.model.responses
         if data.callback? then socket.emit data.callback, res
@@ -204,10 +204,10 @@ start = (config, app, io, sessionStore) ->
         socket.emit("error", {error: err})
       else if not model?
         socket.emit("firestarter", {error: 404})
-      else if not intertwinkles.can_view(socket.session, model)
+      else if not utils.can_view(socket.session, model)
         socket.emit("error", {error: "Permission denied"})
       else
-        model.sharing = intertwinkles.clean_sharing(socket.session, model)
+        model.sharing = utils.clean_sharing(socket.session, model)
         socket.emit("firestarter", {
           model: model.toJSON()
         })
@@ -226,7 +226,7 @@ start = (config, app, io, sessionStore) ->
     if not data.callback?
       socket.emit "error", {error: "Missing callback parameter."}
     else
-      intertwinkles.list_accessible_documents(
+      utils.list_accessible_documents(
         schema.Firestarter, socket.session, (err, docs) ->
           if err? then return socket.emit data.callback, {error: err}
           socket.emit data.callback, {docs: docs}
@@ -238,7 +238,7 @@ start = (config, app, io, sessionStore) ->
     unless data.callback?
       return socket.emit "error", {error: "Missing callback"}
     schema.Firestarter.findOne {_id: data.firestarter_id}, (err, doc) ->
-      if not intertwinkles.can_view(socket.session, doc)
+      if not utils.can_view(socket.session, doc)
         return socket.emit "error", {error: "Permission denied"}
       api_methods.get_events {
         application: "firestarter"
@@ -257,7 +257,7 @@ start = (config, app, io, sessionStore) ->
           _id: data.model.firestarter_id
         }).populate("responses").exec (err, firestarter) ->
           return done(err) if err?
-          unless intertwinkles.can_edit(socket.session, firestarter)
+          unless utils.can_edit(socket.session, firestarter)
             done("Permission denied")
           else
             done(null, firestarter)
@@ -352,7 +352,7 @@ start = (config, app, io, sessionStore) ->
         }).populate('responses').exec (err, firestarter) ->
           return done(err) if err?
           return done("Firestarter not found.") unless firestarter?
-          unless intertwinkles.can_edit(socket.session, firestarter)
+          unless utils.can_edit(socket.session, firestarter)
             return done("Permission denied")
           
           for response,i in firestarter.responses

@@ -1,7 +1,7 @@
 express        = require 'express'
 socketio       = require 'socket.io'
 mongoose       = require 'mongoose'
-intertwinkles  = require '../../../lib/intertwinkles'
+utils          = require '../../../lib/utils'
 RoomManager    = require('iorooms').RoomManager
 RedisStore     = require('connect-redis')(express)
 _              = require 'underscore'
@@ -21,7 +21,7 @@ start = (config, app, io, sessionStore) ->
   iorooms.authorizeJoinRoom = (session, name, callback) ->
     schema.TwinklePad.findOne {pad_id: name}, 'sharing', (err, doc) ->
       return callback(err) if err?
-      if intertwinkles.can_view(session, doc)
+      if utils.can_view(session, doc)
         callback(null)
       else
         callback("Permission denied")
@@ -58,7 +58,7 @@ start = (config, app, io, sessionStore) ->
   iorooms.onChannel "save_twinklepad", (socket, data) ->
     respond = (err, doc) ->
       return socket.emit "error", {error: err} if err?
-      doc.sharing = intertwinkles.clean_sharing(socket.session, doc)
+      doc.sharing = utils.clean_sharing(socket.session, doc)
       socket.broadcast.to(doc.pad_id).emit "twinklepad", {twinklepad: doc}
       socket.emit "twinklepad", {twinklepad: doc}
 
@@ -68,11 +68,11 @@ start = (config, app, io, sessionStore) ->
     schema.TwinklePad.findOne {_id: data.twinklepad._id}, (err, doc) ->
       return respond(err) if err?
       return respond("Twinklepad not found for #{data.twinklepad.pad_id}") unless doc?
-      return respond("Permission denied") unless intertwinkles.can_change_sharing(
+      return respond("Permission denied") unless utils.can_change_sharing(
         socket.session, doc
       )
       doc.sharing = data.twinklepad.sharing
-      return respond("Permission denied") unless intertwinkles.can_change_sharing(
+      return respond("Permission denied") unless utils.can_change_sharing(
         socket.session, doc
       )
       doc.save(respond)
@@ -96,10 +96,10 @@ start = (config, app, io, sessionStore) ->
     return _.extend({
       initial_data: _.extend(
         {application: "twinklepad"},
-        intertwinkles.get_initial_data(req?.session, config),
+        utils.get_initial_data(req?.session, config),
         initial_data or {}
       )
-      conf: intertwinkles.clean_conf(config)
+      conf: utils.clean_conf(config)
       flash: req.flash()
     }, obj)
 
@@ -133,7 +133,7 @@ start = (config, app, io, sessionStore) ->
           done(err, results?.response?.docs)
 
       (done) ->
-        if intertwinkles.is_authenticated(req.session)
+        if utils.is_authenticated(req.session)
           solr.execute_search {
             public: false
             
@@ -147,7 +147,7 @@ start = (config, app, io, sessionStore) ->
       return server_error(req, res, err) if err?
       res.render 'twinklepad/index', context(req, {
         title: "#{config.apps.twinklepad.name}"
-        is_authenticated: intertwinkles.is_authenticated(req.session)
+        is_authenticated: utils.is_authenticated(req.session)
         listed_pads: {
           public: results[0]
           group: results[1]
@@ -178,9 +178,9 @@ start = (config, app, io, sessionStore) ->
       return server_error(req, res, err) if err?
 
       # Check that we can view this pad.
-      if intertwinkles.can_edit(req.session, doc)
+      if utils.can_edit(req.session, doc)
         read_only = false
-      else if intertwinkles.can_view(req.session, doc)
+      else if utils.can_view(req.session, doc)
         read_only = true
       else
         return permission_denied(req, res)
@@ -200,7 +200,7 @@ start = (config, app, io, sessionStore) ->
         }
       }, 1000 * 60 * 5, (->)
 
-      doc.sharing = intertwinkles.clean_sharing(req.session, doc)
+      doc.sharing = utils.clean_sharing(req.session, doc)
       title = "#{req.params.pad_name} | #{config.apps.twinklepad.name}"
 
       #
@@ -259,7 +259,7 @@ start = (config, app, io, sessionStore) ->
             delete cookie_params.domain
           res.cookie("sessionID", data.sessionID, cookie_params)
           embed_url = doc.url
-          if intertwinkles.is_authenticated(req.session)
+          if utils.is_authenticated(req.session)
             author_color = req.session.users[req.session.auth.user_id].icon?.color
             author_name = req.session.users[req.session.auth.user_id].name
             embed_url += "?userName=#{author_name}&userColor=%23#{author_color}"

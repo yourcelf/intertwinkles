@@ -7,7 +7,7 @@ connect_assets = require 'connect-assets'
 stylus         = require 'stylus'
 log4js         = require 'log4js'
 
-intertwinkles  = require './intertwinkles'
+utils          = require './utils'
 socket_routes  = require './socket_routes'
 
 # Logger

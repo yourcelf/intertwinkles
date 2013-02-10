@@ -3,14 +3,14 @@ async         = require 'async'
 express       = require 'express'
 RoomManager   = require('iorooms').RoomManager
 schema        = require './schema'
-intertwinkles = require '../../../lib/intertwinkles'
+utils         = require '../../../lib/utils'
 
 start = (config, app, io, sessionStore) ->
   iorooms = new RoomManager("/io-clock", io, sessionStore)
   iorooms.authorizeJoinRoom = (seession, name, callback) ->
     schema.ProgTime.findOne {'_id', name}, 'sharing', (err, doc) ->
       return callback(err) if err?
-      if intertwinkles.can_view(session, doc)
+      if utils.can_view(session, doc)
         callback(null)
       else
         callback("Permission denied")
@@ -20,18 +20,18 @@ start = (config, app, io, sessionStore) ->
   #
 
   index_res = (req, res, initial_data) ->
-    intertwinkles.list_accessible_documents schema.ProgTime, req.session, (err, docs) ->
+    utils.list_accessible_documents schema.ProgTime, req.session, (err, docs) ->
       return res.send(500) if err?
       for doc in docs
-        doc.sharing = intertwinkles.clean_sharing(req.session, doc)
+        doc.sharing = utils.clean_sharing(req.session, doc)
       res.render 'clock/index', {
         title: "Progressive Clock"
         initial_data: _.extend(
           {application: "clock", listed_progtimes: docs},
-          intertwinkles.get_initial_data(req?.session, config),
+          utils.get_initial_data(req?.session, config),
           initial_data or {}
         )
-        conf: intertwinkles.clean_conf(config)
+        conf: utils.clean_conf(config)
         flash: req.flash()
       }
 
@@ -55,7 +55,7 @@ start = (config, app, io, sessionStore) ->
         data: { name: doc.name }
       }, 1000 * 60 * 5, (->)
 
-      doc.sharing = intertwinkles.clean_sharing(req.session, doc)
+      doc.sharing = utils.clean_sharing(req.session, doc)
       index_res(req, res, {
         progtime: doc.toJSON()
       })
@@ -67,11 +67,11 @@ start = (config, app, io, sessionStore) ->
   iorooms.onChannel "create_progtime", (socket, data) ->
     respond = (err, doc) ->
       return socket.emit "error", {error: err} if err?
-      doc.sharing = intertwinkles.clean_sharing(socket.session, doc)
+      doc.sharing = utils.clean_sharing(socket.session, doc)
       socket.emit "progtime", {progtime: doc, now: new Date()}
 
     return respond("Missing model attributes") unless data.model?.name?
-    return respond("Permission denied") unless intertwinkles.can_edit(data.model) and intertwinkles.can_change_sharing(data.model)
+    return respond("Permission denied") unless utils.can_edit(data.model) and utils.can_change_sharing(data.model)
 
     doc = new schema.ProgTime()
     for key in ["name", "created", "sharing"]
@@ -90,7 +90,7 @@ start = (config, app, io, sessionStore) ->
   iorooms.onChannel "edit_progtime", (socket, data) ->
     respond = (err, doc) ->
       return socket.emit "error", {error: err} if err?
-      doc.sharing = intertwinkles.clean_sharing(socket.session, doc)
+      doc.sharing = utils.clean_sharing(socket.session, doc)
       socket.broadcast.to(doc.id).emit "progtime", {progtime: doc, now: new Date()}
       socket.emit "progtime", {progtime: doc, now: new Date()}
 
@@ -109,8 +109,8 @@ start = (config, app, io, sessionStore) ->
     schema.ProgTime.findOne {_id: data.model._id}, (err, doc) ->
       return respond("Server error") if err?
       return respond("Not found") unless doc?
-      return respond("Permission denied") unless intertwinkles.can_edit(req.session, doc)
-      if updates.sharing and not intertwinkles.can_change_sharing(req.session, doc)
+      return respond("Permission denied") unless utils.can_edit(req.session, doc)
+      if updates.sharing and not utils.can_change_sharing(req.session, doc)
         return respond("Permission denied")
 
       doc.name = updates.name if updates.name
@@ -125,7 +125,7 @@ start = (config, app, io, sessionStore) ->
 
       # Make sure we can still change sharing after changes have been applied.
       # (e.g. protect the new sharing values)
-      unless intertwinkles.can_change_sharing(req.session, doc)
+      unless utils.can_change_sharing(req.session, doc)
         return respond("Permission denied")
       doc.save(respond)
   
@@ -136,7 +136,7 @@ start = (config, app, io, sessionStore) ->
   iorooms.onChannel "update_time", (socket, data) ->
     respond = (err, doc, dont_rebroadcast) ->
       return socket.emit "error", {error: err} if err?
-      doc.sharing = intertwinkles.clean_sharing(socket.session, doc)
+      doc.sharing = utils.clean_sharing(socket.session, doc)
       emission = {
         _id: doc.id
         category: doc.categories[data.category]
@@ -149,7 +149,7 @@ start = (config, app, io, sessionStore) ->
     schema.ProgTime.findOne {_id: data._id}, (err, doc) ->
       return respond("Server error") if err?
       return respond("Not found") unless doc?
-      return respond("Permission denied") unless intertwinkles.can_edit(req.session, doc)
+      return respond("Permission denied") unless utils.can_edit(req.session, doc)
       return respond("Category not found") unless doc.categories[data.category]?
 
       now = new Date()
