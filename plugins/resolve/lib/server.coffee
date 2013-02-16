@@ -151,7 +151,7 @@ start = (config, app, io, sessionStore) ->
   iorooms.onChannel "get_proposal_events", (socket, data) ->
     respond = (err, events) ->
       return socket.emit "error", {error: err} if err?
-      return socket.emit data.callback, {evvents: events}
+      return socket.emit data.callback, {events: events}
 
     return respond("Missing proposal ID") unless data.proposal_id?
     return respond("Missing callback") unless data.callback?

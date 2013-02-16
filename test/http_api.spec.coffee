@@ -9,7 +9,7 @@ utils         = require '../lib/utils'
 logger        = require('log4js').getLogger()
 api_methods   = require("../lib/api_methods")(config)
 
-describe "api", ->
+describe "HTTP api", ->
   before (done) ->
     common.startUp (server, browser) =>
       @server = server

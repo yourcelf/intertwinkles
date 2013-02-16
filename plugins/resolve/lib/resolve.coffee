@@ -134,16 +134,16 @@ module.exports = (config) ->
       # 2. Now post new notifications for all people that still need them.
       if proposal.sharing.group_id and not proposal.resolved?
         group = session.groups[proposal.sharing.group_id]
-        member_ids = (m.user for m in group.members)
+        member_ids = (m.user.toString() for m in group.members)
         current_voters = []
         stale_voters = []
         cutoff = proposal.revisions[0].date
         for opinion in proposal.opinions
           if opinion.user_id?
-            if opinion.revisions[0].date > cutoff
-              current_voters.push(opinion.user_id)
+            if opinion.revisions[0].date >= cutoff
+              current_voters.push(opinion.user_id.toString())
             else
-              stale_voters.push(opinion.user_id)
+              stale_voters.push(opinion.user_id.toString())
         needed = _.difference(member_ids, current_voters)
         notices = []
         for user_id in needed

@@ -234,6 +234,7 @@ module.exports = (config) ->
     query.entity = params.entity if params.entity?
     query.type = params.type if params.type?
     query.recipient = params.recipient if params.recipient?
+    query.cleared = false
     async.series [
       (done) ->
         if params.user?

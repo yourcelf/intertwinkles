@@ -56,6 +56,8 @@ describe "resolve", ->
     }
 
   it "Posts search indices", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     resolve.post_search_index @proposal, (err, si) =>
       expect(err).to.be(null)
       expect(si).to.not.be(null)
@@ -109,7 +111,12 @@ describe "resolve", ->
         expect(docs.length).to.be(2)
         done()
 
-  it "Updates notifications", (done) ->
+  it "Updates notifications based on resolution", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      @proposal_with_notices.resolved = new Date()
+      @proposal_with_notices.save done
+      return
+    #general test of update notifications method.
     @proposal_with_notices.resolved = new Date()
     @proposal_with_notices.save (err, doc) =>
       www_schema.Notification.find {entity: doc.id}, (err, docs) =>
@@ -123,6 +130,10 @@ describe "resolve", ->
             done()
 
   it "Updates a proposal", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      @proposal_with_notices.resolved = null
+      @proposal_with_notices.save done
+      return
     expect(@proposal_with_notices.resolved).to.not.be(null)
     expect(@proposal_with_notices.sharing.group_id).to.not.be(null)
     resolve.update_proposal @session, {
@@ -135,7 +146,55 @@ describe "resolve", ->
     , (err, proposal, event, si, notices) =>
       expect(event.group.toString()).to.be(@proposal_with_notices.sharing.group_id.toString())
       expect(err).to.be(null)
+      @proposal_with_notices = proposal
       done()
+
+  it "Updates notifications based on votes", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
+    prop = @proposal_with_notices
+    expect(prop.resolved).to.be(null)
+    user_id = prop.revisions[0].user_id
+    prop.opinions.push {
+      user_id: user_id
+      name: @session.users[user_id].name
+      revisions: [{
+        vote: "weak_yes"
+        text: "Okie"
+      }]
+    }
+    prop.save (err, doc) =>
+      resolve.update_notifications @session, doc, (err, notifications) =>
+        expect(err).to.be(null)
+        expect(notifications?.length).to.be(3)
+        cleared = 0
+        uncleared = 0
+        for notice in notifications
+          if notice.cleared
+            cleared += 1
+          else
+            uncleared += 1
+            expect(notice.recipient.toString()).to.not.eql(user_id.toString())
+        expect(cleared).to.be(2)
+        expect(uncleared).to.be(1)
+        doc.opinions.pop()
+        doc.save  (err, doc) =>
+          expect(err).to.be(null)
+          expect(doc).to.not.be(null)
+          resolve.update_notifications @session, doc, (err, notifications) =>
+            expect(err).to.be(null)
+            expect(notifications.length).to.be(3)
+            cleared = 0
+            uncleared = 0
+            for notice in notifications
+              if notice.cleared
+                cleared += 1
+                expect(notice.recipient.toString()).to.not.eql(user_id.toString())
+              else
+                uncleared += 1
+            expect(cleared).to.be(1)
+            expect(uncleared).to.be(2)
+            done()
 
   it "Opinion: error out", (done) ->
     resolve.add_opinion @session, {
@@ -278,6 +337,8 @@ describe "resolve", ->
       done()
 
   it "Removes an opinion", (done) ->
+    if process.env.SKIP_SOLR_TESTS
+      return done()
     start_length = @proposal.opinions.length
     resolve.remove_opinion @session, {
       proposal: {_id: @proposal._id}

@@ -583,6 +583,7 @@ class ShowProposalView extends intertwinkles.BaseView
     if resolve.model.id
       callback = "resolve_events_#{resolve.model.id}"
       resolve.socket.once callback, (data) =>
+        console.log data
         collection = new intertwinkles.EventCollection()
         for event in data.events
           event.date = new Date(event.date)
