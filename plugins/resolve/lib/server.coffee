@@ -11,7 +11,16 @@ logger        = require('log4js').getLogger()
 start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
   api_methods = require("../../../lib/api_methods")(config)
-  iorooms = new RoomManager("/io-resolve", io, sessionStore)
+  resolve = require("./resolve")(config)
+  iorooms = new RoomManager("/io-resolve", io, sessionStore, {
+    authorizeJoinRoom: (session, name, callback) ->
+      schema.Proposal.findOne {id: name}, 'sharing', (err, doc) ->
+        return callback(err) if err?
+        if utils.can_view(session, doc)
+          callback(null)
+        else
+          callback("Permission denied")
+  })
   
   #
   # Routes

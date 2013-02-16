@@ -119,8 +119,9 @@ class AddFirestarterView extends Backbone.View
     val = encodeURIComponent(val)
     if val
       @$(".firestarter-url").html(
-        "Firestarter URL: " +
-        window.location.protocol + "//" + window.location.host + "/firestarter/f/" + val
+        "Firestarter URL: <br /><nobr>" +
+        window.location.protocol + "//" + window.location.host + "/firestarter/f/" + val +
+        "</nobr>"
       )
     else
       @$(".firestarter-url").html("")
@@ -147,11 +148,13 @@ class AddFirestarterView extends Backbone.View
             @$("#id_#{error.field}").after(
               "<span class='help-inline error-msg'>#{error.message}</span>"
             )
+          @$(".error")[0].scrollIntoView()
         else
           alert("Unexpected server error! Oh fiddlesticks!")
       else
         load_firestarter_data(data.model)
         fire.app.navigate("/firestarter/f/#{encodeURIComponent(fire.model.get("slug"))}", {trigger: true})
+        $("html,body").animate({scrollTop: 0}, 0)
 
     fire.socket.emit "create_firestarter", {
       callback: "create_firestarter"
@@ -520,15 +523,28 @@ class Router extends Backbone.Router
 fire.firestarter_url = (slug) ->
   return "#{INTERTWINKLES_APPS["firestarter"].url}/firestarter/f/#{slug}"
 
+socket_connected = false
 socket = io.connect("/io-firestarter")
 socket.on "error", (data) ->
   flash("error", "Oh hai, the server has ERRORed. Oh noes!")
-  window.console?.log?(data.error)
+  window.console?.log?(data)
 
 socket.on "connect", ->
+  socket_connected = true
   fire.socket = socket
   unless fire.started == true
     fire.app = new Router()
     Backbone.history.start(pushState: true, silent: false)
     fire.started = true
 
+socket.on "disconnect", ->
+  socket_connected = false
+
+orig_emit = socket.emit
+socket.emit = (label, data) ->
+  if socket_connected
+    orig_emit.apply(socket, [label, data])
+  else
+    if confirm("Lost connection to the server. Refresh page?")
+      window.location.href = window.location.href
+    

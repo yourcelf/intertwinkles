@@ -2,18 +2,18 @@ log4js = require 'log4js'
 logger = log4js.getLogger()
 logger.setLevel(log4js.levels.FATAL)
 
-Browser = require 'zombie'
-fs      = require 'fs'
-_       = require 'underscore'
-async   = require 'async'
-expect  = require 'expect.js'
-mongoose= require 'mongoose'
-Schema  = mongoose.Schema
-config  = require './test_config'
-www_schema = require('../lib/schema').load(config)
-ds_schema  = require('../plugins/dotstorm/lib/schema')
-server  = require '../lib/server'
-fixture = require './fixture'
+Browser      = require 'zombie'
+fs           = require 'fs'
+_            = require 'underscore'
+async        = require 'async'
+expect       = require 'expect.js'
+mongoose     = require 'mongoose'
+Schema       = mongoose.Schema
+config       = require './test_config'
+www_schema   = require('../lib/schema').load(config)
+ds_schema    = require('../plugins/dotstorm/lib/schema').load(config)
+server       = require '../lib/server'
+fixture      = require './fixture'
 email_server = require "../lib/email_server"
 email        = require "emailjs"
 
@@ -27,7 +27,10 @@ TestModelSchema = new Schema
     extra_editors: [String]
     advertise: Boolean
   }
-TestModel = mongoose.model("TestModel", TestModelSchema)
+try
+  TestModel = mongoose.model("TestModel")
+catch e
+  TestModel = mongoose.model("TestModel", TestModelSchema)
 
 startUp = (done) ->
   srv = server.start(config)
@@ -130,20 +133,22 @@ loadFixture = (callback) ->
   ], callback)
 
 stubBrowserID = (browser, browserid_response) ->
-  browser.resources.mock "https://login.persona.org/include.js", {
-    statusCode: 200
-    headers: { "Content-Type": "text/javascript" }
-    body: """
-      var handlers = {};
-      navigator.id = {
-        _shimmed: true,
-        _mocked: true,
-        request: function() { handlers.onlogin("faux-assertion"); },
-        watch: function(obj) { handlers = obj; },
-        logout: function() { handlers.onlogout(); }
-      };
-    """
-  }
+  # Mocking of browserid only works in zombie v2.
+  if browser.resources.mock?
+    browser.resources.mock "https://login.persona.org/include.js", {
+      statusCode: 200
+      headers: { "Content-Type": "text/javascript" }
+      body: """
+        var handlers = {};
+        navigator.id = {
+          _shimmed: true,
+          _mocked: true,
+          request: function() { handlers.onlogin("faux-assertion"); },
+          watch: function(obj) { handlers = obj; },
+          logout: function() { handlers.onlogout(); }
+        };
+      """
+    }
   browserid = require("../node_modules/browserid-consumer")
   browserid.verify = (assertion, audience, callback, options) ->
     callback(null, _.extend {

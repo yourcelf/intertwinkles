@@ -4,6 +4,8 @@ _         = require 'underscore'
 icons     = require './icons'
 carriers  = require './carriers'
 
+schema = null
+
 load = (config) ->
   UserSchema = new Schema {
     name: String
@@ -87,7 +89,6 @@ load = (config) ->
     delete ret.icon.sizes
     delete ret.mobile
     return ret
-  User = mongoose.model("User", UserSchema)
 
   membership_fields = {
     invited_by: {type: Schema.ObjectId, ref: 'User'}
@@ -140,7 +141,6 @@ load = (config) ->
     delete ret.logo?.full
     delete ret.logo?.thumb
     return ret
-  Group = mongoose.model("Group", GroupSchema)
 
   EventSchema = new Schema {
     application: String
@@ -177,7 +177,6 @@ load = (config) ->
     if not @date?
       @date = new Date()
     next()
-  Event = mongoose.model("Event", EventSchema)
 
   NotificationSchema = new Schema {
     application: String # Application label, if any
@@ -220,7 +219,6 @@ load = (config) ->
       suppressed: {$ne: true}
     }, constraint)).populate("recipient").exec(callback)
 
-  Notification = mongoose.model("Notification", NotificationSchema)
 
   SearchIndexSchema = new Schema {
     application: {type: String, required: true}
@@ -250,7 +248,6 @@ load = (config) ->
   SearchIndexSchema.pre "save", (next) ->
     @modified = new Date()
     next()
-  SearchIndex = mongoose.model("SearchIndex", SearchIndexSchema)
 
   #
   # Twinkles
@@ -268,7 +265,6 @@ load = (config) ->
   }
   TwinkleSchema.pre "save", (next) ->
     @date = new Date() unless @date?
-  Twinkle = mongoose.model("Twinkle", TwinkleSchema)
 
   #
   # Short URLs
@@ -276,15 +272,6 @@ load = (config) ->
 
   SHORT_URL_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIKLMNOPQRSTUVWXYZ0123456789"
   SHORT_PATH_LENGTH = 4
-
-  get_unique_short_path = (callback) =>
-    short_path = (SHORT_URL_CHARS.charAt(parseInt(Math.random() * SHORT_URL_CHARS.length)) for i in [0...SHORT_PATH_LENGTH]).join("")
-    ShortURL.findOne {short_path}, (err, doc) =>
-      return callback(err) if err?
-      if not doc?
-        return callback(null, short_path)
-      else
-        get_unique_short_path(callback)
 
   ShortURLSchema = new Schema {
     application: {type: String, required: true}
@@ -303,8 +290,26 @@ load = (config) ->
       return next(err) if err?
       @short_path = short_path
       next()
-  ShortURL = mongoose.model("ShortURL", ShortURLSchema)
 
-  return { User, Group, Event, Notification, SearchIndex, Twinkle, ShortURL }
+  schemas = {}
+  for name, schema of {
+        User: UserSchema, Group: GroupSchema, Event: EventSchema,
+        Notification: NotificationSchema, SearchIndex: SearchIndexSchema,
+        Twinkle: TwinkleSchema, ShortURL: ShortURLSchema}
+    try
+      schemas[name] = mongoose.connection.model(name)
+    catch e
+      schemas[name] = mongoose.model(name, schema)
+
+  get_unique_short_path = (callback) =>
+    short_path = (SHORT_URL_CHARS.charAt(parseInt(Math.random() * SHORT_URL_CHARS.length)) for i in [0...SHORT_PATH_LENGTH]).join("")
+    schemas.ShortURL.findOne {short_path}, (err, doc) =>
+      return callback(err) if err?
+      if not doc?
+        return callback(null, short_path)
+      else
+        get_unique_short_path(callback)
+
+  return schemas
 
 module.exports = { load }

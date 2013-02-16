@@ -3,9 +3,10 @@ _          = require 'underscore'
 Browser    = require 'zombie'
 mongoose   = require 'mongoose'
 fs         = require 'fs'
-models     = require '../lib/schema'
-common     = require '../../../test/common'
+
 config     = require '../../../test/test_config'
+models     = require('../lib/schema').load(config)
+common     = require '../../../test/common'
 
 #
 # Test CRUD for ideas and dotstorms for the whole socket pipeline.

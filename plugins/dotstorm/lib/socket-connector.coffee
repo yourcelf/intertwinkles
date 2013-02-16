@@ -1,5 +1,4 @@
 logger        = require './logging'
-models        = require './schema'
 thumbnails    = require './thumbnails'
 utils         = require '../../../lib/utils'
 
@@ -9,6 +8,7 @@ utils         = require '../../../lib/utils'
 # models.  Rebroadcast data to rooms as appropriate.
 #
 attach = (config, iorooms) ->
+  models = require('./schema').load(config)
   events = require('./events')(config)
   iorooms.onChannel 'backbone', (socket, data) ->
     session = socket.session

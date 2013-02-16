@@ -5,15 +5,18 @@ edit_new_profile_template = _.template("""
     <h3 style='text-align: center;'>Ready in 1, 2, 3:</h3><br />
     <div class='control-group'>
       <b>1: What is your name?</b><br />
+      <div class='controls'></div><!-- keep this for a target for validation errors. -->
       <input type='text' name='name' value='<%= name %>' />
     </div>
     <div class='control-group'>
       <b>2: What is your favorite color?</b><br />
+      <div class='controls'></div><!-- keep this for a target for validation errors. -->
       <div class='help-text color-label'></div>
       <input type='text' name='color' value='<%= color %>' class='color' />
     </div>
     <div class='control-group'>
       <b>3. Which icon do you like the best?</b><br />
+      <div class='controls'></div><!-- keep this for a target for validation errors. -->
       <div class='image-chooser'></div>
     </div>
   </div>

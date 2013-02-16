@@ -7,11 +7,11 @@ module.exports = (config) ->
   schema = require('./schema').load(config)
   api_methods = require("../../../lib/api_methods")(config)
 
+  r = {} # Return object
   #
   # Post an event for the given proposal.
   #
-  post_event = (session, proposal, type, opts) ->
-    doc = proposal
+  r.post_event = (session, proposal, type, opts) ->
     event = _.extend {
         application: "resolve"
         type: type
@@ -26,12 +26,12 @@ module.exports = (config) ->
           action: opts.data
         }
       }, opts.overrides or {}
-    api_methods.post_event(event, config, opts.callback or (->), opts.timeout)
+    api_methods.post_event(event, opts.timeout or 0, opts.callback or (->))
 
   #
   # Post a search index for the given proposal
   #
-  post_search_index = (proposal, callback) ->
+  r.post_search_index = (proposal, callback) ->
     doc = proposal
     votes_expanded = {
       yes: "Strongly approve"
@@ -50,7 +50,7 @@ module.exports = (config) ->
 
     search_data = {
       application: "resolve"
-      entity: doc._id
+      entity: doc.id
       type: "proposal"
       url: "/resolve/p/#{doc._id}/"
       title: doc.title
@@ -66,23 +66,23 @@ module.exports = (config) ->
   #
   # callback(err, twinkle, proposal)
   #
-  post_twinkle = (session, proposal_id, subentity, callback) ->
+  r.post_twinkle = (session, proposal_id, subentity, callback) ->
     async.waterfall [
       (done) ->
-        schema.Proposal.findOne {_id: data.entity}, (err, doc) ->
+        schema.Proposal.findOne {_id: proposal_id}, (err, doc) ->
           return done(err) if err?
           return done("Not found") unless doc?
-          unless utils.can_view(socket.session, doc)
+          unless utils.can_view(session, doc)
             return done("Permission denied")
 
           recipient_id = null
-          revision = _.find doc.revisions, (r) -> r._id.toString() == data.subentity
+          revision = _.find doc.revisions, (r) -> r._id.toString() == subentity.toString()
           if revision
             recipient_id = revision.user_id
           else
             opinion = _.find doc.opinions, (o) ->
               for rev in o.revisions
-                return true if rev._id.toString() == data.subentity
+                return true if rev._id.toString() == subentity.toString()
               return false
             if opinion
               recipient_id = opinion.user_id
@@ -94,7 +94,7 @@ module.exports = (config) ->
         api_methods.post_twinkle {
           application: "resolve"
           entity: doc._id
-          subentity: data.subentity
+          subentity: subentity
           url: "/resolve/p/#{doc._id}/"
           sender: session.auth?.user_id
           sender_anon_id: session.anon_id
@@ -102,16 +102,13 @@ module.exports = (config) ->
         }, (err, results) ->
           done(err, results, doc)
 
-    ], (err, results, doc) ->
+    ], (err, twinkle, doc) ->
       callback(err, twinkle, doc)
-      return socket.emit "error", {error: err} if err?
-      socket.broadcast.to(doc.id).emit "twinkles", { twinkles: [twinkle] }
-      socket.emit "twinkles", { twinkles: [twinkle] }
 
   #
   # Update notifications for a proposal
   #
-  update_notifications = (session, proposal, callback) ->
+  r.update_notifications = (session, proposal, callback=(->)) ->
     # XXX: This is an inefficient but easy strategy for syncing notifications
     # -- one database insert for each group member for every write to this
     # doc, as well as a wider removal. Could do better by more intelligently
@@ -119,19 +116,20 @@ module.exports = (config) ->
 
     # This will contain both 'clear' updates and new notices.
     notices_to_broadcast = []
+    notice_type = "needs_my_response"
     
     # 1. remove all notifications associated with this entity.
     api_methods.clear_notifications {
       application: "resolve",
-      type: "proposal"
-      entity: proposal._id
-    }, (err, results) ->
+      type: notice_type 
+      entity: proposal.id
+    }, (err, notifications) ->
       if err?
         callback?(err)
         return logger.error(err)
 
       # Append the 'cleared' notices to our broadcast.
-      notices_to_broadcast = notices_to_broadcast.concat(results.notifications)
+      notices_to_broadcast = notices_to_broadcast.concat(notifications)
 
       # 2. Now post new notifications for all people that still need them.
       if proposal.sharing.group_id and not proposal.resolved?
@@ -159,21 +157,21 @@ module.exports = (config) ->
             web = """#{group.name} needs your response to a proposal! """
           notices.push({
             application: "resolve"
-            type: "needs_my_response"
-            entity: proposal._id
+            type: notice_type
+            entity: proposal._id.toString()
             recipient: user_id
             url: "/resolve/p/#{proposal._id}/"
             sender: proposal.revisions[0].user_id
             formats: { web }
           })
         if notices.length > 0
-          api_methods.post_notifications notices, (err, notifications) ->
+          return api_methods.post_notifications notices, (err, notifications) ->
             if err?
               logger.error err
               return callback(err)
-            notices_to_broadcast = notices_to_broadcast.concat(
-              notifications)
-            callback(null, notices_to_broadcast)
+            notices_to_broadcast = notices_to_broadcast.concat(notifications)
+            return callback(null, notices_to_broadcast)
+      return callback(null, notices_to_broadcast)
 
   #
   # Remove the twinkle specified by given:
@@ -184,18 +182,18 @@ module.exports = (config) ->
   #
   # callback(err, twinkle, proposal)
   #
-  remove_twinkle = (session, twinkle_id, proposal_id, callback) ->
+  r.remove_twinkle = (session, twinkle_id, proposal_id, callback) ->
     async.waterfall [
       (done) ->
         return done("Missing twinkle_id") unless twinkle_id?
-        return done("Missing entity") unless entity?
-        schema.Proposal.findOne {_id: data.entity}, 'sharing', (err, doc) ->
+        return done("Missing proposal_id") unless proposal_id?
+        schema.Proposal.findOne {_id: proposal_id}, 'sharing', (err, doc) ->
           unless utils.can_view(session, doc)
             return done("Permission denied")
 
-          api_methods.remove_twinkle {
-            twinkle_id: data.twinkle_id
-            entity: data.entity
+          api_methods.delete_twinkle {
+            twinkle_id: twinkle_id
+            entity: proposal_id
             sender: session.auth?.user_id or null
             sender_anon_id: session.anon_id
           }, (err, results) ->
@@ -227,7 +225,7 @@ module.exports = (config) ->
   #
   # Create
   #
-  create_proposal = (session, data, post_save_callback, post_events_callback) ->
+  r.create_proposal = (session, data, post_save_callback, post_events_callback) ->
     proposal = new schema.Proposal()
     _update_proposal(session, proposal, data, "create",
       post_save_callback, post_events_callback)
@@ -235,7 +233,7 @@ module.exports = (config) ->
   #
   # Update
   #
-  update_proposal = (session, data, post_save_callback, post_events_callback) ->
+  r.update_proposal = (session, data, post_save_callback, post_events_callback) ->
     schema.Proposal.findOne {_id: data.proposal?._id}, (err, proposal) ->
       return callback(err) if err?
       _update_proposal(session, proposal, data, "update", post_save_callback, post_events_callback)
@@ -252,7 +250,7 @@ module.exports = (config) ->
     event_data = {}
     # Update sharing
     if data.proposal?.sharing?
-      unless utils.can_change_sharing(socket.session, proposal)
+      unless utils.can_change_sharing(session, proposal)
         return error_out("Not allowed to change sharing.")
       if (data.proposal.sharing.group_id? and
           not session.groups[data.proposal.sharing.group_id]?)
@@ -295,10 +293,11 @@ module.exports = (config) ->
   #
   # Append
   #
-  add_opinion = (session, data, post_save_callback, post_events_callback) ->
+  r.add_opinion = (session, data, post_save_callback, post_events_callback) ->
     error_out = (err) ->
-      (post_save_callback or post_events_callback)(err)
+      (post_save_callback or post_events_callback)?(err)
 
+    return error_out("Missing proposal id") unless data?.proposal?._id?
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
       unless utils.can_edit(session, proposal)
         return error_out("Permission denied.")
@@ -362,7 +361,7 @@ module.exports = (config) ->
   #
   # Trim
   #
-  remove_opinion = (session, data, post_save_callback, post_events_callback) ->
+  r.remove_opinion = (session, data, post_save_callback, post_events_callback) ->
     error_out = (err) ->
       (post_save_callback or post_events_callback)(err)
     event_data = {data: {}}
@@ -371,7 +370,7 @@ module.exports = (config) ->
         return error_out("Permission denied.")
       found = false
       for opinion, i in proposal.opinions
-        if opinion._id.toString() == data.opinion._id
+        if opinion._id.toString() == data.opinion._id.toString()
           event_data.data.deleted_opinion = proposal.opinions.splice(i, 1)[0]
           found = true
           break
@@ -385,30 +384,24 @@ module.exports = (config) ->
                               post_events_callback)
 
   _send_proposal_events = (session, proposal, action, event_data, callback) ->
-        async.parallel [
-          # Post events.
-          (done) ->
-            post_event(session, proposal, action, {
-              data: event_data
-              callback: done
-            })
+    async.parallel [
+      # Post events.
+      (done) ->
+        r.post_event(session, proposal, action, {
+          data: event_data
+          callback: done
+        })
 
-          # Post search index.
-          (done) ->
-            post_search_index(proposal, done)
+      # Post search index.
+      (done) ->
+        r.post_search_index(proposal, done)
 
-          # Update notifications
-          (done) ->
-            update_notifications(session, proposal, done)
+      # Update notifications
+      (done) ->
+        r.update_notifications session, proposal, done
 
-        ], (err, results) ->
-          callback?.apply(this, [err, proposal].concat(results))
-
-
-  return {
-    post_event, post_search_index, post_twinkle, remove_twinkle
-    create_proposal, update_proposal, add_opinion, remove_opinion,
-    update_notifications
-  }
-
+    ], (err, results) ->
+      [event, searchindex, notices] = results
+      callback?(err, proposal, event, searchindex, notices)
+  return r
 

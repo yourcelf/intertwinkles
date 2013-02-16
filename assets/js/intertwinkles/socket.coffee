@@ -5,4 +5,7 @@ intertwinkles.connect_socket = (cb) ->
     window.console?.log?(data.error)
   socket.on "connect", ->
     intertwinkles.socket = socket
+    intertwinkles.socket_connected = true
     cb?(socket)
+  socket.on "disconnect", ->
+    intertwinkles.socket_connected = false

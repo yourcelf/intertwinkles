@@ -2,6 +2,7 @@ mongoose  = require 'mongoose'
 Schema    = mongoose.Schema
 
 load = (config) ->
+
   ProposalSchema = new Schema
     resolved: Date
     passed: Boolean
@@ -47,8 +48,14 @@ load = (config) ->
     if parts.length < 20
       return @revisions[0].text
     return parts.slice(0, 20).join(" ") + "..."
-  Proposal = mongoose.model("Proposal", ProposalSchema)
 
-  return { Proposal }
+  schemas = {}
+  for name, schema of {Proposal: ProposalSchema}
+    try
+      schemas[name] = mongoose.model(name)
+    catch e
+      schemas[name] = mongoose.model(name, schema)
+
+  return schemas
 
 module.exports = { load }

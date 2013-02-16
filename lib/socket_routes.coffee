@@ -19,16 +19,19 @@ build_room_users_list_for_user = (iorooms, user_session, room, callback) ->
     callback(null, { room: room, list: room_list })
 
 route = (config, io, sessionStore) ->
-  iorooms = new RoomManager("/io-intertwinkles", io, sessionStore)
-  iorooms.authorizeConnection = set_anonymous_id = (session, callback) ->
-    if not session.anon_id?
-      session.anon_id = uuid.v4()
-      iorooms.saveSession(session, callback)
-    callback()
   api_methods = require("./api_methods")(config)
 
+  iorooms = new RoomManager("/io-intertwinkles", io, sessionStore, {
+    authorizeConnection: (session, callback) ->
+      throw new Error("HEY THERE IT WORKED")
+      if not session.anon_id?
+        session.anon_id = uuid.v4()
+        return iorooms.saveSession(session, callback)
+      else
+        callback()
+  })
   iorooms.onChannel 'verify', (socket, reqdata) ->
-    api_methods.authenticate socket.session, reqdata.assertion, (err, session) ->
+    api_methods.authenticate socket.session, reqdata.assertion, (err, session, message) ->
       iorooms.saveSession session, (err) ->
         return socket.emit "error", {error: err} if err?
 
@@ -95,7 +98,7 @@ route = (config, io, sessionStore) ->
         respond(null, model: doc)
 
   iorooms.onChannel "get_notifications", (socket, data) ->
-    return unless auth.is_authenticated(socket.session)
+    return unless utils.is_authenticated(socket.session)
     api_methods.get_notifications socket.session.auth.email, (err, docs) ->
       return socket.emit "error", {error: err} if err?
       socket.emit "notifications", {notifications: docs}

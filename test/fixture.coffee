@@ -31,6 +31,11 @@ module.exports = {
       email_change_request: "new_address@mockmyid.com"
       mobile: { number: "5556666666", carrier: "US Cellular" }
     },
+    {
+      name: "No group"
+      joined: new Date()
+      email: "no_group@mockmyid.com"
+    },
   ]
   groups: [
     {
@@ -69,7 +74,7 @@ module.exports = {
       }]
     },
     {
-      name: "Three members"
+      name: "Three Members"
       slug: "three-members"
       disabled: false
       logo: null

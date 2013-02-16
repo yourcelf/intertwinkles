@@ -46,6 +46,7 @@ class intertwinkles.BaseView extends Backbone.View
           "<span class='error-msg help-inline'>#{msg}</span>"
         )
     if dirty
+      $(".error", container)[0].scrollIntoView()
       return false
     return cleaned_data
 

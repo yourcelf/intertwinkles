@@ -36,9 +36,12 @@ start = (config) ->
   sessionStore = new RedisStore()
   io = socketio.listen(app, {"log level": 0})
   socket_routes.route(config, io, sessionStore)
-  db = mongoose.connect(
-    "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
-  )
+  unless config.db_connection?
+    db = mongoose.connect(
+      "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
+    )
+  else
+    db = null
 
   app.use express.bodyParser({keepExtensions: true})
   app.use express.cookieParser()
@@ -48,7 +51,7 @@ start = (config) ->
     store: sessionStore
   app.set 'view engine', 'jade'
   app.set 'view options', {layout: false}
-  app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
+  #app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
 
   # static files
   app.configure 'development', ->
@@ -94,6 +97,6 @@ start = (config) ->
   app.set "views", view_folders
 
   app.listen config.port
-  return {app, db, logger}
+  return {app, logger, db: (db or config.db_connection)}
 
 module.exports = {start}

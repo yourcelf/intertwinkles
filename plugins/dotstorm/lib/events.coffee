@@ -1,9 +1,9 @@
-schema        = require './schema'
 _             = require 'underscore'
 logger        = require('log4js').getLogger()
 
 module.exports = (config) ->
   api_methods = require("../../../lib/api_methods")(config)
+  schema = require('./schema').load(config)
 
   return {
     post_event: (session, dotstorm, type, opts) =>

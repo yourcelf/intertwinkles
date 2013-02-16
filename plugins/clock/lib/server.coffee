@@ -2,19 +2,20 @@ _             = require 'underscore'
 async         = require 'async'
 express       = require 'express'
 RoomManager   = require('iorooms').RoomManager
-schema        = require './schema'
 utils         = require '../../../lib/utils'
 
 start = (config, app, io, sessionStore) ->
-  iorooms = new RoomManager("/io-clock", io, sessionStore)
-  iorooms.authorizeJoinRoom = (seession, name, callback) ->
-    schema.ProgTime.findOne {'_id', name}, 'sharing', (err, doc) ->
-      return callback(err) if err?
-      if utils.can_view(session, doc)
-        callback(null)
-      else
-        callback("Permission denied")
-
+  schema = require('./schema').load(config)
+  iorooms = new RoomManager("/io-clock", io, sessionStore, {
+    authorizeJoinRoom: (seession, name, callback) ->
+      schema.ProgTime.findOne {'_id', name}, 'sharing', (err, doc) ->
+        return callback(err) if err?
+        if utils.can_view(session, doc)
+          callback(null)
+        else
+          callback("Permission denied")
+  })
+  
   #
   # Routes
   #

@@ -1,6 +1,7 @@
 fs         = require 'fs'
 expect     = require 'expect.js'
-models     = require '../lib/schema'
+config     = require '../../../test/test_config'
+models     = require('../lib/schema').load(config)
 common     = require '../../../test/common'
 
 describe "Canvas to image from idea", ->

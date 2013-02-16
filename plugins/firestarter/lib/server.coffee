@@ -1,21 +1,24 @@
 express       = require 'express'
 RoomManager   = require('iorooms').RoomManager
-schema        = require './schema'
 _             = require 'underscore'
 async         = require 'async'
 utils         = require '../../../lib/utils'
+logger        = require('log4js').getLogger("firestarter")
 
 start = (config, app, io, sessionStore) ->
+  schema = require('./schema').load(config)
+
   io.of("/io-firestarter").setMaxListeners(15)
-  iorooms = new RoomManager("/io-firestarter", io, sessionStore)
-  iorooms.authorizeJoinRoom = (session, name, callback) ->
-    # Only allow to join the room if we're allowed to view the firestarter.
-    schema.Firestarter.findOne {'slug': name}, 'sharing', (err, doc) ->
-      return callback(err) if err?
-      if utils.can_view(session, doc)
-        callback(null)
-      else
-        callback("Permission denied")
+  iorooms = new RoomManager("/io-firestarter", io, sessionStore, {
+    authorizeJoinRoom: (session, name, callback) ->
+      # Only allow to join the room if we're allowed to view the firestarter.
+      schema.Firestarter.findOne {'slug': name}, 'sharing', (err, doc) ->
+        return callback(err) if err?
+        if utils.can_view(session, doc)
+          callback(null)
+        else
+          callback("Permission denied")
+  })
 
   api_methods = require("../../../lib/api_methods")(config)
 
@@ -64,8 +67,53 @@ start = (config, app, io, sessionStore) ->
       index_res(req, res, {
         firestarter: doc.toJSON()
       })
+  #
+  # Add an event entry for the given firestarter.
+  #
+  add_firestarter_event = (firestarter, event_params, timeout, callback) ->
+    respond = (err) ->
+      if err?
+        logger.error("add_firestarter_event", err)
+      callback?(err)
 
+    for key in ["type", "anon_id", "data"]
+      if not event_params[key]?
+        return respond("Missing event param #{key}")
+
+    event_data = _.extend({
+      application: "firestarter"
+      entity: firestarter.id
+      entity_url: "/firestarter/f/#{firestarter.slug}"
+      group: firestarter.sharing.group_id
+    }, event_params)
+
+    api_methods.post_event(event_data, timeout, respond)
+
+  #
+  # Add or update the search index for the given firestarter.
+  #
+  add_firestarter_search = (firestarter, callback) ->
+    respond = ->
+      if err?
+        logger.error("add_firestarter_search", err)
+      callback?(err)
+    # Post search content
+    search_content = [firestarter.name, firestarter.prompt].concat((
+        r.response for r in firestarter.responses
+      )).join("\n")
+    api_methods.add_search_index({
+      application: "firestarter"
+      type: "firestarter"
+      url: "/firestarter/f/#{firestarter.slug}"
+      title: firestarter.name
+      summary: firestarter.promt
+      text: search_content
+      sharing: firestarter.sharing
+    }, respond)
+
+  #
   # Get a valid slug for a firestarter that hasn't yet been used.
+  #
   iorooms.onChannel 'get_unused_slug', (socket, data) ->
     choices = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     unless data.callback?
@@ -84,7 +132,9 @@ start = (config, app, io, sessionStore) ->
           get_slug()
     get_slug()
 
+  #
   # Create a new firestarter.
+  #
   iorooms.onChannel "create_firestarter", (socket, data) ->
     unless data.callback?
       return socket.emit("error", {error: "Must specifiy callback."})
@@ -111,35 +161,17 @@ start = (config, app, io, sessionStore) ->
           socket.emit(data.callback, {error: []})
       else
         socket.emit(data.callback, {model: model.toJSON()})
-        url = "/firestarter/f/#{model.slug}"
-        api_methods.post_event {
+        add_firestarter_event(model, {
           type: "create"
-          application: "firestarter"
-          entity: model.id
-          entity_url: url
           user: socket.session.auth?.email
           anon_id: socket.session.anon_id
-          group: model.sharing.group_id
-          data: {
-            action: {
-              name: model.name
-              prompt: model.prompt
-            }
-            title: model.name
-          }
-        }, (->)
-        api_methods.add_search_index {
-          application: "firestarter"
-          entity: model.id
-          type: "firestarter"
-          url: url
-          title: model.name
-          summary: model.prompt
-          text: [model.name, model.prompt].join("\n")
-          sharing: model.sharing
-        }
+          data: { action: { name: model.name, prompt: model.prompt } }
+        }, 0)
+        add_firestarter_search(model)
 
+  #
   # Edit a firestarter
+  #
   iorooms.onChannel 'edit_firestarter', (socket, data) ->
     updates = {}
     changes = false
@@ -166,36 +198,18 @@ start = (config, app, io, sessionStore) ->
         delete res.model.responses
         if data.callback? then socket.emit data.callback, res
         socket.broadcast.to(doc.slug).emit "firestarter", res
-        
-        # Add event and search index.
-        url = "/firestarter/f/#{doc.slug}"
-        api_methods.post_event {
-          type: "update"
-          application: "firestarter"
-          entity: doc.id
-          entity_url: url
-          user: socket.session.auth?.email
-          anon_id: socket.session.anon_id
-          group: doc.sharing.group_id
-          data: {
-            title: doc.name
-            action: updates
-          }
-        }, (->)
-        api_methods.add_search_index({
-          application: "firestarter"
-          entity: doc.id
-          type: "firestarter"
-          url: url
-          title: doc.name
-          summary: doc.prompt
-          sharing: doc.sharing
-          text: [doc.name, doc.prompt].concat((
-            res.response for res in doc.responses
-          )).join("\n")
-        })
 
+        add_firestarter_event(doc, {
+          type: "update"
+          user: socket.session.auth?.user_id
+          anon_id: socket.session.anon_id
+          data: { action: updates }
+        }, 0)
+        add_firestarter_search(doc)
+
+  #
   # Retrieve a firestarter with responses.
+  #
   iorooms.onChannel 'get_firestarter', (socket, data) ->
     unless data.slug?
       socket.emit("error", {error: "Missing slug!"})
@@ -211,16 +225,12 @@ start = (config, app, io, sessionStore) ->
         socket.emit("firestarter", {
           model: model.toJSON()
         })
-        api_methods.post_event {
+        add_firestarter_event(model, {
           type: "visit"
-          application: "firestarter"
-          entity: model.id
-          entity_url: "/firestarter/f/#{model.slug}"
-          user: socket.session.auth?.email
+          user: socket.session.auth?.user_id
           anon_id: socket.session.anon_id
-          group: model.sharing.group_id
-          data: { title: model.name }
-        }, 5000 * 60, (->)
+          data: {}
+        }, 5000 * 60)
   
   iorooms.onChannel "get_firestarter_list", (socket, data) ->
     if not data.callback?
@@ -247,7 +257,10 @@ start = (config, app, io, sessionStore) ->
         return socket.emit "error", {error: err} if err?
         socket.emit data.callback, {events: events}
 
+
+  #
   # Save a response to a firestarter.
+  #
   iorooms.onChannel "save_response", (socket, data) ->
     async.waterfall [
       # Grab the firestarter. Populate responses so we can build search
@@ -313,33 +326,18 @@ start = (config, app, io, sessionStore) ->
       socket.emit(data.callback, responseData) if data.callback?
 
       # Post search data
-      url = "/firestarter/f/#{firestarter.slug}"
-      api_methods.add_search_index {
-        application: "firestarter", entity: firestarter.id,
-        type: "firestarter", url: url,
-        title: firestarter.name, summary: firestarter.prompt,
-        sharing: firestarter.sharing
-        text: search_content
-      }, (err) ->
-        socket.emit("error", {error: err}) if err?
-
-      # Post an event if we're signed in.
-      api_methods.post_event {
+      add_firestarter_event(firestarter, {
         type: "append"
-        application: "firestarter"
-        entity: firestarter.id
-        entity_url: url
         user: response.user_id or null
         anon_id: socket.session.anon_id
         via_user: socket.session.auth?.user_id
-        group: firestarter.sharing.group_id
-        data: {
-          title: firestarter.name
-          action: response.toJSON()
-        }
-      }, (->)
+        data: { action: response.toJSON() }
+      }, 0)
+      add_firestarter_search(firestarter)
 
+  #
   # Delete a response
+  #
   iorooms.onChannel "delete_response", (socket, data) ->
     return done("No response._id specified") unless data.model._id?
     return done("No firestarter_id specified") unless data.model.firestarter_id?
@@ -378,31 +376,13 @@ start = (config, app, io, sessionStore) ->
         socket.emit(data.callback, responseData) if data.callback?
         socket.broadcast.to(firestarter.slug).emit("delete_response", responseData)
 
-        # Post event
-        url = "/firestarter/f/#{firestarter.slug}"
-        api_methods.post_event {
+        add_firestarter_event(firestarter, {
           type: "trim"
-          application: "firestarter"
-          entity: firestarter.id
-          entity_url: url
-          user: socket.session.auth?.email
+          user: socket.session.auth?.user_id
           anon_id: socket.session.anon_id
-          group: firestarter.sharing.group_id
-          data: {
-            title: firestarter.name
-            action: response?.toJSON()
-          }
-        }, (err) ->
-          socket.emit "error", {error: err} if err?
-        
-        # Post search index
-        api_methods.add_search_index {
-            application: "firestarter", entity: firestarter.id,
-            type: "firestarter", url: url,
-            title: firestarter.name, summary: firestarter.prompt,
-            text: search_content, sharing: firestarter.sharing,
-          }, (err) ->
-            socket.emit "error", {error: err} if err?
+          data: { action: response?.toJSON() }
+        }, 0)
+        add_Firestarter_search(firestarter)
 
     ], (err) ->
       socket.emit "error", {error: err} if err?

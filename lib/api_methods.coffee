@@ -4,6 +4,7 @@ url           = require 'url'
 icons         = require './icons'
 email_notices = require './email_notices'
 logger        = require('log4js').getLogger()
+browserid     = require 'browserid-consumer'
 
 module.exports = (config) ->
   schema = require("./schema").load(config)
@@ -69,6 +70,8 @@ module.exports = (config) ->
       "members.user": user.id
     }).populate("members.user").populate("invited_members.user").exec (err, groups) ->
       return callback(err) if err?
+      if groups.length == 0
+        output.users[user.id] = user
       for group in groups or []
         for member in group.members
           output.users[member.user.id] = member.user
@@ -81,11 +84,13 @@ module.exports = (config) ->
         output.groups[group.id] = group
       return callback(null, output)
 
-  m.get_groups = (user, callback) ->
-    if _.isObject(user)
-      _get_groups(user, callback)
-    else if _.isString(user)
-      get_user user, (err, user) ->
+  # Resolves the first argument into a user object, then gets the user's
+  # associated groups.
+  m.get_groups = (email_or_id_or_user, callback) ->
+    if _.isObject(email_or_id_or_user)
+      _get_groups(email_or_id_or_user, callback)
+    else if _.isString(email_or_id_or_user)
+      get_user email_or_id_or_user, (err, user) ->
         return callback(err) if err?
         _get_groups(user, callback)
     else
@@ -98,17 +103,17 @@ module.exports = (config) ->
   m.authenticate = (session, assertion, callback) ->
     m.verify_assertion assertion, (err, persona_response) ->
       return callback(err) if err?
-      m.get_authenticating_user persona_response.email, (err, res) ->
+      m.get_authenticating_user persona_response.email, (err, data) ->
         return callback(err) if err?
-        { user, message } = res
-        _get_groups user, (err, res) ->
+        { user, message } = data
+        _get_groups user, (err, data) ->
           return callback(err) if err?
-          { groups, users } = res
+          { groups, users } = data
           session.auth = persona_response
           session.auth.user_id = user.id
           session.groups = groups
           session.users = users
-          callback(err, session)
+          callback(err, session, message)
 
   m.clear_session_auth = (session, callback) ->
     session.auth = null
@@ -158,16 +163,29 @@ module.exports = (config) ->
   _add_search_index = (params, callback) ->
     conditions = {}
     update = {}
-    options = {upsert: true, 'new': true}
     for key in ["application", "entity", "type"]
       conditions[key] = params[key]
     for key in ["title", "summary", "text", "url"]
       update[key] = params[key]
+    # Avoid updating sharing if not passed explicitly.
     if params.sharing?
       update.sharing = params.sharing
-    schema.SearchIndex.findOneAndUpdate conditions, update, options, (err, doc) ->
+    # options = {upsert: true, 'new': true}
+    # XXX: findOneAndUpdate here was leading to
+    # [RangeError: Maximum call stack size exceeded]
+    # and 
+    # Object [object Object],[object Object]  has mo method 'getRequestId'
+    # under mongoose 3.5.6.
+    # Couldn't figure it out; switched to a findOne + save instead.
+    schema.SearchIndex.findOne conditions, (err, doc) ->
       return callback(err) if err?
-      solr.post_search_index(doc, (err) -> callback(err, doc))
+      unless doc?
+        doc = new schema.SearchIndex(conditions)
+      for key, val of update
+        doc[key] = val
+      doc.save (err, doc) ->
+        return callback(err) if err?
+        solr.post_search_index(doc, (err) -> callback(err, doc))
 
   m.add_search_index = (params, timeout, callback) ->
     if timeout and isNaN(timeout)
@@ -176,7 +194,7 @@ module.exports = (config) ->
     else
       callback or= (->)
       
-    if timeout?
+    if timeout? and timeout > 0
       key = [params.application, params.entity, params.type].join(":")
       if _add_search_index_timeout[key]?
         clearTimeout(_add_search_index_timeout[key])
@@ -220,9 +238,9 @@ module.exports = (config) ->
       (done) ->
         if params.user?
           get_user params.user, (err, doc) ->
-            return callback(err) if err?
+            return done(err) if err?
             query.recipient = doc.id
-            done(null)
+            done(null, null)
         else
           done(null, null)
       (done) ->
@@ -231,9 +249,10 @@ module.exports = (config) ->
             doc.cleared = true
             doc.save (err, doc) ->
               cb(err, doc)
-          async.map docs, mark_cleared, (err, results) ->
-            callback(err, results)
-    ]
+          async.map docs, mark_cleared, done
+    ], (err, results) ->
+      [none, notifications] = results
+      callback(err, notifications)
 
   m.suppress_notifications = (email, notification_id, callback=(->)) ->
     get_user email, (err, user) ->
@@ -279,30 +298,26 @@ module.exports = (config) ->
       # Add user id's
       async.parallel [
         (done) ->
-          done(null, false) unless params.sender?
-          if params.sender.indexOf('@') != -1
-            schema.User.findOne {email: params.sender}, (err, doc) -> done(err, doc)
+          return done(null, false) unless params.sender?
+          if params.sender.toString().indexOf('@') != -1
+            schema.User.findOne {email: params.sender}, done
           else
             done(null, {_id: params.sender})
         (done) ->
-          if params.recipient.indexOf('@') != -1
-            schema.User.findOne {email: params.recipient}, (err, doc) -> done(err, doc)
+          if params.recipient.toString().indexOf('@') != -1
+            schema.User.findOne {email: params.recipient}, done
           else
             done(null, {_id: params.recipient})
       ], (err, results) ->
-        return callback(err) if err?
-        unless results[0]?
-          return callback("Sender '#{params.sender}' not found.")
-        unless results[1]?
-          return callback("Recipient '#{params.recipient}' not found.")
-
+        return done(err) if err?
+        return done("Sender '#{params.sender}' not found.") unless results[0]?
+        return done("Recipient '#{params.recipient}' not found.") unless results[1]?
         # Save.
         if results[0] != false
           notice_conditions.sender = results[0]._id
         notice_conditions.recipient = results[1]._id
-        options = {'new': true, 'upsert': true}
         schema.Notification.findOneAndUpdate(
-          notice_conditions, notice_update, options, done
+          notice_conditions, notice_update, {'new': true, 'upsert': true}, done
         )
 
     async.map(notices, store_notice, callback)
@@ -357,6 +372,8 @@ module.exports = (config) ->
         filter.date = after
       else if params.before?
         filter.date = before
+      for key in ["application", "entity", "type"]
+        filter[key] = params[key] if params[key]?
       schema.Event.find(filter, callback)
 
   _event_timeout_queue = {}
@@ -366,7 +383,7 @@ module.exports = (config) ->
     async.parallel [
       (done) ->
         if params.group?
-          schema.Group.find {_id: params.group}, '_id', (err, group) ->
+          schema.Group.findOne {_id: params.group}, '_id', (err, group) ->
             data.group = group?._id
             done(err)
         else

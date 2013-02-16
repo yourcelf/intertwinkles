@@ -58,8 +58,12 @@ onlogin = (assertion) ->
       flash "error", data.error or "Error signing in."
 
   if intertwinkles.socket?
-    intertwinkles.socket.once "login", handle
-    intertwinkles.socket.emit "verify", {callback: "login", assertion: assertion}
+    if intertwinkles.socket_connected
+      intertwinkles.socket.once "login", handle
+      intertwinkles.socket.emit "verify", {callback: "login", assertion: assertion}
+    else
+      if confirm("Lost connection. Refresh page?")
+        window.location.href = window.location.href
   else
     alert("Error: socket missing")
 

@@ -2,7 +2,8 @@ expect   = require 'expect.js'
 mongoose = require 'mongoose'
 fs       = require 'fs'
 _        = require 'underscore'
-models   = require '../lib/schema'
+config   = require '../../../test/test_config'
+models   = require('../lib/schema').load(config)
 common   = require '../../../test/common'
 
 describe "Mongoose connector", ->

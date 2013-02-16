@@ -63,8 +63,14 @@ load = (config) ->
     "#{config.apps.twinklepad.etherpad.url}/p/#{@read_only_pad_id}"
   TwinklePadSchema.set('toObject', {virtuals: true})
   TwinklePadSchema.set('toJSON', {virtuals: true})
-  TwinklePad = mongoose.model("TwinklePad", TwinklePadSchema)
 
-  return { TwinklePad }
+  schemas = {}
+  for name, schema of {TwinklePad: TwinklePadSchema}
+    try
+      schemas[name] = mongoose.model(name)
+    catch e
+      schemas[name] = mongoose.model(name, schema)
+
+  return schemas
 
 module.exports = { load }

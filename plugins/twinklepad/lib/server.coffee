@@ -17,14 +17,16 @@ start = (config, app, io, sessionStore) ->
   #
   # Sockets
   #
-  iorooms = new RoomManager("/io-twinklepad", io, sessionStore)
-  iorooms.authorizeJoinRoom = (session, name, callback) ->
-    schema.TwinklePad.findOne {pad_id: name}, 'sharing', (err, doc) ->
-      return callback(err) if err?
-      if utils.can_view(session, doc)
-        callback(null)
-      else
-        callback("Permission denied")
+  iorooms = new RoomManager("/io-twinklepad", io, sessionStore, {
+    authorizeJoinRoom: (session, name, callback) ->
+      schema.TwinklePad.findOne {pad_id: name}, 'sharing', (err, doc) ->
+        return callback(err) if err?
+        if utils.can_view(session, doc)
+          callback(null)
+        else
+          callback("Permission denied")
+
+  })
 
   # Clear etherpad session on disconnect
   iorooms.on "disconnect", (data) ->

@@ -1,22 +1,24 @@
 express       = require 'express'
 RoomManager   = require('iorooms').RoomManager
-schema        = require './schema'
 _             = require 'underscore'
 utils         = require '../../../lib/utils'
 
 # See Cakefile for config definitions and defaults
 start = (config, app, io, sessionStore) ->
   events = require('./events')(config)
+  schema = require('./schema').load(config)
 
-  iorooms = new RoomManager("/io-dotstorm", io, sessionStore)
+  iorooms = new RoomManager("/io-dotstorm", io, sessionStore, {
+    authorizeJoinRoom: (session, name, callback) ->
+      schema.Dotstorm.findOne {_id: name}, 'sharing', (err, doc) ->
+        return callback(err) if err?
+        if utils.can_view(session, doc)
+          callback(null)
+        else
+          callback("Permission denied")
+  })
+
   require('./socket-connector').attach(config, iorooms)
-  iorooms.authorizeJoinRoom = (session, name, callback) ->
-    schema.Dotstorm.findOne {_id: name}, 'sharing', (err, doc) ->
-      return callback(err) if err?
-      if utils.can_view(session, doc)
-        callback(null)
-      else
-        callback("Permission denied")
 
   #
   # Routes

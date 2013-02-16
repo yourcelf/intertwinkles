@@ -1,4 +1,5 @@
 config = require '../config/config'
+mongoose  = require "mongoose"
 
 # Arbitrary different port that doesn't clash with dev server
 config.port = 8888

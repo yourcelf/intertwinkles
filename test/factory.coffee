@@ -8,11 +8,11 @@ mongoose = require("mongoose")
 # Create factory based on given config.
 #
 module.exports.run = (config, done) ->
+  www_schema = require("../lib/schema").load(config)
+  res_schema = require("../plugins/resolve/lib/schema").load(config)
   db = mongoose.connect(
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
-  www_schema = require("../lib/schema").load(config)
-  res_schema = require("../plugins/resolve/lib/schema").load(config)
 
   day_zero = new Date().getTime() - (1000 * 60 * 60 * 24) * 7
   day = (plus_days) ->
