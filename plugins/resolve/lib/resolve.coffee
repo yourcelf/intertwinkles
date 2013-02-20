@@ -121,7 +121,7 @@ module.exports = (config) ->
     # 1. remove all notifications associated with this entity.
     api_methods.clear_notifications {
       application: "resolve",
-      type: notice_type 
+      type: notice_type
       entity: proposal.id
     }, (err, notifications) ->
       if err?

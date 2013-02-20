@@ -252,8 +252,9 @@ module.exports = (config) ->
               cb(err, doc)
           async.map docs, mark_cleared, done
     ], (err, results) ->
+      return callback(err) if err?
       [none, notifications] = results
-      callback(err, notifications)
+      callback(null, notifications)
 
   m.suppress_notifications = (email, notification_id, callback=(->)) ->
     get_user email, (err, user) ->

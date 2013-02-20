@@ -37,6 +37,11 @@ utils.get_json = (get_url, query, callback) ->
         callback(null, json)
   ).on("error", (e) -> callback(error: e))
 
+utils.append_slash = (app, route, methods=["get"]) ->
+  for method in methods
+    app[method](new RegExp("^" + route + "$"), (req, res) -> res.redirect(route + "/"))
+
+
 # Post the given data to the given URL as form encoded data; interpret the
 # response as JSON.
 utils.post_data = (post_url, data, callback, method='POST') ->
