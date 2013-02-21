@@ -9,6 +9,9 @@ log4js         = require 'log4js'
 
 utils          = require './utils'
 socket_routes  = require './socket_routes'
+www_routes     = require "./www_routes"
+api_routes     = require "./api_routes"
+require "better-stack-traces"
 
 # Logger
 
@@ -69,10 +72,10 @@ start = (config) ->
   view_folders = [__dirname + "/../views"]
   asset_folders = [__dirname + "/../assets"]
 
-  # API routes
-  require("./api_routes").route(config, app)
   # Base routes for home page, auth, groups, profiles, search
-  require("./www_routes").route(config, app, io, sessionStore)
+  www_routes.route(config, app, io, sessionStore)
+  # API routes
+  api_routes.route(config, app)
 
   for key, appconf of config.apps
     continue if key == "www"
@@ -93,8 +96,10 @@ start = (config) ->
   # Don't prefix connect-assets' css and js paths by default.
   css.root = ''
   js.root = ''
-
   app.set "views", view_folders
+
+  # 404 route -- must be last, after all other routes, as it defines a wildcard.
+  www_routes.route_errors(config, app)
 
   app.listen config.port
   return {app, logger, db: (db or config.db_connection)}

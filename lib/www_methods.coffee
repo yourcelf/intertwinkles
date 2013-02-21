@@ -16,7 +16,13 @@ module.exports = (config) ->
   #
   www.handle_error = (req, res, err, msg) ->
     logger.error(err, msg)
-    res.send(msg or "Server error", 500)
+    res.statusCode = 500
+    res.render("500", {
+      title: "Server Error"
+      initial_data: utils.get_initial_data(req?.session, config)
+      conf: utils.clean_conf(config)
+      flash: {}
+    })
 
   www.ajax_handle_error = (req, res, err, msg) ->
     logger.error(err, msg)
@@ -26,13 +32,31 @@ module.exports = (config) ->
     res.redirect("/profiles/login/?next=" + encodeURIComponent(req.url))
 
   www.not_found = (req, res) ->
-    res.send("Not found, 404", 404)
+    res.statusCode = 404
+    res.render("404", {
+      title: "Not Found"
+      initial_data: utils.get_initial_data(req?.session, config)
+      conf: utils.clean_conf(config)
+      flash: {}
+    })
   
   www.permission_denied = (req, res) ->
-    res.send("Permission Denied", 403)
+    res.statusCode = 403
+    res.render("403", {
+      title: "Permission denied"
+      initial_data: utils.get_initial_data(req?.session, config)
+      conf: utils.clean_conf(config)
+      flash: {}
+    })
 
   www.bad_request = (req, res, msg) ->
-    res.send(msg or "Bad Request", 400)
+    res.statusCode = 400
+    res.render("500", {
+      title: "Bad Request"
+      initial_data: utils.get_initial_data(req?.session, config)
+      conf: utils.clean_conf(config)
+      flash: {}
+    })
 
   www.ajax_bad_request = (req, res, msg) ->
     res.send({error: msg or "Bad Request", status: 400}, 400)
@@ -93,8 +117,10 @@ module.exports = (config) ->
       doc.name = params.name if params.name?
       doc.icon.pk = params.icon if params.icon?
       doc.icon.color = params.color if params.color?
-      doc.mobile.number = params.mobile_number if params.mobile_number?
-      doc.mobile.carrier = params.mobile_carrier if params.mobile_carrier?
+      if params.mobile_number?
+        doc.mobile.number = params.mobile_number or null
+      if params.mobile_carrier?
+        doc.mobile.carrier = params.mobile_carrier or null
       doc.save(callback)
 
   #
@@ -104,20 +130,25 @@ module.exports = (config) ->
     group = _new_group_with_session(session)
     user_map = {}
     user_map[session.auth.user_id] = session.users[session.auth.user_id]
-    _update_group session, group, user_map, group_params, (err, event_data) ->
-      api_methods.post_event {
-        type: "create"
-        application: "www"
-        entity: group.id
-        entity_url: "/groups/#{group.slug}"
-        user: session.auth.user_id
-        group: group.id
-        data: {
-          title: "group #{group.name}"
-          action: event_data
-        }
-      }, (err) ->
-        callback(err, group)
+    _update_group(session,
+      group,
+      user_map,
+      group_params,
+      (err, event_data, group, clear_notices, new_notices) ->
+        api_methods.post_event {
+          type: "create"
+          application: "www"
+          entity: group.id
+          entity_url: "/groups/#{group.slug}"
+          user: session.auth.user_id
+          group: group.id
+          data: {
+            title: "group #{group.name}"
+            action: event_data
+          }
+        }, (err, event) ->
+          callback(err, group, event, [].concat(clear_notices or [], new_notices or []))
+    )
 
   # Create a new group with the given session's user as a method.
   _new_group_with_session = (session, callback) ->
@@ -148,20 +179,26 @@ module.exports = (config) ->
       user_map = {}
       for user in docs
         user_map[user.id] = user
-      _update_group session, group, user_map, group_params, (err, event_data) ->
-        api_methods.post_event {
-          type: "update"
-          application: "www"
-          entity: group.id
-          entity_url: "/groups/#{group.slug}"
-          user: session.auth.user_id
-          group: group.id
-          data: {
-            title: "group #{group.name}"
-            action: event_data
-          }
-        }, (err) ->
-          callback(err, group)
+      _update_group(session,
+        group,
+        user_map,
+        group_params,
+        (err, event_data, group, clear_notices, new_notices) ->
+          return callback(err) if err?
+          api_methods.post_event {
+            type: "update"
+            application: "www"
+            entity: group.id
+            entity_url: "/groups/#{group.slug}"
+            user: session.auth.user_id
+            group: group.id
+            data: {
+              title: "group #{group.name}"
+              action: event_data
+            }
+          }, (err, event) ->
+            callback(err, group, event, [].concat(clear_notices or [], new_notices or []))
+      )
 
   # Create an invitation object; creating the user if needed.  Calls back with:
   # callback(err, invitation)
@@ -238,9 +275,8 @@ module.exports = (config) ->
         if user_map[membership.user].email == email
           group.members.splice(i, 1)
           removal = {}
-          for key, val of membership
-            if key != "_id" and key != "id"
-              removal[key] = val
+          for key in ["invited_by", "invited_on", "role", "voting", "user", "joined"]
+            removal[key] = membership[key]
           removal.left = new Date()
           removal.removed_by = session.auth.user_id
           group.past_members.push(removal)
@@ -376,11 +412,12 @@ module.exports = (config) ->
               return done(err) if err?
               session.groups = res.groups
               session.users = res.users
-              done()
+              done(null, null)
             )
         ], (err, results) ->
           return callback(err) if err?
-          return callback(null, event_data)
+          [clear_notices, new_notices, none] = results
+          return callback(null, event_data, group, clear_notices, new_notices)
 
   #
   # Verify that the user with the given session has been invited to the group
@@ -438,9 +475,12 @@ module.exports = (config) ->
             user: session.auth.user_id
             entity: group.id
             type: "invitation"
-          }, (err, results) ->
-            done(err)
+          }, (err, notices) ->
+            done(err, notices)
 
-      ], callback
+      ], (err, results) ->
+        return callback(err) if err?
+        [event, notices] = results
+        return callback(null, group, event, notices)
 
   return www

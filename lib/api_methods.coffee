@@ -429,11 +429,11 @@ module.exports = (config) ->
     if _event_timeout_queue[key]
       return callback(null, _event_timeout_queue[key])
 
-    _post_event params, (err, events) ->
+    _post_event params, (err, event) ->
       if timeout? and not err?
-        _event_timeout_queue[key] = events
+        _event_timeout_queue[key] = event
         setTimeout (-> delete _event_timeout_queue[key]), timeout
-      return callback(err, events)
+      return callback(err, event)
 
   #
   # Twinkles

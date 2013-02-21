@@ -1,0 +1,13 @@
+extends layout
+
+block poststyles
+  style(type='text/css')
+    #push, footer { display: none; }
+
+block body
+  div(style='text-align: center;')
+    h1 Page Not Found
+    img(src='/static/img/twinkle_shadow.png', alt='Missing twinkle star')
+    p.
+      Sorry, we couldn't find a page here.
+      <a href='mailto:support@intertwinkles.org'>Contact Us</a> if we screwed up.

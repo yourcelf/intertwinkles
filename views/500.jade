@@ -1,0 +1,16 @@
+extends layout
+
+block poststyles
+  style(type='text/css')
+    #push, footer { display: none; }
+
+block body
+  div(style='text-align: center;')
+    h1 Oh Noes!
+    h2 Server Error
+    img(src='/static/img/distressed_twinkle.png', alt='Distressed twinkle star')
+    p.
+      Sorry about that.
+      <a href='mailto:support@intertwinkles.org'>Let us know what happened</a>
+      if you like.
+

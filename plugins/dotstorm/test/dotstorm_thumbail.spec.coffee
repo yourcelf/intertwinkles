@@ -4,7 +4,7 @@ config     = require '../../../test/test_config'
 models     = require('../lib/schema').load(config)
 common     = require '../../../test/common'
 
-describe "Canvas to image from idea", ->
+describe "Dotstorm Canvas to image from idea", ->
   before (done) ->
     @mahId = undefined
     common.startUp (server, browser) =>

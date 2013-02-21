@@ -43,6 +43,7 @@ route = (config, app, io, sessionStore) ->
         title: "InterTwinkles: Twinkling all over the InterWebs"
         hero_apps: ["firestarter", "twinklepad", "dotstorm", "resolve"]
         activity: activity
+        groups: req.session.groups
       })
 
     unless utils.is_authenticated(req.session)
@@ -52,7 +53,7 @@ route = (config, app, io, sessionStore) ->
       (done) -> www_methods.get_user_events(req.session, done)
       (done) -> www_methods.get_group_events(req.session, done)
       (done) -> utils.list_group_documents(
-          schema.SearchIndex, session, done, {}, "-modified", 0, 20, true)
+          schema.SearchIndex, req.session, done, {}, "-modified", 0, 20, true)
     ], (err, results) ->
       return respond(err) if err?
       [user_events, group_events, recent_docs] = results
@@ -87,8 +88,18 @@ route = (config, app, io, sessionStore) ->
       title: "Related Work"
     })
 
+  #
+  # Testing
+  #
+  utils.append_slash(app, "/test")
   app.get '/test/', (req, res) ->
-    res.render 'home/test', context(req, { title: "Test" })
+    res.render 'test', context(req, {title: "Test"})
+
+  utils.append_slash(app, "/500")
+  app.get '/500/', (req, res) -> throw new Error("Test error, ignore")
+
+  utils.append_slash(app, "/403")
+  app.get '/403/', (req, res) -> www_methods.permission_denied(req, res)
 
   #
   # Search
@@ -315,4 +326,15 @@ route = (config, app, io, sessionStore) ->
 
   return {app}
 
-module.exports = {route}
+route_errors = (config, app) ->
+  www_methods = require("./www_methods")(config)
+  app.use (err, req, res, next) ->
+    if err?
+      www_methods.handle_error(req, res, err)
+    else
+      next()
+  #XXX There should be a cleaner way to capture unrouted 404's..
+  #app.get /^\/(?!(built|static|uploads)\/).*$/, www_methods.not_found
+
+
+module.exports = {route, route_errors}

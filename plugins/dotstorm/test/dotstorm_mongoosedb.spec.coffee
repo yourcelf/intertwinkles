@@ -6,7 +6,7 @@ config   = require '../../../test/test_config'
 models   = require('../lib/schema').load(config)
 common   = require '../../../test/common'
 
-describe "Mongoose connector", ->
+describe "Dotstorm Mongoose connector", ->
   before (done) ->
     common.startUp (server, browser) =>
       @server = server

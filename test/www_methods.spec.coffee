@@ -10,8 +10,9 @@ www_methods   = require("../lib/www_methods")(config)
 www_schema    = require("../lib/schema").load(config)
 api_methods   = require("../lib/api_methods")(config)
 fs            = require 'fs'
+require "better-stack-traces"
 
-describe "groups", ->
+describe "www methods", ->
   before (done) ->
     common.startUp (server, browser) =>
       @server = server
@@ -82,6 +83,14 @@ describe "groups", ->
         expect(user.email_change_request).to.be(null)
         done()
 
+  it "Validates profile edit with blank mobile # and carrier", (done) ->
+    params = {mobile_number: "", mobile_carrier: ""}
+    www_methods.edit_profile @session, params, (err, user) =>
+      expect(err).to.be(null)
+      expect(user.mobile.number).to.be(null)
+      expect(user.mobile.carrier).to.be(null)
+      done()
+
   it "Creates a new group", (done) ->
     params = {
       name: "My Awesome Group"
@@ -109,15 +118,46 @@ describe "groups", ->
           expect(user).to.not.be(null) # but this one does
           done(null, user)
       (user, done) =>
-        www_methods.create_group @session, params, (err, group) =>
+        www_methods.create_group @session, params, (err, group, event, notices) =>
           expect(err).to.be(null)
-          expect(group).to.not.be(null)
-          @group = group
-          expect(group.isNew).to.be(false)
-          expect(group.members.length).to.be(1)
-          expect(group.members[0].role).to.be("President")
-          expect(group.invited_members.length).to.be(3)
-          done(null, user)
+          # Get a map of all the users for use in checking recipients of notifications.
+          www_schema.User.find {}, (err, docs) =>
+            expect(err).to.be(null)
+            user_map = {}
+            for doc in docs
+              user_map[doc.email] = doc._id
+
+            expect(group).to.not.be(null)
+
+            # Check event properties.
+            expect(event.type).to.be("create")
+            expect(event.application).to.be("www")
+            expect(event.entity).to.be(group.id)
+            expect(event.user.toString()).to.eql(@session.auth.user_id)
+            expect(event.group).to.eql(group._id)
+
+            # Check notice properties.
+            expect(notices.length).to.be(3)
+            user_id = @session.auth.user_id
+            expect(n.type for n in notices).to.eql(["invitation", "invitation", "invitation"])
+            expect(n.entity for n in notices).to.eql([group.id, group.id, group.id])
+            expect(n.sender.toString() for n in notices).to.eql([user_id, user_id, user_id])
+            # make a "set" to compare unordered recipients
+            recipients = {}
+            for n in notices
+              recipients[n.recipient.toString()] = true
+            expected_recipients = {}
+            for e in ["two@mockmyid.com", "three@mockmyid.com", "new_user@mockmyid.com"]
+              expected_recipients[user_map[e].toString()] = true
+            expect(recipients).to.eql(expected_recipients)
+
+            # Check group properties
+            @group = group
+            expect(group.isNew).to.be(false)
+            expect(group.members.length).to.be(1)
+            expect(group.members[0].role).to.be("President")
+            expect(group.invited_members.length).to.be(3)
+            done(null, user)
       (user, done) =>
         u1 = _.find @group.invited_members, (m) ->
           m.user.toString() == user._id.toString()
@@ -137,23 +177,6 @@ describe "groups", ->
           expect(u2.role).to.be("Secretary")
           done(null, user, user2)
           @new_user = user2
-      (user, user2, done) =>
-        find_notice = (user, done) =>
-          www_schema.Notification.findOne {
-            application: "www"
-            entity: @group.id
-            type: "invitation"
-            recipient: user._id
-            url: "/groups/join/#{@group.slug}"
-            sender: @session.auth.user_id
-            cleared: false
-          }, (err, doc) =>
-            expect(err).to.be(null)
-            expect(doc).to.not.be(null)
-            done()
-        async.map [user, user2], find_notice, (err) ->
-          done(err, user, user2)
-        
     ], done
 
   it "Processes invitations", (done) ->
@@ -175,16 +198,30 @@ describe "groups", ->
         ], authenticate, done
       (done) =>
         # Have two@mockmyid.com accept the invitation.
-        www_methods.process_invitation two_session, @group, true, (err) =>
+        www_methods.process_invitation two_session, @group, true, (err, group, event, notices) =>
           expect(err).to.be(null)
-          schema.Group.findOne {_id: @group._id}, (err, group) =>
-            expect(err).to.be(null)
-            expect(group.members.length).to.be(2)
-            expect(group.invited_members.length).to.be(2)
-            found = _.find group.members, (m) ->
-              m.user.toString() == two_session.auth.user_id.toString()
-            expect(!!found).to.be(true)
-            done()
+          # Group details
+          expect(group).to.not.be(null)
+          expect(group.members.length).to.be(2)
+          expect(group.invited_members.length).to.be(2)
+          found = _.find group.members, (m) ->
+            m.user.toString() == two_session.auth.user_id.toString()
+          expect(!!found).to.be(true)
+
+          # Event details
+          expect(event).to.not.be(null)
+          expect(event.type).to.be("join")
+          expect(event.user.toString()).to.be(two_session.auth.user_id)
+          expect(event.group).to.eql(group._id)
+
+          # Notice details
+          expect(notices.length).to.be(1)
+          n = notices[0]
+          expect(n.type).to.be("invitation")
+          expect(n.cleared).to.be(true)
+          expect(n.recipient.toString()).to.be(two_session.auth.user_id)
+
+          done()
       (done) =>
         # Have three@mockmyid.com refuse the invitation.
         www_methods.process_invitation three_session, @group, false, (err) =>
@@ -231,24 +268,47 @@ describe "groups", ->
             "four@mockmyid.com": {role: "Muahaha", voting: false}
           }
         }
-      }, (err, group) =>
-        expect(err).to.be(null)
-        expect(group.members.length).to.be(1)
-        expect(group.members[0].role).to.be("Fool")
-        expect(group.invited_members.length).to.be(1)
-        expect(group.invited_members[0].role).to.be("Muahaha")
-        expect(group.past_members.length).to.be(1)
-        expect(group.past_members[0].role).to.be("Two")
-        expect(group.past_members[0].removed_by.toString()).to.eql(
-          @session.auth.user_id.toString()
-        )
-        @group = group
-        done()
+      }, (err, group, event, notices) =>
+        www_schema.User.find {}, (err, docs) =>
+          expect(err).to.be(null)
+          # Get a map of all users to check recipients with
+          user_map = {}
+          for doc in docs
+            user_map[doc.email] = doc._id
+
+          expect(err).to.be(null)
+          # Group properties
+          expect(group).to.not.be(null)
+          expect(group.members.length).to.be(1)
+          expect(group.members[0].role).to.be("Fool")
+          expect(group.invited_members.length).to.be(1)
+          expect(group.invited_members[0].role).to.be("Muahaha")
+          expect(group.past_members.length).to.be(1)
+          expect(group.past_members[0].role).to.be("Two")
+          expect(group.past_members[0].removed_by.toString()).to.eql(
+            @session.auth.user_id.toString()
+          )
+          @group = group
+
+          # Event properties
+          expect(event).to.not.be(null)
+          expect(event.type).to.be("update")
+          expect(event.application).to.be("www")
+          expect(event.user.toString()).to.eql(@session.auth.user_id)
+
+          # Notifications
+          expect(notices.length).to.be(2)
+          oldn = _.find(notices, (n) -> n.cleared == true)
+          newn = _.find(notices, (n) -> n.cleared == false)
+          expect(oldn.recipient).to.eql(user_map["new_user@mockmyid.com"])
+          expect(newn.recipient).to.eql(user_map["four@mockmyid.com"])
+          expect(n.type for n in notices).to.eql(["invitation", "invitation"])
+          done()
 
   it "Uploads a file", (done) ->
     www_methods.update_group @session, @group, {
       logo_file: __dirname + "/test_logo.png"
-    }, (err, group) =>
+    }, (err, group, event, notices) =>
       expect(err).to.be(null)
       prefix = __dirname + "/../uploads/"
       expect(fs.existsSync(prefix + group.logo.full)).to.be(true)
@@ -259,49 +319,9 @@ describe "groups", ->
       expect(fs.existsSync(prefix + group.logo.full)).to.be(false)
       fs.unlinkSync(prefix + group.logo.thumb)
       expect(fs.existsSync(prefix + group.logo.thumb)).to.be(false)
+
+      expect(event).to.not.be(null)
+      expect(event.type).to.be("update")
+      expect(notices.length).to.be(0)
+
       done()
-
-  it "Logs events", (done) ->
-    # Verify that all the preceeding logged all the events we expect it to.
-    async.waterfall [
-      (done) =>
-        # Get a map of users by email address.
-        www_schema.User.find {}, (err, users) =>
-          expect(err).to.be(null)
-          user_map = {}
-          for user in users
-            user_map[user.email] = user
-          done(null, user_map)
-      (user_map, done) =>
-        # Check that all the events we expect to exist do, and no others.
-        event_list_order = [
-          "type", "entity", "user", "url"
-        ]
-        event_list = [
-          ["create", @group._id, user_map["one@mockmyid.com"]._id, "/groups/my-awesome-group"]
-          ["join",   @group._id, user_map["two@mockmyid.com"]._id, "/groups/my-awesome-group"]
-          ["decline",@group._id, user_map["three@mockmyid.com"]._id,"/groups/my-awesome-group"]
-          ["update", @group._id, user_map["one@mockmyid.com"]._id, "/groups/a-new-name"]
-          ["update", @group._id, user_map["one@mockmyid.com"]._id, "/groups/a-new-name"]
-        ]
-        www_schema.Event.find {}, (err, events) =>
-          expect(err).to.be(null)
-          expect(events.length).to.be(5)
-          for event in events
-            expect(event.group).to.eql(@group._id)
-            expect(event.application).to.be("www")
-            expect(event.data).to.not.be(undefined)
-            found = false
-            for item in event_list
-              for arg, i in item
-                if event[event_list_order[i]] != arg
-                  continue
-              found = true
-              break
-            expect(found).to.be(true)
-          done()
-    ], done
-
-          
-
-

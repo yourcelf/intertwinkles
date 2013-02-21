@@ -4,7 +4,7 @@
   "description": "Web application for group collaboration and decision making",
   "scripts": {
       "start": "bin/run.js",
-      "test": "mocha --compilers coffee:coffee-script --globals css,js,img,lineno --timeout 10000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
+      "test": "mocha --compilers coffee:coffee-script --globals css,js,img,lineno --timeout 10000 -R spec test/*.spec.coffee plugins/*/test/*.spec.coffee",
       "postinstall": "bin/install_dependencies.py secrets"
   },
   "repository": "",
@@ -33,6 +33,7 @@
     "emailjs": "~0",
     "simplesmtp": "~0",
     "mailparser": "~0",
+    "better-stack-traces": "~0.0",
     "connect-assets": "git://github.com/yourcelf/connect-assets.git",
     "node-iorooms": "git+https://github.com/yourcelf/node-iorooms.git",
     "node-browserid-consumer": "git+https://github.com/yourcelf/node-browserid-consumer.git"
