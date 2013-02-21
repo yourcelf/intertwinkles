@@ -150,7 +150,9 @@ describe "groups", ->
             expect(err).to.be(null)
             expect(doc).to.not.be(null)
             done()
-        async.map([user, user2], find_notice, done)
+        async.map [user, user2], find_notice, (err) ->
+          done(err, user, user2)
+        
     ], done
 
   it "Processes invitations", (done) ->
@@ -241,3 +243,47 @@ describe "groups", ->
         )
         @group = group
         done()
+
+  it "Logs events", (done) ->
+    # Verify that all the preceeding logged all the events we expect it to.
+    async.waterfall [
+      (done) =>
+        # Get a map of users by email address.
+        www_schema.User.find {}, (err, users) =>
+          expect(err).to.be(null)
+          user_map = {}
+          for user in users
+            user_map[user.email] = user
+          done(null, user_map)
+      (user_map, done) =>
+        # Check that all the events we expect to exist do, and no others.
+        event_list_order = [
+          "type", "entity", "user", "url"
+        ]
+        event_list = [
+          ["create", @group._id, user_map["one@mockmyid.com"]._id, "/groups/my-awesome-group"]
+          ["join",   @group._id, user_map["two@mockmyid.com"]._id, "/groups/my-awesome-group"]
+          ["decline",@group._id, user_map["three@mockmyid.com"]._id,"/groups/my-awesome-group"]
+          ["update", @group._id, user_map["one@mockmyid.com"]._id, "/groups/a-new-name"]
+        ]
+        www_schema.Event.find {}, (err, events) =>
+          expect(err).to.be(null)
+          expect(events.length).to.be(4)
+          for event in events
+            expect(event.group).to.eql(@group._id)
+            expect(event.application).to.be("www")
+            expect(event.data).to.not.be(undefined)
+            found = false
+            for item in event_list
+              for arg, i in item
+                if event[event_list_order[i]] != arg
+                  continue
+              found = true
+              break
+            expect(found).to.be(true)
+          done()
+    ], done
+
+          
+
+

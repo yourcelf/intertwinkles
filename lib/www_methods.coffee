@@ -110,7 +110,7 @@ module.exports = (config) ->
         application: "www"
         entity: group.id
         entity_url: "/groups/#{group.slug}"
-        user: session.auth.email
+        user: session.auth.user_id
         group: group.id
         data: {
           title: "group #{group.name}"
