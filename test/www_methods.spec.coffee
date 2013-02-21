@@ -9,6 +9,7 @@ logger        = require('log4js').getLogger("test-groups")
 www_methods   = require("../lib/www_methods")(config)
 www_schema    = require("../lib/schema").load(config)
 api_methods   = require("../lib/api_methods")(config)
+fs            = require 'fs'
 
 describe "groups", ->
   before (done) ->
@@ -244,6 +245,22 @@ describe "groups", ->
         @group = group
         done()
 
+  it "Uploads a file", (done) ->
+    www_methods.update_group @session, @group, {
+      logo_file: __dirname + "/test_logo.png"
+    }, (err, group) =>
+      expect(err).to.be(null)
+      prefix = __dirname + "/../uploads/"
+      expect(fs.existsSync(prefix + group.logo.full)).to.be(true)
+      expect(fs.existsSync(prefix + group.logo.thumb)).to.be(true)
+      # original still there
+      expect(fs.existsSync(__dirname + "/test_logo.png")).to.be(true)
+      fs.unlinkSync(prefix + group.logo.full)
+      expect(fs.existsSync(prefix + group.logo.full)).to.be(false)
+      fs.unlinkSync(prefix + group.logo.thumb)
+      expect(fs.existsSync(prefix + group.logo.thumb)).to.be(false)
+      done()
+
   it "Logs events", (done) ->
     # Verify that all the preceeding logged all the events we expect it to.
     async.waterfall [
@@ -265,10 +282,11 @@ describe "groups", ->
           ["join",   @group._id, user_map["two@mockmyid.com"]._id, "/groups/my-awesome-group"]
           ["decline",@group._id, user_map["three@mockmyid.com"]._id,"/groups/my-awesome-group"]
           ["update", @group._id, user_map["one@mockmyid.com"]._id, "/groups/a-new-name"]
+          ["update", @group._id, user_map["one@mockmyid.com"]._id, "/groups/a-new-name"]
         ]
         www_schema.Event.find {}, (err, events) =>
           expect(err).to.be(null)
-          expect(events.length).to.be(4)
+          expect(events.length).to.be(5)
           for event in events
             expect(event.group).to.eql(@group._id)
             expect(event.application).to.be("www")

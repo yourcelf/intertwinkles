@@ -267,9 +267,9 @@ module.exports = (config) ->
     )
 
   # Add group logo.
-  _add_group_logo = (session, group, logo_file, callback) ->
-    return callback() unless logo_file?
-    thumbnails.upload logo_file.path, "/group_logos", (err, paths) ->
+  _add_group_logo = (session, group, file_path, callback) ->
+    return callback() unless file_path?
+    thumbnails.upload file_path, "/group_logos", (err, paths) ->
       return callback(err) if err?
       group.logo = paths
       return callback(null)
@@ -322,7 +322,7 @@ module.exports = (config) ->
           _remove_group_logo group, (err) ->
             return done(err) if err?
             _add_group_logo(session, group, group_update.logo_file
-            , (err) ->
+            , (err, paths) ->
               return done(err) if err?
               event_data.logo = paths
               done()
