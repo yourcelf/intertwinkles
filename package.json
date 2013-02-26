@@ -12,6 +12,7 @@
   "dependencies": {
     "coffee-script": "~1",
     "socket.io": "~0.9",
+    "sockjs": "~0.3",
     "underscore": "~1",
     "canvas": "~0.13",
     "stylus": "*",
@@ -42,6 +43,7 @@
     "mocha": "~1",
     "zombie": "~1",
     "expect.js": "~0.1",
-    "backbone": "~0.9"
+    "backbone": "~0.9",
+    "sockjs-client": "*"
   }
 }

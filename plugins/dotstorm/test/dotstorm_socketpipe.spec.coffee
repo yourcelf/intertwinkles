@@ -29,9 +29,7 @@ describe "Dotstorm socket pipeline", ->
 
   it "visits the front page", (done) ->
     @browser.visit config.apps.dotstorm.url + "/", (blank, browser, status, errors) =>
-      console.log "then"
       await =>
-        console.log "await"
         if @browser.querySelector("#id_join")?
           done()
           return true
