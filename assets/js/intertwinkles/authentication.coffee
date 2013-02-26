@@ -58,9 +58,9 @@ onlogin = (assertion) ->
       flash "error", data.error or "Error signing in."
 
   if intertwinkles.socket?
-    if intertwinkles.socket_connected
+    if intertwinkles.socket.isIdentified()
       intertwinkles.socket.once "login", handle
-      intertwinkles.socket.emit "verify", {callback: "login", assertion: assertion}
+      intertwinkles.socket.send "verify", {callback: "login", assertion: assertion}
     else
       if confirm("Lost connection. Refresh page?")
         window.location.href = window.location.href
@@ -71,14 +71,14 @@ onlogout = ->
   console.log "onlogout"
   intertwinkles.users = null
   intertwinkles.groups = null
-  if intertwinkles.socket
+  if intertwinkles.socket?
     intertwinkles.socket.once "logout", ->
       reload = intertwinkles.is_authenticated()
       intertwinkles.user.clear()
       if reload or window.INTERTWINKLES_AUTH_LOGOUT
         flash "info", "Signed out."
         window.location.pathname = "/"
-    intertwinkles.socket.emit "logout", {callback: "logout"}
+    intertwinkles.socket.send "logout", {callback: "logout"}
   else
     alert("Socket connection failed")
 

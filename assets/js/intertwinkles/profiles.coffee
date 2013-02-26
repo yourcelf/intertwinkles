@@ -70,7 +70,7 @@ class intertwinkles.EditNewProfile extends intertwinkles.BaseModalFormView
         @$el.modal("hide")
         @trigger "done"
 
-    intertwinkles.socket.emit "edit_profile", {
+    intertwinkles.socket.send "edit_profile", {
       callback: "profile_updated"
       model: {
         email: intertwinkles.user.get("email")

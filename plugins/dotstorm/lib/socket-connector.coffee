@@ -7,28 +7,27 @@ utils         = require '../../../lib/utils'
 # Connect the plumbing for backbone models coming over the socket to mongoose
 # models.  Rebroadcast data to rooms as appropriate.
 #
-attach = (config, iorooms) ->
+attach = (config, sockrooms) ->
   models = require('./schema').load(config)
   events = require('./events')(config)
-  iorooms.onChannel 'backbone', (socket, data) ->
-    session = socket.session
+  sockrooms.on 'dotstorm/backbone', (socket, session, data) ->
 
     errorOut = (error, level="error") ->
       logger[level](error)
-      socket.emit(data.signature.event, error: error)
+      sockrooms.socketEmit socket, data.signature.event, {error: error}
 
     respond = (model) ->
-      socket.emit(data.signature.event, model)
+      sockrooms.socketEmit socket, data.signature.event, model
 
     rebroadcast = (room, model) ->
       if room?
-        socket.broadcast.to(room).emit "backbone", {
+        sockrooms.broadcast(room, "dotstorm/backbone", {
           signature: {
             collectionName: data.signature.collectionName
             method: data.signature.method
           }
           model: model
-        }
+        }, socket.sid)
 
     saveIdeaAndRespond = (idea) ->
       for key in ["dotstorm_id", "description", "background", "tags",
@@ -46,7 +45,7 @@ attach = (config, iorooms) ->
           json = idea.serialize()
           delete json.drawing
           respond(json)
-          rebroadcast(idea.dotstorm_id, json)
+          rebroadcast("dotstorm/" + idea.dotstorm_id.toString(), json)
           events.post_event(session, dotstorm, "append", {data: json})
           events.post_search_index(dotstorm)
 
@@ -64,7 +63,7 @@ attach = (config, iorooms) ->
       doc.save (err) ->
         if err? then return errorOut(err)
         respond(doc.serialize())
-        rebroadcast(doc._id, doc)
+        rebroadcast("dotstorm/" + doc.id, doc)
         events.post_event(session, doc, event_type)
         events.post_search_index(doc)
 

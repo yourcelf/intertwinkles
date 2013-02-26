@@ -1,14 +1,14 @@
 # 
 # Socket data!!!!!!!!!!!!!!
 #
-ds.socket = io.connect("/io-dotstorm", reconnect: false)
-Backbone.setSocket(ds.socket)
-ds.app = new ds.Router
-ds.socket.on 'connect', ->
-  ds.client = new Client(ds.socket)
+intertwinkles.connect_socket (socket) ->
+  ds.socket = socket
+  Backbone.setSocket(ds.socket)
+
+  ds.app = new ds.Router
   Backbone.history.start pushState: true
 
-  ds.socket.on 'backbone', (data) ->
+  ds.socket.on 'dotstorm/backbone', (data) ->
     console.debug 'backbone sync', data
     switch data.signature.collectionName
       when "Idea"
@@ -33,17 +33,17 @@ ds.socket.on 'connect', ->
           when "update"
             ds.model.set data.model
 
-  ds.socket.on 'trigger', (data) ->
-    #console.debug 'trigger', data
-    switch data.collectionName
-      when "Idea"
-        ds.ideas.get(data.id).trigger data.event
+    ds.socket.on 'dotstorm/trigger', (data) ->
+      #console.debug 'trigger', data
+      switch data.collectionName
+        when "Idea"
+          ds.ideas.get(data.id).trigger data.event
 
-ds.socket.on 'disconnect', ->
-  # Timeout prevents a flash when you are just closing a tab.
-  setTimeout ->
-    flash "error", "Connection lost.  <a href='' onclick='window.location.reload(); return false;'>Click to reconnect</a>."
-  , 1000
+  ds.socket.on 'closed', ->
+    # Timeout prevents a flash when you are just closing a tab.
+    setTimeout ->
+      flash "error", "Connection lost.  <a href='' onclick='window.location.reload(); return false;'>Click to reconnect</a>."
+    , 1000
 
 window.addEventListener 'message', (event) ->
   if event.origin == "file://"

@@ -46,6 +46,7 @@ events = require 'events'
 _      = require 'underscore'
 logger = require("log4js").getLogger("socket_server")
 uuid   = require "node-uuid"
+async  = require "async"
 
 class RoomManager extends events.EventEmitter
   constructor: (socketServer, sessionStore) ->
@@ -65,7 +66,6 @@ class RoomManager extends events.EventEmitter
     # The actual socket handler.
     @sockjs = socketServer
     @sockjs.on "connection", (socket) =>
-      socket.sid = uuid.v4()
       socket.on "data", (message) =>
         try
           data = JSON.parse(message)
@@ -74,6 +74,8 @@ class RoomManager extends events.EventEmitter
         @route socket, data
       socket.on "close", =>
         @disconnect(socket)
+      socket.sid = uuid.v4()
+      socket.sendJSON = (route, data) => @socketEmit(socket, route, data)
 
   addChannelAuth: (channel, authFunc) => @channelAuth[channel] = authFunc
   removeChannelAuth: (channel) => delete @channelAuth[channel]
@@ -91,6 +93,22 @@ class RoomManager extends events.EventEmitter
         return @handleError(socket, err) if err?
         return @handleError(socket, "Missing session") if not session?
         @emit message.route, socket, session, message.body or {}
+
+  getSessionsInRoom: (room, callback) =>
+    session_ids = []
+    for socket in @roomToSockets[room] or []
+      session_ids.push(@socketIdToSessionId[socket.sid])
+    session_ids = _.unique(session_ids)
+    async.map(session_ids, (sid, done) =>
+      @sessionStore.get(sid, done)
+    , callback)
+
+  getRoomsForSessionId: (session_id) =>
+    rooms = []
+    for socket in @sessionIdToSockets[session_id]
+      rooms = rooms.concat(@socketIdToRooms[socket.sid])
+    rooms = _.unique(rooms)
+    return rooms
 
   #
   # Socket emissions
@@ -136,10 +154,25 @@ class RoomManager extends events.EventEmitter
       unless @sessionIdToSockets[session_id]?
         @sessionIdToSockets[session_id] = []
       @sessionIdToSockets[session_id].push(socket)
-      # Respond with success
-      @socketEmit(socket, "identify", {session_id: session_id})
+      respond = => @socketEmit(socket, "identify", {session_id: session_id})
+      if not session.anon_id or not session.session_id
+        if not session.anon_id
+          session.anon_id = uuid.v4()
+        session.session_id = session_id
+        @sessionStore.set session_id, session, (err, ok) =>
+          return @handleError(socket, err) if err?
+          respond()
+      else
+        respond()
 
-  join: (socket, room) =>
+  saveSession: (session, callback) =>
+    if not session.session_id?
+      return callback("session_id not found")
+    @sessionStore.set session.session_id, session, (err, ok) =>
+      return callback(err) if err?
+      return callback(null, session)
+
+  join: (socket, room, verify=true) =>
     # Ignore any message that doesn't have a matching auth channel.
     return @handleError(socket, "Room not specified") unless room?
     channel = room.split("/")[0]
@@ -149,36 +182,37 @@ class RoomManager extends events.EventEmitter
       @channelAuth[channel](session, room, (err, authorized) =>
         return @handleError(socket, err) if err?
         if authorized
-          @roomToSockets[room] ?= []
-          @socketIdToRooms[socket.sid] ?= []
-          first = false
-          if not _.contains(@socketIdToRooms[socket.sid], room)
-            # Find out if our session has any other sockets in this room.
-            session_id = @socketIdToSessionId[socket.sid]
-            # 'first' refers to first in this *session*. If we have another
-            # window open here, it will be a different socket, and this could
-            # be first for the *socket*.  But we want first for the sesssion in
-            # order to trigger updates of room user lists and such, which list
-            # sessions, not sockets.
-            first = _.every(@roomToSockets[room], (sock) =>
-              @socketIdToSessionId[sock.sid] != session_id
-            )
-            # Add the socket/room association.
-            @roomToSockets[room].push(socket)
-            @socketIdToRooms[socket.sid].push(room)
-
-          # Announce to any RoomManager listeners that this socket has joined.
-          @emit "join", {
-            socket: socket
-            session: session
-            room: room
-            first: first
-          }
-          # Reply to the socket, acknowledging the join.
-          @socketEmit socket, "join", {room: room, first: first}
+          @joinWithoutAuth(socket, session, room)
         else
           @handleError(socket, "Permission to join #{room} denied.")
       )
+
+  joinWithoutAuth: (socket, session, room, options) =>
+    @roomToSockets[room] ?= []
+    @socketIdToRooms[socket.sid] ?= []
+    first = false
+    if not _.contains(@socketIdToRooms[socket.sid], room)
+      # Find out if our session has any other sockets in this room.
+      session_id = @socketIdToSessionId[socket.sid]
+      # 'first' refers to first in this *session*. If we have another
+      # window open here, it will be a different socket, and this could
+      # be first for the *socket*.  But we want first for the sesssion in
+      # order to trigger updates of room user lists and such, which list
+      # sessions, not sockets.
+      first = _.every(@roomToSockets[room], (sock) =>
+        @socketIdToSessionId[sock.sid] != session_id
+      )
+      # Add the socket/room association.
+      @roomToSockets[room].push(socket)
+      @socketIdToRooms[socket.sid].push(room)
+
+    # Announce to any RoomManager listeners that this socket has joined.
+    unless options?.silent
+      emission = {socket, session, room, first}
+      @emit "join", emission
+      # Reply to the socket, acknowledging the join.
+      socket_emission = {room, first}
+      @socketEmit socket, "join", socket_emission
 
   leave: (socket, room) =>
     return @handleError(socket, "Room not specified") unless room?
@@ -203,14 +237,12 @@ class RoomManager extends events.EventEmitter
         @socketIdToSessionId[sock.sid] == session_id
       )
       # Announce to any RoomManager listeners that this socket has left.
-      @emit "leave", {
-        socket: socket,
-        session: session,
-        room: room,
-        last: last,
-      }
+      channel = room.split("/")[0]
+      emission = {socket, session, room, last}
+      @emit "leave", emission
       # Respond to the socket, acknowledging the leave.
-      @socketEmit socket, "leave", {room: room, last: last}
+      socket_emission = {room, last}
+      @socketEmit socket, "leave", socket_emission
 
   disconnect: (socket) =>
     # Leave all the rooms this socket is in.

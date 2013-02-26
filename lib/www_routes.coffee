@@ -1,21 +1,15 @@
-express       = require 'express'
-socketio      = require 'socket.io'
 utils         = require './utils'
-RoomManager   = require('iorooms').RoomManager
-RedisStore    = require('connect-redis')(express)
 _             = require 'underscore'
 async         = require 'async'
 carriers      = require './carriers'
 thumbnails    = require './thumbnails'
 logger        = require('log4js').getLogger()
 
-route = (config, app, io, sessionStore) ->
+route = (config, app, sockrooms) ->
   schema = require('./schema').load(config)
   api_methods = require("./api_methods")(config)
   www_methods = require("./www_methods")(config)
   solr = require("./solr_helper")(config)
-  iorooms = new RoomManager("/io-www", io, sessionStore)
-
 
   #
   # Routes
@@ -337,7 +331,7 @@ route_errors = (config, app) ->
   #work with the current strategy of directory-passing to connect-assets,
   #unless we can get connect-assets to work prior to the router.  This
   #intercepts all connect-assets urls currently.
-  #app.get /^\/(?!(static|uploads)\/).*$/, www_methods.not_found
+  app.get /.*/, www_methods.not_found
 
 
 module.exports = {route, route_errors}

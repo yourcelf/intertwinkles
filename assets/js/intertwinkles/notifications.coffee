@@ -53,7 +53,7 @@ class intertwinkles.NotificationMenu extends Backbone.View
     intertwinkles.user.on "change", @fetchNotifications
 
   remove: =>
-    intertwinkles.socket.removeListener "notifications", @handleNotifications
+    intertwinkles.socket.off "notifications", @handleNotifications
     intertwinkles.user.off "change", @fetchNotifications
     view.remove() for view in @dateViews
     super()
@@ -61,7 +61,7 @@ class intertwinkles.NotificationMenu extends Backbone.View
   fetchNotifications: (data) =>
     if intertwinkles.is_authenticated()
       @notices = new NotificationCollection()
-      intertwinkles.socket.emit "get_notifications" # should result in 'render'
+      intertwinkles.socket.send "get_notifications" # should result in 'render'
     else
       @render() # just nuke 'em!
 

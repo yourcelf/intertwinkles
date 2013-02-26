@@ -82,15 +82,16 @@ class intertwinkles.RoomUsersMenu extends Backbone.View
   initialize: (options={}) ->
     @room = options.room
     intertwinkles.socket.on "room_users", @roomList
-    intertwinkles.socket.emit "join", {room: @room}
+    intertwinkles.socket.send "join", {room: @room}
     @list = []
 
   remove: =>
-    intertwinkles.socket.removeListener "room_users", @roomList
-    intertwinkles.socket.emit "leave", {room: @room}
+    intertwinkles.socket.off "room_users", @roomList
+    intertwinkles.socket.send "leave", {room: @room}
     super()
 
   roomList: (data) =>
+    return if data.room != @room
     @list = data.list
     if data.anon_id?
       @anon_id = data.anon_id
@@ -423,7 +424,7 @@ intertwinkles.get_short_url = (params, callback) ->
       callback(null, data.short_url)
 
 
-  intertwinkles.socket.emit "get_short_url", {
+  intertwinkles.socket.send "get_short_url", {
     callback: socket_callback, application: params.application, path: params.path
   }
 

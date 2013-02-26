@@ -34,8 +34,6 @@ html
     != "var INTERTWINKLES_API_URL = '" + conf.api_url + "';"
     != "var INTERTWINKLES_APPS = " + JSON.stringify(conf.apps) + ";"
     </script>
-    // Socket IO
-    script(src="/socket.io/socket.io.js", type="text/javascript")
     // Intertwinkles library
     !=js('js/intertwinkles/index')
     // Flash messages

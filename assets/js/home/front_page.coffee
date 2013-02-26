@@ -1,6 +1,6 @@
-intertwinkles.connect_socket()
-intertwinkles.build_toolbar($("header"), {applabel: "home"})
-intertwinkles.build_footer($("footer"))
+intertwinkles.connect_socket ->
+  intertwinkles.build_toolbar($("header"), {applabel: "home"})
+  intertwinkles.build_footer($("footer"))
 
 sub_vars = (scope=document) ->
   $(".varsub", scope).each ->

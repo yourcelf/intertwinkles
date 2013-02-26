@@ -1,3 +1,4 @@
+#= require ../vendor/sockjs-0.3.4.js
 #= require ../vendor/jquery.js
 #= require ../vendor/jquery-ui-1.9.1.custom.js
 #= require ../vendor/jquerypp.custom.js

@@ -56,11 +56,12 @@ class ds.Router extends Backbone.Router
         flash "error", "Idea not found.  Check the URL?"
       else
         # Re-fetch to pull in deferred fields.
-        idea.fetch
+        idea.fetch {
           success: (idea) =>
             view = new ds.EditIdea(idea: idea, dotstorm: ds.model)
             $("#app").html view.el
             view.render()
+        }
     return false
 
   open: (slug, name, callback) =>
@@ -84,7 +85,7 @@ class ds.Router extends Backbone.Router
     else
       # Fetch the ideas.
       coll = new ds.DotstormList
-      coll.fetch
+      coll.fetch {
         query: { slug }
         success: (coll) ->
           ds.ideas = new ds.IdeaList()
@@ -103,16 +104,18 @@ class ds.Router extends Backbone.Router
             ds.model = coll.models[0]
             fixLinks()
             ds.joinRoom(coll.models[0])
-            ds.ideas.fetch
+            ds.ideas.fetch {
               error: (coll, err) ->
                 console.log "error", err
                 flash "error", "Error fetching #{attr}."
               success: (coll) -> callback?()
               query: {dotstorm_id: ds.model.id}
               fields: {drawing: 0}
+            }
         error: (coll, res) =>
           console.log "error", res
           flash "error", res.error
+      }
       return false
 
 room_view = null
@@ -125,7 +128,7 @@ ds.leaveRoom = ->
 ds.joinRoom = (newModel) ->
   ds.leaveRoom()
 
-  room_view = new intertwinkles.RoomUsersMenu(room: newModel.id)
+  room_view = new intertwinkles.RoomUsersMenu(room: "dotstorm/" + newModel.id)
   $(".sharing-online-group .room-users").replaceWith(room_view.el)
   room_view.render()
 

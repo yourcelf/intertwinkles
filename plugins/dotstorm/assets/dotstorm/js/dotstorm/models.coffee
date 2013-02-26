@@ -13,16 +13,13 @@ class ds.Idea extends Backbone.Model
         clean.push($.trim(tag.replace(/[^-\w\s]/g, '')))
     return clean
 
-
-
 class ds.IdeaList extends Backbone.Collection
   model: ds.Idea
   collectionName: ds.Idea.prototype.collectionName
 
 class ds.Dotstorm extends Backbone.Model
   collectionName: 'Dotstorm'
-  defaults:
-    groups: []
+  defaults: { groups: [] }
   slugify: (name) -> return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
   uuid: (a) =>
     # Generate a uuid: https://gist.github.com/982883

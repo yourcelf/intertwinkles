@@ -48,7 +48,7 @@ intertwinkles.twinklify = (socket, scope, old_view_map) ->
 
   # Fetch twinkles for new entities.
   for hash, entity of fetch_entities
-    socket.emit "get_twinkles", entity
+    socket.send "get_twinkles", entity
 
   for hash in _.difference(_.keys(old_view_map), current_view_keys)
     old_view_map[hash].remove()
@@ -76,10 +76,10 @@ class TwinkleView extends intertwinkles.BaseView
     super()
 
   fetch: =>
-    @socket.emit "get_twinkles", @attrs
+    @socket.send "get_twinkles", @attrs
 
   remove: =>
-    @socket.removeListener "twinkles", @parseTwinkles
+    @socket.off "twinkles", @parseTwinkles
     super()
 
   render: =>
@@ -138,14 +138,14 @@ class TwinkleView extends intertwinkles.BaseView
     unless @loading
       active = @getActive()
       if active?
-        @socket.emit "remove_twinkle", {
+        @socket.send "remove_twinkle", {
           twinkle_id: active.id
           entity: @attrs.entity
         }
         @collection.remove active
         @render()
       else
-        @socket.emit "post_twinkle", @attrs
+        @socket.send "post_twinkle", @attrs
         @loading = true
         @$("img").attr("src", "/static/img/spinner.gif")
     return false

@@ -1,5 +1,4 @@
 #= require ../jquery.color
-#= require ../iorooms.client
 #= require ../backbone-socket.client
 #= require common
 #= require models
@@ -9,6 +8,5 @@
 #= require ideas
 #= require editor
 #= require organizer
-#= require users
 #= require router
 #= require socket
