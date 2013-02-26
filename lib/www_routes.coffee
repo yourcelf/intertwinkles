@@ -333,8 +333,11 @@ route_errors = (config, app) ->
       www_methods.handle_error(req, res, err)
     else
       next()
-  #XXX There should be a cleaner way to capture unrouted 404's..
-  #app.get /^\/(?!(built|static|uploads)\/).*$/, www_methods.not_found
+  #XXX There should be a cleaner way to capture unrouted 404's.. This won't
+  #work with the current strategy of directory-passing to connect-assets,
+  #unless we can get connect-assets to work prior to the router.  This
+  #intercepts all connect-assets urls currently.
+  #app.get /^\/(?!(static|uploads)\/).*$/, www_methods.not_found
 
 
 module.exports = {route, route_errors}

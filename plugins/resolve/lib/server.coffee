@@ -11,6 +11,7 @@ logger        = require('log4js').getLogger()
 start = (config, app, io, sessionStore) ->
   schema = require('./schema').load(config)
   api_methods = require("../../../lib/api_methods")(config)
+  www_methods = require("../../../lib/www_methods")(config)
   resolve = require("./resolve")(config)
   iorooms = new RoomManager("/io-resolve", io, sessionStore, {
     authorizeJoinRoom: (session, name, callback) ->
@@ -27,21 +28,16 @@ start = (config, app, io, sessionStore) ->
   #
 
   server_error = (req, res, err) ->
-    res.statusCode = 500
-    logger.error(err)
-    return res.send("Server error") # TODO pretty 500 page
+    www_methods.handle_error(req, res, err)
 
   not_found = (req, res) ->
-    res.statusCode = 404
-    return res.send("Not found") # TODO pretty 404 page
+    www_methods.not_found(req, res)
 
-  bad_request = (req, res) ->
-    res.statusCode = 400
-    return res.send("Bad request") # TODO pretty 400 page
+  bad_request = (req, res, err) ->
+    www_methods.bad_request(req, res, err)
 
   permission_denied = (req, res) ->
-    res.statusCode = 403
-    return res.send("Permission denied") # TODO pretty 403, or redirect to login
+    www_methods.permission_denied(req, res)
 
   context = (req, obj, initial_data) ->
     return _.extend({

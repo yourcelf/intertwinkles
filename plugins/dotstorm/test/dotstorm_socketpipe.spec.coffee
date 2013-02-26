@@ -28,14 +28,13 @@ describe "Dotstorm socket pipeline", ->
     common.shutDown(@server, done)
 
   it "visits the front page", (done) ->
-    @browser.visit(config.apps.dotstorm.url + "/")
-      .then =>
-        await =>
-          if @browser.querySelector("#id_join")?
-            done()
-            return true
-      .fail (err) ->
-        done(new Error(err))
+    @browser.visit config.apps.dotstorm.url + "/", (blank, browser, status, errors) =>
+      console.log "then"
+      await =>
+        console.log "await"
+        if @browser.querySelector("#id_join")?
+          done()
+          return true
   
   it "connects to a room", (done) ->
     @browser.fill("#id_join", "test").pressButton "OK", =>

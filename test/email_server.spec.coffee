@@ -22,8 +22,8 @@ describe "email", ->
   it "Has the SMTP server and client wired up right.", (done) ->
     message = {
       subject: "Test text message"
-      from: "test1@dev.intertwinkles.org"
-      to: "test2@dev.intertwinkles.org"
+      from: "test1@example.com"
+      to: "test2@example.com"
       text: "hello test"
     }
     check_message_callback = (got) ->
@@ -35,4 +35,6 @@ describe "email", ->
       expect(email_server.outbox[0]).to.be(got)
       done()
 
-    smtp_client.send(message)
+    smtp_client.send message, (err) ->
+      expect(err).to.be(null)
+      done(err) if err?

@@ -44,7 +44,7 @@ load = (config) ->
 
   #TODO: Make a property of the schema object.
   schemas.Firestarter.with_responses = (constraint, cb) ->
-    Firestarter.findOne(constraint).populate('responses').exec(cb)
+    schemas.Firestarter.findOne(constraint).populate('responses').exec(cb)
 
   return schemas
 

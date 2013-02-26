@@ -24,7 +24,7 @@ start = (messageHandler, port, started=(->)) ->
     logger.error("Missing port; can't launch SMTP server.")
     process.exit(1)
 
-  smtp = simplesmtp.createServer()
+  smtp = simplesmtp.createServer({disableDNSValidation: true})
   smtp.listen port, (err) ->
     return logger.error(err) if err?
     smtp.on "startData", (envelope) ->
@@ -42,7 +42,9 @@ start = (messageHandler, port, started=(->)) ->
   return smtp
 
 stop = (callback) ->
-  if smtp? then smtp.end(callback) else callback(null)
+  if smtp?
+    return smtp.end(callback)
+  return callback(null)
 
 consoleHandler = (parsed_message) ->
   logger.log(parsed_message.headers)
