@@ -26,16 +26,16 @@
     "mongoose": "~3.5",
     "node-uuid": "*",
     "async": "~0",
-    "http-proxy": "*",
     "solr-client": "~0",
-    "etherpad-lite-client": "git://github.com/yourcelf/etherpad-lite-client-js.git",
     "log4js": "~0",
     "emailjs": "~0",
     "simplesmtp": "~0",
     "mailparser": "~0",
     "better-stack-traces": "~0.0",
+    "etherpad-lite-client": "git://github.com/yourcelf/etherpad-lite-client-js.git",
     "connect-assets": "git://github.com/yourcelf/connect-assets.git",
-    "node-browserid-consumer": "git+https://github.com/yourcelf/node-browserid-consumer.git"
+    "browserid-consumer": "git://github.com/yourcelf/node-browserid-consumer.git",
+    "http-proxy": "git://github.com/yourcelf/node-http-proxy.git"
   },
   "devDependencies": {
     "mocha": "~1",
