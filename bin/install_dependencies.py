@@ -9,16 +9,15 @@ import sys
 import json
 import time
 import shutil
-import string
-import random
+import base64
 import tarfile
 import urllib2
 import tempfile
 import argparse
 import subprocess
 
-SOLR_VERSION = "4.0.0"
-SOLR_INSTALLER = "http://apache.mirrors.pair.com/lucene/solr/{0}/apache-solr-{0}.tgz".format(SOLR_VERSION)
+SOLR_VERSION = "4.1.0"
+SOLR_INSTALLER = "http://apache.mirrors.pair.com/lucene/solr/{0}/solr-{0}.tgz".format(SOLR_VERSION)
 ETHERPAD_REPOSITORY = "https://github.com/ether/etherpad-lite.git"
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
 VENDOR_DIR = os.path.join(PROJECT_ROOT, "vendor")
@@ -54,8 +53,10 @@ def create_secrets():
         key_path = os.path.join(SECRETS_DIR, fname)
         if not os.path.exists(key_path):
             with open(key_path, 'w') as fh:
-                for _ in range(SECRET_LENGTH):
-                    fh.write(random.choice(string.printable))
+                secret = base64.urlsafe_b64encode(os.urandom(SECRET_LENGTH))
+                # base64 encoding makes it bigger; chomp it down.
+                secret = secret[0:SECRET_LENGTH]
+                fh.write(secret)
 
 def install_node_dependencies():
     subprocess.check_call(["npm", "install"], cwd=PROJECT_ROOT)
@@ -68,7 +69,7 @@ def install_solr():
             os.makedirs(dest)
 
         # Download and extract solr.
-        solr = os.path.join(dest, "apache-solr-{0}".format(SOLR_VERSION))
+        solr = os.path.join(dest, "solr-{0}".format(SOLR_VERSION))
         if not os.path.exists(solr):
             response = urllib2.urlopen(SOLR_INSTALLER)
             with tempfile.NamedTemporaryFile(suffix=".tgz") as fh:
@@ -92,7 +93,7 @@ def install_solr():
         if not os.path.exists(start_script):
             with open(start_script, 'w') as fh:
                 fh.write("""#!/bin/bash
-cd ${{0%/*}}/apache-solr-{0}/example/
+cd ${{0%/*}}/solr-{0}/example/
 java -Djava.util.logging.config.file=logging.properties -jar -server start.jar
 """.format(SOLR_VERSION))
             os.chmod(start_script, 0755)
