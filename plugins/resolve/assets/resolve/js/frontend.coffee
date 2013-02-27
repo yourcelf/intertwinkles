@@ -1,7 +1,3 @@
-intertwinkles.connect_socket()
-intertwinkles.build_toolbar($("header"), {applabel: "resolve"})
-intertwinkles.build_footer($("footer"))
-
 resolve = window.resolve = {}
 
 class Proposal extends Backbone.Model
@@ -65,7 +61,7 @@ class SplashView extends intertwinkles.BaseView
       else
         resolve.listed_proposals = data.proposals
         @render()
-    resolve.socket.emit "get_proposal_list", {
+    resolve.socket.send "resolve/get_proposal_list", {
       callback: "list_proposals"
     }
 
@@ -118,7 +114,7 @@ class AddProposalView extends intertwinkles.BaseView
       resolve.app.navigate "/resolve/p/#{data.proposal._id}/", trigger: true
 
     @$("[type=submit]").addClass("loading").attr("disabled", true)
-    resolve.socket.emit "save_proposal", {
+    resolve.socket.send "resolve/save_proposal", {
       callback: callback,
       proposal: cleaned_data
       action: "create"
@@ -187,7 +183,7 @@ class ShowProposalView extends intertwinkles.BaseView
     resolve.socket.on "proposal_change", @onProposalData
 
   remove: =>
-    resolve.socket.removeAllListeners("proposal_change")
+    resolve.socket.stopListening("proposal_change")
     resolve.model.off(null, null, this)
     intertwinkles.user.off(null, null, this)
     (view.remove() for key,view of @twinkle_map or {})
@@ -207,7 +203,9 @@ class ShowProposalView extends intertwinkles.BaseView
     if not resolve.model.id?
       return @$el.html("<img src='/static/img/spinner.gif' /> Loading...")
     @$el.html @template({ vote_order: @vote_order })
-    @addView ".room-users", new intertwinkles.RoomUsersMenu(room: resolve.model.id)
+    @addView ".room-users", new intertwinkles.RoomUsersMenu({
+      room: "resolve/" + resolve.model.id
+    })
 
     sharingButton = new intertwinkles.SharingSettingsButton(model: resolve.model)
     # Handle changes to sharing settings.
@@ -215,7 +213,7 @@ class ShowProposalView extends intertwinkles.BaseView
       resolve.socket.once "proposal_saved", (data) =>
         resolve.model.set(data.proposal)
         sharingButton.close()
-      resolve.socket.emit "save_proposal", {
+      resolve.socket.send "resolve/save_proposal", {
         action: "update"
         proposal: _.extend(resolve.model.toJSON(), {sharing: sharing_settings})
         callback: "proposal_saved"
@@ -233,7 +231,7 @@ class ShowProposalView extends intertwinkles.BaseView
     @renderProposal()
     @renderOpinions()
     @setVisibility()
-    @twinkle_map = intertwinkles.twinklify(resolve.socket, ".proposal-page", @twinkle_map)
+    @twinkle_map = intertwinkles.twinklify("resolve", ".proposal-page", @twinkle_map)
 
   renderProposal: =>
     rev = resolve.model.get("revisions")?[0]
@@ -498,7 +496,7 @@ class ShowProposalView extends intertwinkles.BaseView
       done?()
 
     update = _.extend {}, changes, {_id: resolve.model.id}
-    resolve.socket.emit "save_proposal", {
+    resolve.socket.send "resolve/save_proposal", {
       action: "update"
       proposal: update
       callback: callback
@@ -520,7 +518,7 @@ class ShowProposalView extends intertwinkles.BaseView
         else
           resolve.model.set(data.proposal)
 
-      resolve.socket.emit "save_proposal", {
+      resolve.socket.send "resolve/save_proposal", {
         callback: "opinion_deleted"
         action: "trim"
         proposal: { _id: resolve.model.id }
@@ -560,7 +558,7 @@ class ShowProposalView extends intertwinkles.BaseView
           return
         @onProposalData(data)
 
-      resolve.socket.emit "save_proposal", {
+      resolve.socket.send "resolve/save_proposal", {
         callback: "save_complete"
         action: "append"
         proposal: {
@@ -583,7 +581,6 @@ class ShowProposalView extends intertwinkles.BaseView
     if resolve.model.id
       callback = "resolve_events_#{resolve.model.id}"
       resolve.socket.once callback, (data) =>
-        console.log data
         collection = new intertwinkles.EventCollection()
         for event in data.events
           event.date = new Date(event.date)
@@ -621,15 +618,15 @@ class ShowProposalView extends intertwinkles.BaseView
               data-trigger='hover' title='#{ title }'
               data-content='#{ content }'>#{ icon }</a>
           """
-      resolve.socket.emit "get_proposal_events", {
+      resolve.socket.send "resolve/get_proposal_events", {
         callback: callback
         proposal_id: resolve.model.id
       }
 
 class Router extends Backbone.Router
   routes:
-    'resolve/p/:id/':   'room'
-    'resolve/new/':        'newProposal'
+    'resolve/p/:id/':     'room'
+    'resolve/new/':       'newProposal'
     'resolve/':           'index'
 
   index: =>
@@ -640,7 +637,7 @@ class Router extends Backbone.Router
         resolve.listed_proposals = data.proposals
         view.render()
       )
-      resolve.socket.emit "get_proposal_list", {callback: "proposal_list"}
+      resolve.socket.send "resolve/get_proposal_list", {callback: "proposal_list"}
     @_display(view)
     $("title").html "Resolve: Decide Something"
         
@@ -653,7 +650,7 @@ class Router extends Backbone.Router
       resolve.model = new Proposal()
       resolve.socket.once "load_proposal", (data) ->
         resolve.model.set(data.proposal)
-      resolve.socket.emit "get_proposal",
+      resolve.socket.send "resolve/get_proposal",
         proposal: {_id: id}
         callback: "load_proposal"
     @_display(new ShowProposalView(id: id))
@@ -664,14 +661,10 @@ class Router extends Backbone.Router
     view.render()
     @view = view
 
-
-socket = io.connect("/io-resolve")
-socket.on "error", (data) ->
-  flash "error", "Oh noes, server error."
-  window.console?.log?(data.error)
-
-socket.on "connect", ->
-  resolve.socket = socket
+intertwinkles.connect_socket ->
+  intertwinkles.build_toolbar($("header"), {applabel: "resolve"})
+  intertwinkles.build_footer($("footer"))
+  resolve.socket = intertwinkles.socket
   unless resolve.started == true
     resolve.app = intertwinkles.app = new Router()
     Backbone.history.start(pushState: true)

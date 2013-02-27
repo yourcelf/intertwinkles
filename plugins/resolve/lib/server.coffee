@@ -1,27 +1,22 @@
-express       = require 'express'
-socketio      = require 'socket.io'
-utils         = require '../../../lib/utils'
-RoomManager   = require('iorooms').RoomManager
-RedisStore    = require('connect-redis')(express)
 _             = require 'underscore'
 async         = require 'async'
-mongoose      = require 'mongoose'
-logger        = require('log4js').getLogger()
+utils         = require '../../../lib/utils'
+logger        = require('log4js').getLogger("resolve")
 
-start = (config, app, io, sessionStore) ->
+start = (config, app, sockrooms) ->
   schema = require('./schema').load(config)
   api_methods = require("../../../lib/api_methods")(config)
   www_methods = require("../../../lib/www_methods")(config)
   resolve = require("./resolve")(config)
-  iorooms = new RoomManager("/io-resolve", io, sessionStore, {
-    authorizeJoinRoom: (session, name, callback) ->
-      schema.Proposal.findOne {id: name}, 'sharing', (err, doc) ->
-        return callback(err) if err?
-        if utils.can_view(session, doc)
-          callback(null)
-        else
-          callback("Permission denied")
-  })
+  sockrooms.addChannelAuth "resolve", (session, room, callback) ->
+    name = room.split("/")[1]
+    schema.Proposal.findOne {_id: name}, 'sharing', (err, doc) ->
+      return callback(err) if err?
+      return callback("Proposal #{name} not found") unless doc?
+      if utils.can_view(session, doc)
+        callback(null, true)
+      else
+        callback(null, false)
   
   #
   # Routes
@@ -82,33 +77,38 @@ start = (config, app, io, sessionStore) ->
         req.session, doc, "visit", {timeout: 60 * 5000}
       )
 
-  iorooms.onChannel "post_twinkle", (socket, data) ->
+  sockrooms.on "resolve/post_twinkle", (socket, session, data) ->
     respond = (err, twinkle, proposal) ->
-      return socket.emit "error", {error: err} if err?
-      socket.broadcast.to(proposal.id).emit "twinkles", { twinkles: [twinkle] }
-      socket.emit "twinkles", { twinkles: [twinkle] }
+      return socket.sendJSON "error", {error: err} if err?
+      sockrooms.broadcast(
+        "resolve/" + proposal.id,
+        "twinkles",
+        { twinkles: [twinkle] })
 
     return respond("Missing entity") unless data.entity?
     return respond("Missing subentity") unless data.subentity?
-    resolve.post_twinkle(socket.session, data.entity, data.subentity, respond)
+    resolve.post_twinkle(session, data.entity, data.subentity, respond)
 
-  iorooms.onChannel "remove_twinkle", (socket, data) ->
+  sockrooms.on "resolve/remove_twinkle", (socket, session, data) ->
     respond = (err, twinkle, proposal) ->
-      return socket.emit "error", {error: err} if err?
-      socket.broadcast.to(proposal.id).emit "twinkles", {remove: data.twinkle_id}
-      socket.emit "twinkles", {remove: data.twinkle_id}
+      return socket.sendJSON "error", {error: err} if err?
+      sockrooms.broadcast(
+        "resolve/" + proposal.id,
+        "twinkles",
+        {remove: data.twinkle_id}
+      )
 
     return respond("Missing twinkle_id") unless data.twinkle_id?
     return respond("Missing entity") unless data.entity?
-    resolve.remove_twinkle(socket.session, data.twinkle_id, data.entity, respond)
+    resolve.remove_twinkle(session, data.twinkle_id, data.entity, respond)
 
-  iorooms.onChannel "get_twinkles", (socket, data) ->
+  sockrooms.on "resolve/get_twinkles", (socket, session, data) ->
     async.waterfall [
       (done) ->
         return done("Missing entity") unless data.entity?
         schema.Proposal.findOne {_id: data.entity}, (err, doc) ->
           return done(err) if err?
-          unless utils.can_view(socket.session, doc)
+          unless utils.can_view(session, doc)
             return done("Permission denied")
           api_methods.get_twinkles {
             application: "resolve"
@@ -116,67 +116,72 @@ start = (config, app, io, sessionStore) ->
           }, done
 
     ], (err, twinkles) ->
-      return socket.emit "error", {error: err} if err?
-      socket.emit "twinkles", {twinkles: twinkles}
+      return socket.sendJSON "error", {error: err} if err?
+      socket.sendJSON "twinkles", {twinkles: twinkles}
 
-  iorooms.onChannel "get_proposal_list", (socket, data) ->
+  sockrooms.on "resolve/get_proposal_list", (socket, session, data) ->
     if not data?.callback?
-      socket.emit "error", {error: "Missing callback parameter."}
+      socket.sendJSON "error", {error: "Missing callback parameter."}
     else
       utils.list_accessible_documents(
-        schema.Proposal, socket.session, (err, proposals) ->
-          if err? then return socket.emit data.callback, {error: err}
-          socket.emit data.callback, {proposals}
+        schema.Proposal, session, (err, proposals) ->
+          if err? then return socket.sendJSON data.callback, {error: err}
+          socket.sendJSON data.callback, {proposals}
       )
 
-  iorooms.onChannel "get_proposal", (socket, data) ->
+  sockrooms.on "resolve/get_proposal", (socket, session, data) ->
     unless data.callback?
-      return socket.emit "error", {error: "Missing 'callback' parameter"}
+      return socket.sendJSON "error", {error: "Missing 'callback' parameter"}
     schema.Proposal.findOne data.proposal, (err, proposal) ->
       response = {}
-      unless utils.can_view(socket.session, proposal)
+      unless utils.can_view(session, proposal)
         response.error = "Permission denied"
       else
-        proposal.sharing = utils.clean_sharing(socket.session, proposal)
+        proposal.sharing = utils.clean_sharing(session, proposal)
         response.proposal = proposal
-      socket.emit data.callback, response
+      socket.sendJSON data.callback, response
       resolve.post_event(
-        socket.session, proposal, "visit", {timeout: 60 * 5000}
+        session, proposal, "visit", {timeout: 60 * 5000}
       )
 
-  iorooms.onChannel "get_proposal_events", (socket, data) ->
+  sockrooms.on "resolve/get_proposal_events", (socket, session, data) ->
     respond = (err, events) ->
-      return socket.emit "error", {error: err} if err?
-      return socket.emit data.callback, {events: events}
+      return socket.sendJSON "error", {error: err} if err?
+      return socket.sendJSON data.callback, {events: events}
 
     return respond("Missing proposal ID") unless data.proposal_id?
     return respond("Missing callback") unless data.callback?
     schema.Proposal.findOne {_id: data.proposal_id}, (err, doc) ->
-      unless utils.can_view(socket.session, doc)
+      unless utils.can_view(session, doc)
         return respond("Permission denied")
       api_methods.get_events {
         application: "resolve"
         entity: doc._id
       }, respond
 
-  iorooms.onChannel "save_proposal", (socket, data) ->
+  sockrooms.on "resolve/save_proposal", (socket, session, data) ->
     respond = (err, proposal) ->
       if err?
-        return socket.emit data.callback, {error: err} if data.callback?
-        return socket.emit "error", {error: err}
-      socket.broadcast.to(proposal._id).emit "proposal_change", {proposal }
-      socket.emit(data.callback, {proposal}) if data.callback?
+        return socket.sendJSON data.callback, {error: err} if data.callback?
+        return socket.sendJSON "error", {error: err}
+      sockrooms.broadcast(
+        "resolve/" + proposal.id,
+        "proposal_change",
+        {proposal},
+        socket.sid)
+      socket.sendJSON(data.callback, {proposal}) if data.callback?
 
     broadcast_notices = (err, proposal, events, search_indices, notices) ->
       if err?
-        return socket.emit data.callback, {error: err} if data.callback?
-        return socket.emit "error", {error: err}
-      user_id = socket.session.auth?.user_id
+        return socket.sendJSON data.callback, {error: err} if data.callback?
+        return socket.sendJSON "error", {error: err}
+      user_id = session.auth?.user_id
       for notice in notices
         payload = {notification: [notice]}
-        socket.broadcast.to(notice.recipient.toString()).emit "notifications", payload
-        if user_id == notice.recipient.toString()
-          socket.emit "notifications", payload
+        sockrooms.broadcast(
+          notice.recipient.toString(),
+          "notifications",
+          payload)
 
     if data.opinion? and not data.proposal?
       return respond("Missing {proposal: {_id: ..}}")
@@ -184,13 +189,13 @@ start = (config, app, io, sessionStore) ->
     # Fetch the proposal.
     switch data.action
       when "create"
-        resolve.create_proposal(socket.session, data, respond, broadcast_notices)
+        resolve.create_proposal(session, data, respond, broadcast_notices)
       when "update"
-        resolve.update_proposal(socket.session, data, respond, broadcast_notices)
+        resolve.update_proposal(session, data, respond, broadcast_notices)
       when "append"
-        resolve.add_opinion(socket.session, data, respond, broadcast_notices)
+        resolve.add_opinion(session, data, respond, broadcast_notices)
       when "trim"
-        resolve.remove_opinion(socket.session, data, respond, broadcast_notices)
+        resolve.remove_opinion(session, data, respond, broadcast_notices)
 
 
 module.exports = {start}

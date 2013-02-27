@@ -109,7 +109,7 @@ class AddFirestarterView extends Backbone.View
     fire.socket.once "unused_slug", (data) =>
       @$("#id_slug").val(data.slug)
       @displayURL()
-    fire.socket.emit "firestarter/get_unused_slug", {
+    fire.socket.send "firestarter/get_unused_slug", {
       callback: "unused_slug"
     }
 

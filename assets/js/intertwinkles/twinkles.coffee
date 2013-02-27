@@ -14,7 +14,7 @@ class TwinkleCollection extends Backbone.Collection
 # the returned view map back as `old_view_map`, to recycle them, saving
 # some socket traffic to populate the twinkles.
 #
-intertwinkles.twinklify = (socket, scope, old_view_map) ->
+intertwinkles.twinklify = (prefix, scope, old_view_map) ->
   old_view_map or= {}
   current_view_keys = []
   new_view_map = {}
@@ -22,12 +22,12 @@ intertwinkles.twinklify = (socket, scope, old_view_map) ->
   $(".twinkles", scope or "document").each ->
     $el = $(this)
     attrs = {
-      socket: socket
       application: $el.attr("data-application")
       entity: $el.attr("data-entity")
       subentity: $el.attr("data-subentity")
       recipient: $el.attr("data-recipient")
       url: $el.attr("data-url")
+      prefix: prefix
     }
     hash = [attrs.application, attrs.entity,
       attrs.subentity, attrs.recipient, attrs.url].join(":")
@@ -48,7 +48,7 @@ intertwinkles.twinklify = (socket, scope, old_view_map) ->
 
   # Fetch twinkles for new entities.
   for hash, entity of fetch_entities
-    socket.send "get_twinkles", entity
+    intertwinkles.socket.send "#{prefix}/get_twinkles", entity
 
   for hash in _.difference(_.keys(old_view_map), current_view_keys)
     old_view_map[hash].remove()
@@ -63,8 +63,8 @@ class TwinkleView extends intertwinkles.BaseView
   }, intertwinkles.BaseEvents
 
   initialize: (options) ->
-    @socket = options.socket
     @collection = options.twinkles or new TwinkleCollection()
+    @prefix = options.prefix
     @attrs = {
       application: options.application
       entity: options.entity
@@ -72,14 +72,14 @@ class TwinkleView extends intertwinkles.BaseView
       recipient: options.recipient or null
       url: options.url or window.location.pathname
     }
-    @socket.on "twinkles", @parseTwinkles
+    intertwinkles.socket.on "twinkles", @parseTwinkles
     super()
 
   fetch: =>
-    @socket.send "get_twinkles", @attrs
+    intertwinkles.socket.send "#{@prefix}/get_twinkles", @attrs
 
   remove: =>
-    @socket.off "twinkles", @parseTwinkles
+    intertwinkles.socket.off "twinkles", @parseTwinkles
     super()
 
   render: =>
@@ -106,7 +106,7 @@ class TwinkleView extends intertwinkles.BaseView
   parseTwinkles: (data) =>
     render = false
     if data.remove?
-      removal = @collection.get(data.twinkle_id)
+      removal = @collection.get(data.remove)
       if removal?
         @collection.remove(removal)
         render = true
@@ -138,14 +138,14 @@ class TwinkleView extends intertwinkles.BaseView
     unless @loading
       active = @getActive()
       if active?
-        @socket.send "remove_twinkle", {
+        intertwinkles.socket.send "#{@prefix}/remove_twinkle", {
           twinkle_id: active.id
           entity: @attrs.entity
         }
         @collection.remove active
         @render()
       else
-        @socket.send "post_twinkle", @attrs
+        intertwinkles.socket.send "#{@prefix}/post_twinkle", @attrs
         @loading = true
         @$("img").attr("src", "/static/img/spinner.gif")
     return false

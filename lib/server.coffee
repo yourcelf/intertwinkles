@@ -1,5 +1,4 @@
 express        = require 'express'
-socketio       = require 'socket.io'
 RedisStore     = require('connect-redis')(express)
 mongoose       = require 'mongoose'
 sockjs         = require 'sockjs'
@@ -119,7 +118,6 @@ start = (config) ->
   # Routes for plugins.
   for key, appconf of config.apps
     continue if key == "www"
-    continue if key == "resolve"
     require("../plugins/#{key}/lib/server").start(config, app, sockrooms)
 
   # 404 route -- must be last, after all other routes, as it defines a
