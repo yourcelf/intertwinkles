@@ -49,19 +49,33 @@ describe "Socket permissions", ->
         # Build 3 users: anon, authenticated, and authorized.
         #
         (done) =>
-          # anon
+          # anon: No session, no authentication.
           @anony = common.build_sockjs_client(done)
         (done) =>
-          # authenticated
-          session = {cookie: { maxAge: 2000 }, session_id: "authenty"}
+          # sessiony: Has session, but not authenticated.
+          session = {cookie: { maxAge: 2000 }, session_id: "sessiony"}
           @server.sockrooms.saveSession session, (err, ok) =>
-            @authenty = common.build_sockjs_client =>
-              @authenty.writeJSON {route: "identify", body: {session_id: "authenty"}}
-              @authenty.onceJSON (data) ->
-                expect(data).to.eql({route: "identify", body: {session_id: "authenty"}})
+            @sessiony = common.build_sockjs_client =>
+              @sessiony.writeJSON {route: "identify", body: {session_id: "sessiony"}}
+              @sessiony.onceJSON (data) ->
+                expect(data).to.eql({route: "identify", body: {session_id: "sessiony"}})
                 done()
         (done) =>
-          # authorized
+          # authenty: Is authenticated, but not authorized.
+          common.stubBrowserID(@browser, {email: "no_group@mockmyid.com"})
+          session = {
+            cookie: { maxAge: 2000 },
+            session_id: "authenty",
+          }
+          api_methods.authenticate session, "bogus assertion", (err, session, message) =>
+            @server.sockrooms.saveSession session, (err, ok) =>
+              @authenty = common.build_sockjs_client =>
+                @authenty.writeJSON {route: "identify", body: {session_id: "authenty"}}
+                @authenty.onceJSON (data) ->
+                  expect(data).to.eql({route: "identify", body: {session_id: "authenty"}})
+                  done()
+        (done) =>
+          # authory: Is authorized to access documents.
           common.stubBrowserID(@browser, {email: "one@mockmyid.com"})
           session = {
             cookie: { maxAge: 2000 },
@@ -109,6 +123,7 @@ describe "Socket permissions", ->
 
   after (done) ->
     @anony.close()
+    @sessiony.close()
     @authenty.close()
     @authory.close()
     common.shutDown(@server, done)
@@ -157,7 +172,8 @@ describe "Socket permissions", ->
 
   it "Authorizes properly for public rooms", (done) ->
     public_join_responses = [
-      [@anony, "session"], [@authenty, "success"], [@authory, "success"]
+      [@anony, "session"], [@sessiony, "success"],
+      [@authenty, "success"], [@authory, "success"]
     ]
     rooms = [ "dotstorm/#{@ds_public.id}", "firestarter/#{@fs_public.slug}",
               "resolve/#{@rs_public.id}",  "twinklepad/#{@tp_public.pad_id}"]
@@ -165,7 +181,8 @@ describe "Socket permissions", ->
 
   it "Authorizes properly for private rooms", (done) ->
     private_join_responses = [
-      [@anony, "session"], [@authenty, "permission"], [@authory, "success"]
+      [@anony, "session"], [@sessiony, "permission"],
+      [@authenty, "permission"], [@authory, "success"]
     ]
     rooms = [ "dotstorm/#{@ds_private.id}", "firestarter/#{@fs_private.slug}",
               "resolve/#{@rs_private.id}",  "twinklepad/#{@tp_private.pad_id}"]
