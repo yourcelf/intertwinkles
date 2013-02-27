@@ -28,7 +28,7 @@ load = (config) ->
     }
 
   TwinklePadSchema.pre 'save', (next) ->
-    if @read_only_pad_id?
+    if @pad_id?
       next()
     else
       # Use the pad_name as the group mapper; one group per pad.
@@ -48,15 +48,17 @@ load = (config) ->
             @pad_id = data?.padID
             return done(err, data)
 
-      ], (err) =>
-        return done(err) if err?
-        etherpad.getReadOnlyID {
-          padID: @pad_id
-        }, (err, data) =>
-          return done(err) if err?
-          @read_only_pad_id = data.readOnlyID
-          next()
-
+      ], next
+  TwinklePadSchema.pre 'save', (next) ->
+    if @read_only_pad_id
+      next()
+    else
+      etherpad.getReadOnlyID {
+        padID: @pad_id
+      }, (err, data) =>
+        return next(err) if err?
+        @read_only_pad_id = data.readOnlyID
+        next()
   TwinklePadSchema.virtual('url').get ->
     "#{config.apps.twinklepad.etherpad.url}/p/#{@pad_id}"
   TwinklePadSchema.virtual('read_only_url').get ->

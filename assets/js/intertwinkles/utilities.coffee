@@ -6,11 +6,12 @@
 
 class intertwinkles.AutoUpdatingDate extends Backbone.View
   tagName: "span"
-  initialize: (datetime) ->
-    if typeof(datetime) == "object"
-      @date = datetime
+  initialize: (options) ->
+    date = options.date
+    if typeof(date) == "object"
+      @date = date
     else
-      @date = new Date(datetime)
+      @date = new Date(date)
     @$el.addClass("date")
 
   remove: =>

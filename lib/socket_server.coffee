@@ -105,7 +105,7 @@ class RoomManager extends events.EventEmitter
 
   getRoomsForSessionId: (session_id) =>
     rooms = []
-    for socket in @sessionIdToSockets[session_id]
+    for socket in @sessionIdToSockets[session_id] or []
       rooms = rooms.concat(@socketIdToRooms[socket.sid])
     rooms = _.unique(rooms)
     return rooms

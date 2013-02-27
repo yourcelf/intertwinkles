@@ -7,7 +7,7 @@ sub_vars = (scope=document) ->
     $el = $(this)
 
     if $el.attr("data-date")
-      date = new intertwinkles.AutoUpdatingDate($el.attr("data-date"))
+      date = new intertwinkles.AutoUpdatingDate(date: $el.attr("data-date"))
       $el.html(date.el)
       date.render()
 

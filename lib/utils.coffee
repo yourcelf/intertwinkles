@@ -39,7 +39,10 @@ utils.get_json = (get_url, query, callback) ->
 
 utils.append_slash = (app, route, methods=["get"]) ->
   for method in methods
-    app[method](new RegExp("^" + route + "$"), (req, res) -> res.redirect(route + "/"))
+    app[method](
+      new RegExp("^" + route + "$"),
+      (req, res) -> res.redirect(req.path + "/")
+    )
 
 
 # Post the given data to the given URL as form encoded data; interpret the

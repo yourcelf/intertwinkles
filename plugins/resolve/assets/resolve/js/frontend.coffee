@@ -55,7 +55,7 @@ class SplashView extends intertwinkles.BaseView
           })
           selector.append(listing)
     @$(".proposal-listing-date").each =>
-      @addView this, new intertwinkles.AutoUpdatingDate($(this).attr("data-date"))
+      @addView this, new intertwinkles.AutoUpdatingDate(date: $(this).attr("data-date"))
 
 
   getProposalList: =>
@@ -250,7 +250,7 @@ class ShowProposalView extends intertwinkles.BaseView
               data-recipient='#{rev.user_id}'
               data-url='#{window.location.pathname}'></span>")
 
-      @addView ".proposal .date-auto", new intertwinkles.AutoUpdatingDate(rev.date)
+      @addView ".proposal .date-auto", new intertwinkles.AutoUpdatingDate(date: rev.date)
       title = resolve.model.get("revisions")[0].text.split(" ").slice(0, 20).join(" ") + "..."
       $("title").html "Proposal: #{title}"
 
@@ -330,7 +330,7 @@ class ShowProposalView extends intertwinkles.BaseView
         @_opinionRevs[opinion._id] = opinion.revisions.length
 
       @addView("##{opinion._id} .date",
-        new intertwinkles.AutoUpdatingDate(opinion.revisions[0].date))
+        new intertwinkles.AutoUpdatingDate(date: opinion.revisions[0].date))
 
     @renderTallies()
 

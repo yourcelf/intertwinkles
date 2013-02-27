@@ -1,9 +1,5 @@
 fire = {}
 
-intertwinkles.connect_socket()
-intertwinkles.build_toolbar($("header"), {applabel: "firestarter"})
-intertwinkles.build_footer($("footer"))
-
 class Firestarter extends Backbone.Model
   idAttribute: "_id"
 class Response extends Backbone.Model
@@ -13,25 +9,6 @@ class ResponseCollection extends Backbone.Collection
   comparator: (r) ->
     return (new Date(r.get("created")).getTime())
 
-
-load_firestarter_data = (data) ->
-  if not fire.responses?
-    fire.responses = new ResponseCollection()
-  if data.responses?
-    while fire.responses.pop()
-      null
-    for response in data.responses
-      fire.responses.add(new Response(response))
-    data.responses = (a._id for a in data.responses)
-  if not fire.model?
-    fire.model = new Firestarter()
-  fire.model.set(data)
-
-#
-# Load initial data if any
-#
-if INITIAL_DATA.firestarter?
-  load_firestarter_data(INITIAL_DATA.firestarter)
 
 class SplashView extends Backbone.View
   template: _.template($("#splashTemplate").html())
@@ -59,7 +36,9 @@ class SplashView extends Backbone.View
       else
         INITIAL_DATA.listed_firestarters = data.docs
         @render()
-    fire.socket.emit "get_firestarter_list", {callback: "list_firestarters"}
+    fire.socket.send "firestarter/get_firestarter_list", {
+      callback: "list_firestarters"
+    }
 
   softNav: (event) =>
     event.preventDefault()
@@ -81,7 +60,7 @@ class SplashView extends Backbone.View
             group: intertwinkles.groups?[doc.sharing.group_id]
           }))
           @$(".#{key}-doc-list").append(item)
-          date = new intertwinkles.AutoUpdatingDate(doc.modified)
+          date = new intertwinkles.AutoUpdatingDate(date: doc.modified)
           $(".date", item).html(date.el)
           date.render()
           @dateWidgets.push(date)
@@ -130,7 +109,9 @@ class AddFirestarterView extends Backbone.View
     fire.socket.once "unused_slug", (data) =>
       @$("#id_slug").val(data.slug)
       @displayURL()
-    fire.socket.emit "get_unused_slug", {callback: "unused_slug"}
+    fire.socket.emit "firestarter/get_unused_slug", {
+      callback: "unused_slug"
+    }
 
   createFirestarter: (event) =>
     event.preventDefault()
@@ -156,7 +137,7 @@ class AddFirestarterView extends Backbone.View
         fire.app.navigate("/firestarter/f/#{encodeURIComponent(fire.model.get("slug"))}", {trigger: true})
         $("html,body").animate({scrollTop: 0}, 0)
 
-    fire.socket.emit "create_firestarter", {
+    fire.socket.send "firestarter/create_firestarter", {
       callback: "create_firestarter"
       model: {
         name: @$("#id_name").val()
@@ -187,7 +168,9 @@ class ShowFirestarter extends Backbone.View
       fire.responses = new ResponseCollection()
     @responseViews = []
 
-    @roomUsersMenu = new intertwinkles.RoomUsersMenu({room: options.slug})
+    @roomUsersMenu = new intertwinkles.RoomUsersMenu({
+      room: "firestarter/" + options.slug
+    })
 
     fire.socket.on "firestarter", (data) =>
       console.info "on firestarter", data
@@ -212,7 +195,7 @@ class ShowFirestarter extends Backbone.View
     fire.responses.on "remove", @removeResponseView, this
 
     unless fire.model.get("slug") == options.slug
-      fire.socket.emit "get_firestarter", {slug: options.slug}
+      fire.socket.send "firestarter/get_firestarter", {slug: options.slug}
 
     # Reload sharing settings
     intertwinkles.user.on "change", @refreshFirestarter, this
@@ -223,9 +206,9 @@ class ShowFirestarter extends Backbone.View
     @editor?.remove()
     for view in @responseViews
       view.remove()
-    fire.socket.removeAllListeners("firestarter")
-    fire.socket.removeAllListeners("response")
-    fire.socket.removeAllListeners("delete_response")
+    fire.socket.stopListening("firestarter")
+    fire.socket.stopListening("response")
+    fire.socket.stopListening("delete_response")
     fire.model.off null, null, this
     intertwinkles.user.off null, null, this
     delete fire.model
@@ -236,7 +219,7 @@ class ShowFirestarter extends Backbone.View
   refreshFirestarter: =>
     for view in @responseViews
       view.remove()
-    fire.socket.emit "get_firestarter", {slug: fire.model.get("slug")}
+    fire.socket.send "firestarter/get_firestarter", {slug: fire.model.get("slug")}
 
   editName: (event) =>
     event.preventDefault()
@@ -274,7 +257,7 @@ class ShowFirestarter extends Backbone.View
       else
         fire.model.set(data.model)
       cb()
-    fire.socket.emit "edit_firestarter", {
+    fire.socket.send "firestarter/edit_firestarter", {
       callback: 'firestarter_edited'
       model: _.extend({
         _id: fire.model.get("_id")
@@ -313,7 +296,7 @@ class ShowFirestarter extends Backbone.View
           fire.model.set({
             responses: _.reject(fire.model.get("responses"), (r) -> r.id == response.id)
           })
-      fire.socket.emit "delete_response", {
+      fire.socket.send "firestarter/delete_response", {
         callback: "response_deleted"
         model: response.toJSON()
       }
@@ -405,7 +388,7 @@ class ShowFirestarter extends Backbone.View
                data-content='#{ content }'>#{ icon }</a>
           """
 
-      fire.socket.emit "get_firestarter_events", {
+      fire.socket.send "firestarter/get_firestarter_events", {
         callback: callback,
         firestarter_id: fire.model.id
       }
@@ -450,7 +433,7 @@ class EditResponseView extends intertwinkles.BaseModalFormView
           @model.set(data.model)
           if add_it
             fire.responses.add(@model)
-      fire.socket.emit "save_response", { callback: "response_saved", model: updates }
+      fire.socket.send "firestarter/save_response", { callback: "response_saved", model: updates }
 
 class DeleteResponseConfirmation extends intertwinkles.BaseModalFormView
   template: _.template $("#deleteResponseConfirmationTemplate").html()
@@ -477,7 +460,7 @@ class ShowResponseView extends Backbone.View
     context = @response.toJSON()
     context.read_only = not intertwinkles.can_edit(fire.model)
     @$el.html(@template(context))
-    @date = new intertwinkles.AutoUpdatingDate(@response.get("created"))
+    @date = new intertwinkles.AutoUpdatingDate(date: @response.get("created"))
     @$(".date-holder").html @date.el
     @date.render()
     @$el.effect("highlight", {}, 3000)
@@ -523,28 +506,34 @@ class Router extends Backbone.Router
 fire.firestarter_url = (slug) ->
   return "#{INTERTWINKLES_APPS["firestarter"].url}/firestarter/f/#{slug}"
 
-socket_connected = false
-socket = io.connect("/io-firestarter")
-socket.on "error", (data) ->
-  flash("error", "Oh hai, the server has ERRORed. Oh noes!")
-  window.console?.log?(data)
+load_firestarter_data = (data) ->
+  if not fire.responses?
+    fire.responses = new ResponseCollection()
+  if data.responses?
+    while fire.responses.pop()
+      null
+    for response in data.responses
+      fire.responses.add(new Response(response))
+    data.responses = (a._id for a in data.responses)
+  if not fire.model?
+    fire.model = new Firestarter()
+  fire.model.set(data)
 
-socket.on "connect", ->
-  socket_connected = true
-  fire.socket = socket
+#
+# Load initial data if any
+#
+if INITIAL_DATA.firestarter?
+  load_firestarter_data(INITIAL_DATA.firestarter)
+
+#
+# GO!
+#
+intertwinkles.connect_socket ->
+  intertwinkles.build_toolbar($("header"), {applabel: "firestarter"})
+  intertwinkles.build_footer($("footer"))
+  fire.socket = intertwinkles.socket
+
   unless fire.started == true
     fire.app = new Router()
     Backbone.history.start(pushState: true, silent: false)
     fire.started = true
-
-socket.on "disconnect", ->
-  socket_connected = false
-
-orig_emit = socket.emit
-socket.emit = (label, data) ->
-  if socket_connected
-    orig_emit.apply(socket, [label, data])
-  else
-    if confirm("Lost connection to the server. Refresh page?")
-      window.location.href = window.location.href
-    

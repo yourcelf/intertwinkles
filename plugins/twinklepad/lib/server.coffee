@@ -1,43 +1,48 @@
-express        = require 'express'
-socketio       = require 'socket.io'
-mongoose       = require 'mongoose'
 utils          = require '../../../lib/utils'
-RoomManager    = require('iorooms').RoomManager
-RedisStore     = require('connect-redis')(express)
 _              = require 'underscore'
 url            = require 'url'
 etherpadClient = require 'etherpad-lite-client'
 async          = require 'async'
 logger         = require('log4js').getLogger()
 
-start = (config, app, io, sessionStore) ->
+start = (config, app, sockrooms) ->
   schema = require('./schema').load(config)
   api_methods = require('../../../lib/api_methods')(config)
+  www_methods = require("../../../lib/www_methods")(config)
   solr = require("../../../lib/solr_helper")(config)
   #
   # Sockets
   #
-  iorooms = new RoomManager("/io-twinklepad", io, sessionStore, {
-    authorizeJoinRoom: (session, name, callback) ->
-      schema.TwinklePad.findOne {pad_id: name}, 'sharing', (err, doc) ->
-        return callback(err) if err?
-        if utils.can_view(session, doc)
-          callback(null)
-        else
-          callback("Permission denied")
+  sockrooms.addChannelAuth "twinklepad", (session, room, callback) ->
+    name = room.split("/")[1]
+    console.log room, name
+    schema.TwinklePad.findOne {pad_id: name}, 'sharing', (err, doc) ->
+      return callback(err) if err?
+      return callback("Twinklepad #{name} not found") unless doc?
+      if utils.can_view(session, doc)
+        callback(null, true)
+      else
+        callback(null, false)
 
-  })
-
-  # Clear etherpad session on disconnect
-  iorooms.on "disconnect", (data) ->
-    session = data.socket.session
-    if session?.etherpad_session_id
-      etherpad.deleteSession {
-        sessionID: session.etherpad_session_id
-      }, (err, data) ->
-        logger.error(err) if err?
-        delete session.etherpad_session_id
-        iorooms.saveSession session, (err) -> logger.error(err) if err?
+  # When we arrive at a pad, the client joins a room for the pad ID.  When we
+  # leave the room, post a search index of the latest pad text, and remove the
+  # etherpad session id.
+  sockrooms.on "leave", (data) ->
+    {socket, session, room, last} = data
+    [channel, name] = room.split("/")
+    unless last and session.etherpad_session_id? and channel == "twinklepad"
+      return
+    # Update the search index.
+    schema.TwinklePad.findOne {pad_id: name}, (err, doc) ->
+      return logger.error(err) if err?
+      post_search_index(doc)
+    # Remove the session's etherpad_session_id.
+    etherpad.deleteSession {
+      sessionID: session.etherpad_session_id
+    }, (err, data) ->
+      logger.error(err) if err?
+      delete session.etherpad_session_id
+      sockrooms.saveSession session, (err) -> logger.error(err) if err?
 
   post_search_index = (doc, timeout=15000) ->
     etherpad.getText {padID: doc.pad_id}, (err, data) ->
@@ -57,12 +62,11 @@ start = (config, app, io, sessionStore) ->
         sharing: doc.sharing
       }, timeout
 
-  iorooms.onChannel "save_twinklepad", (socket, data) ->
+  sockrooms.on "twinklepad/save_twinklepad", (socket, session, data) ->
     respond = (err, doc) ->
-      return socket.emit "error", {error: err} if err?
-      doc.sharing = utils.clean_sharing(socket.session, doc)
-      socket.broadcast.to(doc.pad_id).emit "twinklepad", {twinklepad: doc}
-      socket.emit "twinklepad", {twinklepad: doc}
+      return socket.sendJSON "error", {error: err} if err?
+      doc.sharing = utils.clean_sharing(session, doc)
+      sockrooms.broadcast "twinklepad/" + doc.pad_id, "twinklepad", {twinklepad: doc}
 
     unless data.twinklepad?._id? and data.twinklepad?.sharing?
       return respond("Missing twinklepad params")
@@ -71,24 +75,16 @@ start = (config, app, io, sessionStore) ->
       return respond(err) if err?
       return respond("Twinklepad not found for #{data.twinklepad.pad_id}") unless doc?
       return respond("Permission denied") unless utils.can_change_sharing(
-        socket.session, doc
+        session, doc
       )
       doc.sharing = data.twinklepad.sharing
       return respond("Permission denied") unless utils.can_change_sharing(
-        socket.session, doc
+        session, doc
       )
       doc.save(respond)
       # Re-index immediately, so that search permissions are updated.
       post_search_index(doc, 0)
 
-  # When we arrive at a pad, the client joins a room for the pad ID.  When we
-  # leave the room, post a search index of the latest pad text.
-  iorooms.on "leave", (data) ->
-    session = data.socket.session
-    pad_id = data.room
-    schema.TwinklePad.findOne {pad_id: pad_id}, (err, doc) ->
-      return logger.error(err) if err?
-      post_search_index(doc, 15000)
 
   #
   # Routes
@@ -105,16 +101,6 @@ start = (config, app, io, sessionStore) ->
       flash: req.flash()
     }, obj)
 
-  server_error = (req, res, err) ->
-    res.statusCode = 500
-    logger.error(err)
-    return res.send("Server error") # TODO pretty 500 page
-
-  not_found = (req, res) ->
-    return res.send("Not found", 404) # TODO pretty 404 page
-
-  permission_denied = (req, res) ->
-    return res.send("Permission denied", 403) # TODO pretty 403 page
 
   pad_url_parts = url.parse(config.apps.twinklepad.etherpad.url)
   etherpad = etherpadClient.connect({
@@ -146,7 +132,7 @@ start = (config, app, io, sessionStore) ->
         else
           done(null, [])
     ], (err, results) ->
-      return server_error(req, res, err) if err?
+      return www_methods.handle_error(req, res, err) if err?
       res.render 'twinklepad/index', context(req, {
         title: "#{config.apps.twinklepad.name}"
         is_authenticated: utils.is_authenticated(req.session)
@@ -161,7 +147,7 @@ start = (config, app, io, sessionStore) ->
     # The strategy for authorizing access to InterTwinkles etherpads is to use
     # the Etherpad API to create one group per pad, and to add a one-time-use
     # session for each user on every pad page load. The session is cleared when
-    # the user breaks their iorooms websocket (above).
+    # the user leaves and hence breaks their socket (above).
     #
     # http://etherpad.org/doc/v1.2.1/#index_overview
     #
@@ -169,7 +155,7 @@ start = (config, app, io, sessionStore) ->
       # Retrieve and maybe create the pad.
       (done) ->
         schema.TwinklePad.findOne {pad_name: req.params.pad_name}, (err, doc) ->
-          return server_error(req, res, err) if err?
+          return www_methods.handle_error(req, res, err) if err?
           if not doc?
             doc = new schema.TwinklePad {pad_name: req.params.pad_name}
             doc.save(done)
@@ -177,15 +163,17 @@ start = (config, app, io, sessionStore) ->
             done(null, doc)
 
     ], (err, doc) ->
-      return server_error(req, res, err) if err?
+      return www_methods.handle_error(req, res, err) if err?
 
       # Check that we can view this pad.
       if utils.can_edit(req.session, doc)
         read_only = false
       else if utils.can_view(req.session, doc)
         read_only = true
+      else if utils.is_authenticated(req.session)
+        return www_methods.permission_denied(req, res)
       else
-        return permission_denied(req, res)
+        return www_methods.redirect_to_login(req, res)
 
       # Post a view event to intertwinkles.
       api_methods.post_event {
@@ -229,7 +217,7 @@ start = (config, app, io, sessionStore) ->
         authorMapper: req.session.auth?.user_id or req.session.anon_id
         name: req.session.users?[req.session.auth.user_id]?.name
       }, (err, data) ->
-        return server_error(req, res, err) if err?
+        return www_methods.handle_error(req, res, err) if err?
         author_id = data.authorID
 
         # Set an arbitrary session length of 1 day; though that only matters if
@@ -245,7 +233,7 @@ start = (config, app, io, sessionStore) ->
           authorID: author_id
           validUntil: valid_until
         }, (err, data) ->
-          return server_error(req, res, err) if err?
+          return www_methods.handle_error(req, res, err) if err?
           req.session.etherpad_session_id = data.sessionID
           logger.log config.apps.twinklepad.etherpad.cookie_domain
           cookie_params = {

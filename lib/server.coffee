@@ -119,7 +119,7 @@ start = (config) ->
   # Routes for plugins.
   for key, appconf of config.apps
     continue if key == "www"
-    continue if key != "dotstorm"
+    continue if key == "resolve"
     require("../plugins/#{key}/lib/server").start(config, app, sockrooms)
 
   # 404 route -- must be last, after all other routes, as it defines a

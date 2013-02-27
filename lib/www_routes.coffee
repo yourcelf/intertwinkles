@@ -294,7 +294,7 @@ route = (config, app, sockrooms) ->
         return res.redirect("/")
 
 
-  utils.append_slash(app, "/groups/show/[^/]+")
+  utils.append_slash(app, "/groups/show/([^/]+)")
   app.get '/groups/show/:slug/', (req, res) ->
     return redirect_to_login(req, res) unless utils.is_authenticated(req.session)
     schema.Group.findOne {slug: req.params.slug}, (err, doc) ->

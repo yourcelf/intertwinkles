@@ -29,7 +29,7 @@
     "async": "~0",
     "http-proxy": "*",
     "solr-client": "~0",
-    "etherpad-lite-client": "*",
+    "etherpad-lite-client": "git://github.com/yourcelf/etherpad-lite-client-js.git",
     "log4js": "~0",
     "emailjs": "~0",
     "simplesmtp": "~0",

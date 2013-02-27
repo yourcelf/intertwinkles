@@ -19,8 +19,8 @@ class FlashView extends Backbone.View
   tagName: 'li'
   events:
     'click .close': 'closeMessage'
-  initialize: (flashModel) ->
-    @model = flashModel
+  initialize: (options) ->
+    @model = options.model
   render: =>
     @$el.html @template message: @model.get "message"
     @$el.addClass @model.get "level"
@@ -34,10 +34,10 @@ class FlashView extends Backbone.View
 
 class FlashListView extends Backbone.View
   tagName: 'ul'
-  initialize: (flashList) ->
-    @flashList = flashList
+  initialize: (options) ->
+    @flashList = options.collection
     @flashList.on "add", (model) =>
-      fv = new FlashView(model)
+      fv = new FlashView(model: model)
       fv.on "close", (model) =>
         @flashList.remove(model)
         return false
@@ -46,7 +46,7 @@ class FlashListView extends Backbone.View
 
 # One global flash list:
 window.flashList = new FlashMessageList()
-$("#flash").html new FlashListView(flashList).render().el
+$("#flash").html new FlashListView(collection: flashList).render().el
 # Add to global flash list:
 window.flash = (level, message) ->
   model = new FlashMessage {level, message}
