@@ -8,6 +8,7 @@ _            = require 'underscore'
 async        = require 'async'
 expect       = require 'expect.js'
 mongoose     = require 'mongoose'
+sockjs_client = require 'sockjs-client'
 Schema       = mongoose.Schema
 config       = require './test_config'
 www_schema   = require('../lib/schema').load(config)
@@ -66,6 +67,7 @@ shutDown = (srv, done) ->
   async.series([
     (done) -> email_server.stop(done)
     (done) -> srv.app.close() ; done()
+    (done) -> console.log srv.sockserver ; srv.sockserver.close() ; done()
     (done) -> clearDb(done)
     (done) -> srv.db.disconnect(done)
   ], done)
@@ -175,4 +177,15 @@ session_stub = (user, done) ->
 
     done(session)
 
-module.exports = {stubBrowserID, loadFixture, startUp, shutDown, TestModel}
+build_sockjs_client = (callback) ->
+  client = sockjs_client.create("http://localhost:#{config.port}/sockjs")
+  client.writeJSON = (data) =>
+    client.write JSON.stringify(data)
+  client.onceJSON = (func) =>
+    client.once "data", (str) -> func(JSON.parse(str))
+  client.on "connection", callback
+  return client
+
+
+module.exports = {stubBrowserID, loadFixture, startUp, shutDown, TestModel,
+  build_sockjs_client}

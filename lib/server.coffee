@@ -130,7 +130,7 @@ start = (config) ->
 
   app.listen config.port
 
-  return {app, logger, db }
+  return {app, logger, sockrooms, sockserver, db }
 
 
 module.exports = {start}
