@@ -34,7 +34,6 @@ describe "Socket server", ->
 
   after (done) ->
     @app.close()
-    @sockserver.close()
     done()
 
   it "Returns error when joining without well-formed room", (done) ->
