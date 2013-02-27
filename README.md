@@ -1,6 +1,6 @@
 # InterTwinkles
 
-![](https://raw.github.com/yourcelf/intertwinkles/master/lib/www/assets/www/img/inspire.png)
+![](https://raw.github.com/yourcelf/intertwinkles/master/assets/img/inspire.png)
 
 [![Build Status](https://travis-ci.org/yourcelf/intertwinkles.png)](https://travis-ci.org/yourcelf/intertwinkles)
 
