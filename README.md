@@ -23,6 +23,7 @@ InterTwinkles depends on the following.  Install these first:
  * nodejs v0.8
  * java (for integration with Solr search) 
  * python >= 2.6 (required for installation and development only).
+ * Various image processing and development libraries needed to compile node dependencies. On Debian/Ubuntu, these are: <tt>imagemagick libcairo2-dev libjpeg8-dev libpango1.0-dev libgif-dev build-essential g++</tt>
 
 Once these dependencies are installed, install all the remaining dependencies
 using the provided script:
