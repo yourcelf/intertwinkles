@@ -17,6 +17,7 @@ server       = require '../lib/server'
 fixture      = require './fixture'
 email_server = require "../lib/email_server"
 email        = require "emailjs"
+mongoose     = require "mongoose"
 
 TestModelSchema = new Schema
   name: String
@@ -67,7 +68,6 @@ shutDown = (srv, done) ->
   async.series([
     (done) -> email_server.stop(done)
     (done) -> srv.app.close() ; done()
-    #(done) -> console.log srv.sockserver ; srv.sockserver.close() ; done()
     (done) -> clearDb(done)
     (done) -> srv.db.disconnect(done)
   ], done)
@@ -82,25 +82,13 @@ deleteIcons = (cb) ->
     async.parallel(deletions, cb)
 
 clearDb = (cb) ->
-  clearModel = (model, done) ->
-    model.remove {}, (err) ->
-      expect(err).to.be(null)
-      model.find {}, (err, docs) ->
-        expect(err).to.be(null)
-        expect(docs.length).to.be(0)
-        done()
-
-  async.series([
-    (done) -> deleteIcons(done),
-    (done) ->
-      async.map [
-        www_schema.User, www_schema.Group, www_schema.Event,
-        www_schema.Notification, www_schema.SearchIndex,
-        www_schema.Twinkle, www_schema.ShortURL, TestModel
-        ds_schema.Dotstorm, ds_schema.Idea, ds_schema.IdeaGroup
-      ], clearModel, done
-  ], cb)
-
+  conn = mongoose.createConnection(
+    "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
+  )
+  conn.db.dropDatabase (err) ->
+    expect(err).to.be(null)
+    conn.close()
+    cb()
 
 loadFixture = (callback) ->
   users_by_name = {}

@@ -45,7 +45,7 @@ clear_test_docs_from_solr = (done) ->
           done()
   , 'DELETE'
 
-describe "solr search", ->
+describe "SOLR search", ->
   before (done) ->
     if process.env.SKIP_SOLR_TESTS
       return done()

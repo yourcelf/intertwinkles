@@ -15,7 +15,6 @@ start = (config, app, sockrooms) ->
   #
   sockrooms.addChannelAuth "twinklepad", (session, room, callback) ->
     name = room.split("/")[1]
-    console.log room, name
     schema.TwinklePad.findOne {pad_id: name}, 'sharing', (err, doc) ->
       return callback(err) if err?
       return callback("Twinklepad #{name} not found") unless doc?

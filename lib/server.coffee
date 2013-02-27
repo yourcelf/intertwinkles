@@ -104,9 +104,9 @@ start = (config) ->
   app.configure 'production', ->
     logger.setLevel(log4js.levels.ERROR)
     timeout = {maxAge: 1000*60*60*24}
-    app.use "/uploads/", express.static(__dirname + '/../uploads', timeout)
+    app.use "/uploads/", express.static(__dirname + '/../uploads')
     for folder in static_folders
-      app.use "/static/", express.static(folder, timeout)
+      app.use "/static/", express.static(folder)
 
   ###
   # Express routes

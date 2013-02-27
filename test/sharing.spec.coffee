@@ -6,7 +6,7 @@ schema        = require('../lib/schema').load(config)
 common        = require './common'
 utils = require '../lib/utils'
 
-describe "sharing", ->
+describe "Sharing", ->
   before (done) ->
     common.startUp (server, browser) =>
       @server = server
