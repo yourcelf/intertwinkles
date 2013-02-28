@@ -22,7 +22,7 @@
     "express": "~2",
     "imagemagick": "~0",
     "jade": "~0",
-    "markdown": "~0",
+    "marked": "~0",
     "mongoose": "~3.5",
     "node-uuid": "*",
     "async": "~0",
