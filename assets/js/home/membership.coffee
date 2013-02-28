@@ -221,7 +221,7 @@ class MembershipTable extends Backbone.View
   addMember: (event) =>
     event.preventDefault()
     @validateEmail(event)
-    email = @$("#add_email").val()
+    email = $.trim(@$("#add_email").val())
     role = @$("#add_role").val()
     voting = @$("#add_voting").is(":checked")
     email_td = @$("#add_email").parent()
@@ -232,7 +232,7 @@ class MembershipTable extends Backbone.View
     else if _.find(@group.members, (m) => @users[m.user]?.email == email)?
       email_td.addClass("error")
       flash "info", "That user is already a member."
-    else if _.find(@group.invited_members, (m) -> m.email == email)?
+    else if _.find(@group.invited_members, (m) => @users[m.user]?.email == email)?
       email_td.addClass("error")
       flash "info", "That user has already been invited."
     else
