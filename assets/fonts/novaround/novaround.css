@@ -1,0 +1,11 @@
+@font-face {
+    font-family: 'nova_roundbook';
+    src: url('/static/fonts/novaround/novaround-webfont.eot');
+    src: url('/static/fonts/novaround/novaround-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/static/fonts/novaround/novaround-webfont.woff') format('woff'),
+         url('/static/fonts/novaround/novaround-webfont.ttf') format('truetype'),
+         url('/static/fonts/novaround/novaround-webfont.svg#nova_roundbook') format('svg');
+    font-weight: normal;
+    font-style: normal;
+
+}

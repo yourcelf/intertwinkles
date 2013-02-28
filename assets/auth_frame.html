@@ -18,7 +18,15 @@
 
   document.getElementById('signin').onclick = function(event) {
     event.preventDefault();
-    navigator.id.request();
+    var opts = {
+      siteName: "InterTwinkles",
+      termsOfService: "/about/terms/",
+      privacyPolicy: "/about/privacy/"
+    }
+    if (window.location.protocol == "https:") {
+      opts.siteLogo = "/static/img/star-icon.png";
+    }
+    navigator.id.request(opts);
     return false;
   };
 

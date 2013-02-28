@@ -41,8 +41,8 @@
 
 $.fn.modal.defaults.maxHeight = -> $(window).height() - 165
 
-$(document).ready ->
-  $("span.intertwinkles").on "mouseover", ->
+intertwinkles.twunklify = (scope) ->
+  $("span.intertwinkles", scope or document).on "mouseover", ->
     $el = $(this)
     unless $el.hasClass("twunkled")
       $el.addClass("twunkled")
@@ -57,6 +57,8 @@ $(document).ready ->
         setTimeout((-> el.className = ""), 100)
       , i * 50)
 
+$(document).ready ->
+  intertwinkles.twunklify()
   $(".modal-video").on "click", ->
     width = parseInt($(this).attr("data-width"))
     height = parseInt($(this).attr("data-height"))

@@ -16,7 +16,7 @@ logger = log4js.getLogger("socket_server")
 logger.setLevel(log4js.levels.FATAL)
 
 #
-# This test suite verifies that the permissions to join a room for a socket are
+# This test suite verifies that the permissions to join a socket "room" are
 # correctly handled.  One should only be able to join the socket for a document
 # one has permission to access.
 #

@@ -77,10 +77,11 @@
           , activeTarget = this.activeTarget
           , i
 
-        if (scrollTop >= maxScroll) {
-          return activeTarget != (i = targets.last()[0])
-            && this.activate ( i )
-        }
+        //  XXX XXX This breaks scrollspy on the front page...
+        // if (scrollTop >= maxScroll) {
+        //   return activeTarget != (i = targets.last()[0])
+        //     && this.activate ( i )
+        // }
 
         for (i = offsets.length; i--;) {
           activeTarget != targets[i]

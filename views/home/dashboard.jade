@@ -1,0 +1,43 @@
+extends www_base
+
+block body
+  div.container-fluid#frontpage
+    div.row-fluid
+      div.span3
+        h3 Groups
+        ul
+          for group in groups
+            li.
+              <a href='/groups/show/#{group.slug}'>#{group.name}</a>
+              (#{group.members.length} members)
+        a.btn(href='/groups/new') Add new group
+
+        h3(style='text-align: center;') Tools
+        include includes/app_list
+      div.span9
+        div.row-fluid
+          div.span4
+            if (activity.docs.length > 0)
+              h3 Recent things
+              ul.events-and-docs
+                for doc in activity.docs
+                  li.tile-link
+                    summary = "<span class='markmeup'>" + doc.summary + "</span>"
+                    include includes/search_result
+
+          div.span4
+            if (activity.user.length > 0)
+              h3 Your activity
+              ul.events-and-docs
+                for event in activity.user
+                  li.tile-link
+                    show_user = false
+                    include includes/event
+          div.span4
+            if (activity.group.length > 0)
+              h3 Your groups' activity
+              ul.events-and-docs
+                for event in activity.group
+                  li.tile-link
+                    show_user = true
+                    include includes/event

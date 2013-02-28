@@ -22,12 +22,13 @@ intertwinkles.request_logout = ->
   frame = $("#auth_frame")[0].contentWindow
   frame.postMessage {action: 'intertwinkles_logout'}, INTERTWINKLES_API_URL
 
-onlogin = (assertion) ->
+intertwinkles.onlogin = (assertion) ->
   console.log "onlogin"
   if window.INTERTWINKLES_AUTH_LOGOUT?
     return intertwinkles.request_logout()
 
   finish = ->
+    intertwinkles.user.trigger("login")
     if window.INTERTWINKLES_AUTH_REDIRECT?
       window.location.href = INTERTWINKLES_AUTH_REDIRECT
 
@@ -67,7 +68,7 @@ onlogin = (assertion) ->
   else
     alert("Error: socket missing")
 
-onlogout = ->
+intertwinkles.onlogout = ->
   console.log "onlogout"
   intertwinkles.users = null
   intertwinkles.groups = null
@@ -75,6 +76,7 @@ onlogout = ->
     intertwinkles.socket.once "logout", ->
       reload = intertwinkles.is_authenticated()
       intertwinkles.user.clear()
+      intertwinkles.user.trigger("logout")
       if reload or window.INTERTWINKLES_AUTH_LOGOUT
         flash "info", "Signed out."
         window.location.pathname = "/"
@@ -85,8 +87,8 @@ onlogout = ->
 onmessage = (event) ->
   if event.origin == INTERTWINKLES_API_URL
     switch event.data.action
-      when 'onlogin' then onlogin(event.data.assertion)
-      when 'onlogout' then onlogout()
+      when 'onlogin' then intertwinkles.onlogin(event.data.assertion)
+      when 'onlogout' then intertwinkles.onlogout()
 window.addEventListener('message', onmessage, false)
 
 intertwinkles.is_authenticated = -> return intertwinkles.user.get("email")?

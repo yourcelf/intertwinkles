@@ -6,6 +6,9 @@ sub_vars = (scope=document) ->
   $(".varsub", scope).each ->
     $el = $(this)
 
+    #
+    # Dashboard fill-ins
+    #
     if $el.attr("data-date")
       date = new intertwinkles.AutoUpdatingDate(date: $el.attr("data-date"))
       $el.html(date.el)
@@ -34,3 +37,4 @@ sub_vars = (scope=document) ->
       window.location.href = href
 
 sub_vars()
+window.sub_vars = sub_vars

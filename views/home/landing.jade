@@ -1,0 +1,91 @@
+extends ../layout
+
+block body
+  div.row-fluid
+    div.span2
+      div#sidenav.hidden-phone
+        ul.nav
+          li
+            a(href='#top') What
+          li
+            a(href='#about') How?
+          li
+            a(href='#more') More..
+    
+    div.span10
+      div#top.row-fluid
+        div.span6.offset3
+          div(style='max-width: 400px; margin-left: auto; margin-right: auto;')
+            h1 Inter&#8203;<span class='intertwinkles'>Twinkles</span>
+            ul.sub-nav
+              li.left
+                a(href='/about/') About
+              li.center
+                a(href='/about/faq/') FAQ
+              li.right
+                a#signin(href='#') Sign&nbsp;In
+
+      div.app-tiles
+        div.row-fluid
+          div.app-tile.right
+            a(href='/firestarter/')
+              img.app-image(src='/static/firestarter/img/firestarter_tile.png')
+            a.app-title(href='/firestarter/') Firestarter
+            div.app-blurb.
+              Go arounds, ice breakers, intros. Get to know each other
+          div.app-tile.left
+            a(href='/dotstorm/')
+              img.app-image(src='/static/dotstorm/img/dotstorm_tile.png')
+            a.app-title(href='/dotstorm/') Dotstorm
+            div.app-blurb.
+              Structured brainstorming with sticky notes. Come up with new ideas
+          div(style='clear: both;')
+        div.row-fluid
+          div.app-tile.right
+            a(href='/twinklepad/')
+              img.app-image(src='/static/twinklepad/img/twinklepad_tile.png')
+            a.app-title(href='/twinklepad/') TwinklePad
+            div.app-blurb.
+              Public or private collaborative document editing with etherpads
+          div.app-tile.left
+            a(href='/resolve/')
+              img.app-image(src='/static/resolve/img/resolve_tile.png')
+            a.app-title(href='/resolve/') Resolve
+            div.app-blurb.
+              Approve or reject a proposal with a group. Asynchronous voting and
+              revising proposals
+          div(style='clear: both;')
+
+
+      div#about
+        a.modal-video(href='#',
+          data-url='https://www.youtube-nocookie.com/embed/6YBWrcTsMl0',
+          data-width='640', data-height='360')
+            i.icon-play
+            | 5 minute video introduction
+
+
+
+      div#more.row-fluid
+        div.span4.offset1
+          h3(style='text-align: center;') Features
+          ul  
+            li Real-time, collaborative editing
+            li Flexible permissions &ndash; share with your group, or with the world for specified time periods.
+            li Integrated search
+            li See who in your group has been active, and who hasn't
+        div.span4.offset2
+          h3(style='text-align: center;') Workshops
+          p(style='line-height: 1.25em;').
+            From January to June of 2013, we'll be running workshops sharing
+            these tools and co-developing best practices for online decision
+            making.  Want to participate?
+            <a href='mailto:cfd@media.mit.edu'>Contact us!</a>
+    div(style='clear: both;')
+
+block poststyles
+  !=css("css/landing")
+
+block postscripts
+  <script src='https://login.persona.org/include.js'></script>
+  !=js("js/home/landing")

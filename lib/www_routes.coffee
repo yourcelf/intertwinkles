@@ -31,32 +31,48 @@ route = (config, app, sockrooms) ->
   #
 
   app.get '/', (req, res) ->
-    respond = (err, activity) ->
-      return www_methods.handle_error(req, res, err) if err?
-      res.render 'home/index', context(req, {
+    # Show the landing page if we're not signed in.
+    hero_apps =  ["firestarter", "twinklepad", "dotstorm", "resolve"]
+    if not utils.is_authenticated(req.session)
+      return res.render 'home/landing', context(req, {
         title: "InterTwinkles: Twinkling all over the InterWebs"
-        hero_apps: ["firestarter", "twinklepad", "dotstorm", "resolve"]
-        activity: activity
-        groups: req.session.groups
+        hero_apps: hero_apps
       })
 
-    unless utils.is_authenticated(req.session)
-      return respond(null, null)
-
+    # Show the dashboard if we are signed in.
     async.parallel [
       (done) -> www_methods.get_user_events(req.session, done)
       (done) -> www_methods.get_group_events(req.session, done)
       (done) -> utils.list_group_documents(
-          schema.SearchIndex, req.session, done, {}, "-modified", 0, 20, true)
+          schema.SearchIndex, req.session, done, {}, "-modified", 0, 20, true
+        )
     ], (err, results) ->
-      return respond(err) if err?
+      return www_methods.handle_error(req, res, err) if err?
       [user_events, group_events, recent_docs] = results
-      activity = null
-      respond(null, {
-        user: user_events
-        group: group_events
-        docs: recent_docs
+      if user_events.length == group_events.length == recent_docs.length == 0
+        return res.redirect("/starting/")
+      res.render 'home/dashboard', context(req, {
+        title: "InterTwinkles"
+        hero_apps: hero_apps
+        activity: {
+          user: user_events
+          group: group_events
+          docs: recent_docs
+        }
+        groups: req.session.groups
       })
+
+  utils.append_slash(app, "/starting")
+  app.get '/starting/', (req, res) ->
+    res.render 'home/starting', context(req, {
+      title: "Getting Started with InterTwinkles"
+    })
+
+  utils.append_slash(app, "/more")
+  app.get '/more/', (req, res) ->
+    res.render 'home/more', context(req, {
+      title: "More InterTwinkles"
+    })
 
   utils.append_slash(app, "/about")
   app.get '/about/', (req, res) ->
@@ -183,7 +199,6 @@ route = (config, app, sockrooms) ->
     res.render 'home/profiles/logout', context(req, {
       title: "Logging out..."
     })
-
 
   utils.append_slash(app, "/groups/new", ["get", "post"])
   app.get '/groups/new/', (req, res) ->

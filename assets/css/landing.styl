@@ -1,0 +1,103 @@
+@import "./utils"
+
+h1
+  text-transform: uppercase
+  letter-spacing: -0.01em
+  font-size: 3em
+  line-height: 1
+
+.sub-nav
+  text-align: center
+  margin-left: 0
+  padding-left: 0
+  li
+    .left
+      text-align: left
+    .center
+      text-align: center
+    .right
+      text-align: right
+    margin: 0
+    padding: 0
+    display: inline-block
+    width: 33%
+    float: left
+    a
+      titley-font()
+      text-transform: uppercase
+      color: black
+      font-size: 1.5em
+      &:hover
+        color: #ff0088
+
+#sidenav
+  position: fixed
+  top: 20%
+  margin-left: 0
+  li
+    padding-top: 1em
+    padding-bottom: 1em
+    padding-left: 32px
+    list-style-type: none
+    a
+      titley-font()
+      text-transform: uppercase
+      color: black
+    &.active a, a:hover
+      color: #ff0088
+      background-color: transparent
+    &.active
+      background: transparent url("/static/img/star-icon.png") no-repeat
+      background-position: 0px
+    
+.app-tiles
+  margin-top: 5em
+  margin-bottom: 5em
+  text-align: center 
+  .app-title
+    titley-font()
+    text-transform: uppercase
+
+  tile-border-width = 6px
+  tile-margin-width = (tile-border-width + 2px)
+
+  .app-tile
+    display: inline-block
+    max-width: 300px
+    padding-bottom: tile-margin-width
+    vertical-align: top
+
+  .app-image
+    padding: 2em
+    border: tile-border-width solid black
+    background-color: white
+    &:hover
+      border-color: #ff0088
+
+  .app-blurb
+    font-size: 14px
+    line-height: 1.2
+
+  .right
+    padding-right: (tile-margin-width / 2)
+    text-align: right
+    .app-image
+      float: right
+      margin-left: tile-margin-width
+  .left
+    padding-left: (tile-margin-width / 2)
+    text-align: left
+    .app-image
+      float: left
+      margin-right: tile-margin-width
+
+@media (max-width: 660px)
+  .app-tiles
+    .right
+      padding-left: 4px
+      padding-right: 0
+      text-align: left
+      .app-image
+        float: left
+        margin-left: 0
+        margin-right: 8px

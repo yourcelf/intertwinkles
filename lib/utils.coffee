@@ -98,7 +98,7 @@ utils.clean_conf = (config) ->
 # InterTwinkles api server.
 #
 
-utils.is_authenticated = (session) -> return session.auth?.email?
+utils.is_authenticated = (session) -> return session?.auth?.email?
 
 utils.get_initial_data = (session, config) ->
   initial_data = {

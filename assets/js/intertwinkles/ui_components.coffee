@@ -125,6 +125,7 @@ intertwinkles.build_toolbar = (destination, options) ->
   toolbar.render()
   $(".auth_frame").html(intertwinkles.auth_frame_template())
   toolbar.setAuthFrameVisibility()
+  intertwinkles.twunklify($(destination))
 
 toolbar_template = _.template("""
   <div class='navbar navbar-top nav'>
@@ -160,10 +161,8 @@ toolbar_template = _.template("""
            data-target='.nav-collapse' data-toggle='collapse' href='#'
            role='button' id='dlogo'>
           <span class='visible-phone'>
-            I<span class='intertwinkles'>T</span>
-            <span class='appname'><%= apps[0].name.substr(0, 1) %></span>
-            <b class='caret'></b>
-            <span class='label' style='font-size: 50%;'>B</span>
+            <img src='/static/img/star-icon.png' alt='IT' style='max-height: 24px;'/>
+            <span style='font-size: 12px;'><%= apps[0].name %></span>
           </span>
           <span class='hidden-phone'>
             Inter<span class='intertwinkles'>Twinkles</span>:
@@ -274,7 +273,7 @@ footer_template = _.template("""
 
 intertwinkles.build_footer = (destination) ->
   $(destination).html(footer_template())
-
+  intertwinkles.twunklify($(destination))
 
 #
 # User choice widget
@@ -431,7 +430,14 @@ intertwinkles.get_short_url = (params, callback) ->
 invite_helper_template = _.template("
 <a href='#' class='dropdown-toggle invite-helper'
    data-toggle='dropdown'
-   title='Barcodes and short URLs' >&lt;/&gt; <i class='caret'></i> </a>
+   title='Barcodes and short URLs' >
+     <span class='visible-phone'>
+      <i class='icon-share'></i>
+     </span>
+     <span class='hidden-phone'>
+       share <i class='caret'></i>
+     </span>
+</a>
 <ul class='dropdown-menu invite-helper-menu' role='menu'>
   <li class='linkless'>
     <%= message %><br />
