@@ -600,7 +600,6 @@ class ds.Organizer extends Backbone.View
 
 
   startDragGroup: (event) =>
-    console.log "startDragGroup"
     return @startDrag(event)
   startDrag: (event) =>
     event.preventDefault()

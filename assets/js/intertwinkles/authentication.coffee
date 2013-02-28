@@ -56,6 +56,7 @@ intertwinkles.onlogin = (assertion) ->
         profile_editor = new intertwinkles.EditNewProfile()
         $("body").append(profile_editor.el)
         profile_editor.render()
+        profile_editor.on "done", finish
       else if old_user != intertwinkles.user.get("email")
         flash "info", "Welcome, #{intertwinkles.user.get("name")}"
         finish()

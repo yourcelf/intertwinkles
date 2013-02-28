@@ -8,6 +8,7 @@ build_room_users_list_for_user = (sockrooms, user_session, room, callback) ->
     if err? then return callback(err)
     room_list = []
     for session in sessions
+      continue unless session?
       if utils.is_authenticated(session)
         user = session.users[session.auth.user_id]
         info = { name: user.name, icon: user.icon }
@@ -76,7 +77,7 @@ route = (config, sockrooms) ->
       user: session.auth.email,
       name: data.model.name,
       icon_id: data.model.icon.id,
-      icon_color: data.model.icon_color,
+      icon_color: data.model.icon.color,
       mobile_number: data.model.mobile_number,
       mobile_carrier: data.model.mobile_carrier,
     }, (err, doc) ->

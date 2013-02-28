@@ -19,7 +19,7 @@ load = (config) ->
       }
     }
     icon: {
-      pk: String
+      pk: String # "primary key"; index to assets/img/source_icons/
       name: String
       color: {type: String, match: /[0-9A-F]{6}/i}
       sizes: {

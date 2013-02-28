@@ -235,7 +235,7 @@ intertwinkles.instasearch = (form_selector, results_selector, callback) ->
             history.replaceState({}, "", "?" + $(form_selector).formSerialize())
             callback?()
           error: (data) ->
-            console.log(data)
+            console.log("error", data)
             alert("Server error!")
             callback?("error")
         }

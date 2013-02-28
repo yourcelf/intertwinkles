@@ -52,7 +52,6 @@ class intertwinkles.EditNewProfile extends intertwinkles.BaseModalFormView
       chosen: intertwinkles.user.get("icon")?.id
     }))
     @$(".color").on "change", =>
-      console.log "wat"
       val = @$(".color").val()
       @$(".color-label").css("color", "#" + val).html(intertwinkles.match_color(val))
     @$(".color").change()
@@ -60,6 +59,7 @@ class intertwinkles.EditNewProfile extends intertwinkles.BaseModalFormView
 
   saveProfile: (cleaned_data) =>
     intertwinkles.socket.once "profile_updated", (data) =>
+      console.log data
       @$("input[type=submit]").removeClass("loading")
       if data.error?
         flash "error", "Oh Noes... Server errorrrrrrr........."
