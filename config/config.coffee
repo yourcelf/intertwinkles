@@ -46,7 +46,7 @@ config = {
   apps: {
     www: {
       name: "Home"
-      about: "Home page for InterTwinkles."
+      about: "Recent activity from all your groups"
       url: base_url
     }
     firestarter: {

@@ -6,22 +6,20 @@ h1
   font-size: 3em
   line-height: 1
 
+.sign-in
+  position: absolute
+  top: -30px
+  right: 10px
+
 .sub-nav
   text-align: center
   margin-left: 0
   padding-left: 0
   li
-    .left
-      text-align: left
-    .center
-      text-align: center
-    .right
-      text-align: right
     margin: 0
-    padding: 0
+    padding-right: 1em
+    padding-left: 1em
     display: inline-block
-    width: 33%
-    float: left
     a
       titley-font()
       text-transform: uppercase
@@ -29,6 +27,17 @@ h1
       font-size: 1.5em
       &:hover
         color: #ff0088
+
+.top-blurb, .how, .get-involved
+  font-size: 18px
+  max-width: 30em
+  margin-left: auto
+  margin-right: auto
+
+h3
+  padding-left: 1.5em
+  background: transparent url("/static/img/star-icon.png") no-repeat
+
 
 #sidenav
   position: fixed
@@ -51,7 +60,6 @@ h1
       background-position: 0px
     
 .app-tiles
-  margin-top: 5em
   margin-bottom: 5em
   text-align: center 
   .app-title

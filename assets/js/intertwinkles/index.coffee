@@ -57,9 +57,8 @@ intertwinkles.twunklify = (scope) ->
         setTimeout((-> el.className = ""), 100)
       , i * 50)
 
-$(document).ready ->
-  intertwinkles.twunklify()
-  $(".modal-video").on "click", ->
+intertwinkles.modalvidify = (scope) ->
+  $(".modal-video", scope or document).on "click", ->
     width = parseInt($(this).attr("data-width"))
     height = parseInt($(this).attr("data-height"))
     mod = $("<div class='modal' role='dialog'></div>").css {
@@ -75,6 +74,10 @@ $(document).ready ->
     mod.on('hidden', -> mod.remove())
     mod.modal()
     return false
+
+$(document).ready ->
+  intertwinkles.twunklify()
+  intertwinkles.modalvidify()
 
   $(".search-menu-trigger").on "click", ->
     el = $(".dropdown-menu.search input[name=q]")

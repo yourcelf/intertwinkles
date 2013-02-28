@@ -9,7 +9,7 @@ $(window).on "resize", resizeH1
 resizeH1()
 $("body").scrollspy({ target: "#sidenav" })
 
-$("#signin").on "click", (event) ->
+$(".signin-link").on "click", (event) ->
   event.preventDefault()
   opts = {
     siteName: "InterTwinkles"
@@ -19,12 +19,12 @@ $("#signin").on "click", (event) ->
   if window.location.protocol == "https:"
     opts.siteLogo = "/static/img/star-icon.png"
   navigator.id.request(opts)
-
 navigator.id.watch {
   onlogin: (assertion) ->
     intertwinkles.onlogin(assertion)
   onlogout: ->
     intertwinkles.onlogout()
 }
+
 intertwinkles.user.on "login", ->
   window.location.href = window.location.href

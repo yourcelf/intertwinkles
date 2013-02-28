@@ -8,6 +8,9 @@ intertwinkles.connect_socket (socket) ->
   ds.app = new ds.Router
   Backbone.history.start pushState: true
 
+  intertwinkles.twunklify("#app")
+  intertwinkles.modalvidify("#app")
+
   ds.socket.on 'dotstorm/backbone', (data) ->
     console.debug 'backbone sync', data
     switch data.signature.collectionName
