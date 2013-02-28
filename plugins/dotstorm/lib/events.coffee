@@ -11,7 +11,7 @@ module.exports = (config) ->
       event = _.extend {
           application: "dotstorm"
           type: type
-          entity_url: "/dotstorm/d/#{dotstorm.slug}/"
+          entity_url: "/d/#{dotstorm.slug}/"
           entity: dotstorm._id
           user: session.auth?.user_id
           via_user: session.auth?.user_id
@@ -57,7 +57,7 @@ module.exports = (config) ->
             application: "dotstorm"
             entity: dotstorm._id
             type: "dotstorm"
-            url: "/dotstorm/d/#{dotstorm.slug}/"
+            url: "/d/#{dotstorm.slug}/"
             title: dotstorm.name or "Untitled dotstorm"
             summary: "#{dotstorm.topic or ""} " +
               "(#{untrash_count} idea#{if untrash_count == 1 then "" else "s"})"

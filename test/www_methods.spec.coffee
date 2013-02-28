@@ -135,6 +135,9 @@ describe "www methods", ->
             expect(event.entity).to.be(group.id)
             expect(event.user.toString()).to.eql(@session.auth.user_id)
             expect(event.group).to.eql(group._id)
+            expect(event.absolute_url).to.eql(
+              "http://localhost:#{config.port}/groups/show/my-awesome-group"
+            )
 
             # Check notice properties.
             expect(notices.length).to.be(3)

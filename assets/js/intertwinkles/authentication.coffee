@@ -23,10 +23,16 @@ intertwinkles.request_logout = ->
   frame.postMessage {action: 'intertwinkles_logout'}, INTERTWINKLES_API_URL
 
 intertwinkles.onlogin = (assertion) ->
-  console.log "onlogin"
   if window.INTERTWINKLES_AUTH_LOGOUT?
     return intertwinkles.request_logout()
 
+  if not intertwinkles.socket?
+    console.log "onlogin awaiting socket"
+    return setTimeout(->
+      intertwinkles.onlogin(assertion)
+    , 100)
+
+  console.log "onlogin"
   finish = ->
     intertwinkles.user.trigger("login")
     if window.INTERTWINKLES_AUTH_REDIRECT?
@@ -58,31 +64,33 @@ intertwinkles.onlogin = (assertion) ->
       intertwinkles.request_logout()
       flash "error", data.error or "Error signing in."
 
-  if intertwinkles.socket?
-    if intertwinkles.socket.isIdentified()
-      intertwinkles.socket.once "login", handle
-      intertwinkles.socket.send "verify", {callback: "login", assertion: assertion}
-    else
-      if confirm("Lost connection. Refresh page?")
-        window.location.href = window.location.href
+  if intertwinkles.socket.isIdentified()
+    intertwinkles.socket.once "login", handle
+    intertwinkles.socket.send "verify", {callback: "login", assertion: assertion}
   else
-    alert("Error: socket missing")
+    if confirm("Lost connection. Refresh page?")
+      window.location.href = window.location.href
 
-intertwinkles.onlogout = ->
-  console.log "onlogout"
+intertwinkles.onlogout = (count) ->
   intertwinkles.users = null
   intertwinkles.groups = null
-  if intertwinkles.socket?
-    intertwinkles.socket.once "logout", ->
-      reload = intertwinkles.is_authenticated()
-      intertwinkles.user.clear()
-      intertwinkles.user.trigger("logout")
-      if reload or window.INTERTWINKLES_AUTH_LOGOUT
-        flash "info", "Signed out."
-        window.location.pathname = "/"
-    intertwinkles.socket.send "logout", {callback: "logout"}
-  else
-    alert("Socket connection failed")
+  if not intertwinkles.socket?
+    if count > 15
+      return alert("Socket connection failed.")
+    count ?= 0
+    console.log "onlogout awaiting socket #{count}..."
+    return setTimeout( ->
+      intertwinkles.onlogout(count + 1)
+    , 100)
+  console.log "onlogout"
+  intertwinkles.socket.once "logout", ->
+    reload = intertwinkles.is_authenticated()
+    intertwinkles.user.clear()
+    intertwinkles.user.trigger("logout")
+    if reload or window.INTERTWINKLES_AUTH_LOGOUT
+      flash "info", "Signed out."
+      window.location.pathname = "/"
+  intertwinkles.socket.send "logout", {callback: "logout"}
 
 onmessage = (event) ->
   if event.origin == INTERTWINKLES_API_URL

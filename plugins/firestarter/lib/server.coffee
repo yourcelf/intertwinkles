@@ -51,7 +51,7 @@ start = (config, app, sockrooms) ->
         type: "visit"
         application: "firestarter"
         entity: doc.id
-        entity_url: "/firestarter/f/#{doc.slug}"
+        entity_url: "/f/#{doc.slug}"
         user: req.session.auth?.email
         anon_id: req.session.anon_id
         group: doc.sharing.group_id
@@ -80,7 +80,7 @@ start = (config, app, sockrooms) ->
     event_data = _.extend({
       application: "firestarter"
       entity: firestarter.id
-      entity_url: "/firestarter/f/#{firestarter.slug}"
+      entity_url: "/f/#{firestarter.slug}"
       group: firestarter.sharing.group_id
     }, event_params)
 
@@ -101,7 +101,7 @@ start = (config, app, sockrooms) ->
     api_methods.add_search_index({
       application: "firestarter"
       type: "firestarter"
-      url: "/firestarter/f/#{firestarter.slug}"
+      url: "/f/#{firestarter.slug}"
       title: firestarter.name
       summary: firestarter.promt
       text: search_content

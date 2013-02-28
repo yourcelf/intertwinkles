@@ -49,7 +49,7 @@ start = (config, app, io, sessionStore) ->
         type: "visit"
         application: "clock"
         entity: doc.id
-        entity_url: "/clock/c/#{doc.id}/"
+        entity_url: "/c/#{doc.id}"
         user: req.session.auth?.email
         anon_id: req.session.anon_id
         group: doc.sharing.group_id

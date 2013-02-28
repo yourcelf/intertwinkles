@@ -399,7 +399,7 @@ describe "HTTP api", ->
         application: "firestarter"
         entity: "123"
         type: "firestarter"
-        url: "http://localhost:8888/f/123"
+        url: "/f/123"
         title: "Fire!"
         summary: "What's the question, doc? (3 responses)"
         text: "Fire! What's the question, doc? Response 1. Response 2. Response 3."
@@ -414,6 +414,9 @@ describe "HTTP api", ->
         schema.SearchIndex.find {entity: "123"}, (err, docs) ->
           expect(err).to.be(null)
           expect(docs.length).to.be(1)
+          expect(docs[0].absolute_url).to.be(
+            "http://localhost:#{config.port}/firestarter/f/123"
+          )
           done()
 
   it "Updates a search index", (done) ->
@@ -443,6 +446,9 @@ describe "HTTP api", ->
         schema.SearchIndex.find {entity: "123"}, (err, docs) ->
           expect(err).to.be(null)
           expect(docs.length).to.be(1)
+          expect(docs[0].absolute_url).to.be(
+            "http://localhost:#{config.port}/firestarter/f/123"
+          )
           done()
     
   it "Removes a search index", (done) ->

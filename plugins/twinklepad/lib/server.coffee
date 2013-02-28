@@ -54,7 +54,7 @@ start = (config, app, sockrooms) ->
         application: "twinklepad"
         entity: doc._id
         type: "etherpad"
-        url: "/twinklepad/p/#{doc.pad_name}"
+        url: "/p/#{doc.pad_name}"
         title: "#{doc.pad_name}"
         summary: summary
         text: text
@@ -178,7 +178,7 @@ start = (config, app, sockrooms) ->
       api_methods.post_event {
         application: "twinklepad"
         type: "visit"
-        entity_url: "/twinklepad/p/#{doc.pad_name}"
+        entity_url: "/p/#{doc.pad_name}"
         entity: doc._id
         user: req.session.auth?.user_id
         anon_id: req.session.anon_id

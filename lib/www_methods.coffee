@@ -140,7 +140,7 @@ module.exports = (config) ->
           type: "create"
           application: "www"
           entity: group.id
-          entity_url: "/groups/#{group.slug}"
+          entity_url: "/groups/show/#{group.slug}"
           user: session.auth.user_id
           group: group.id
           data: {
@@ -190,7 +190,7 @@ module.exports = (config) ->
             type: "update"
             application: "www"
             entity: group.id
-            entity_url: "/groups/#{group.slug}"
+            entity_url: "/groups/show/#{group.slug}"
             user: session.auth.user_id
             group: group.id
             data: {

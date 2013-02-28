@@ -15,7 +15,7 @@ module.exports = (config) ->
     event = _.extend {
         application: "resolve"
         type: type
-        entity_url: "/resolve/p/#{proposal.id}/"
+        entity_url: "/p/#{proposal.id}"
         entity: proposal._id
         user: session.auth?.user_id
         via_user: session.auth?.user_id
@@ -52,7 +52,7 @@ module.exports = (config) ->
       application: "resolve"
       entity: doc.id
       type: "proposal"
-      url: "/resolve/p/#{doc._id}/"
+      url: "/p/#{doc._id}"
       title: doc.title
       summary: "Proposal with #{doc.opinions.length} responses."
       text: parts.join("\n")
@@ -129,7 +129,8 @@ module.exports = (config) ->
         return logger.error(err)
 
       # Append the 'cleared' notices to our broadcast.
-      notices_to_broadcast = notices_to_broadcast.concat(notifications)
+      if notifications?
+        notices_to_broadcast = notices_to_broadcast.concat(notifications)
 
       # 2. Now post new notifications for all people that still need them.
       if proposal.sharing.group_id and not proposal.resolved?

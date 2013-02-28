@@ -286,8 +286,9 @@ route = (config, app, sockrooms) ->
 
   utils.append_slash(app, "/groups/join/[^/]+", ["get", "post"])
   app.get '/groups/join/:slug/', (req, res) ->
-    req.flash("info", "You must sign in to join a group.")
-    return www_methods.redirect_to_login(req, res) unless utils.is_authenticated(session)
+    unless utils.is_authenticated(session)
+      req.flash("info", "You must sign in to join a group.")
+      return www_methods.redirect_to_login(req, res)
     www_methods.verify_invitation req.session, req.params.slug, (err, group) ->
       return www_methods.handle_error(req, res, err) if err?
       return not_found(req, res) unless group?
@@ -314,8 +315,9 @@ route = (config, app, sockrooms) ->
 
   utils.append_slash(app, "/groups/show/([^/]+)")
   app.get '/groups/show/:slug/', (req, res) ->
-    req.flash("info", "You must sign in to see this group.")
-    return www_methods.redirect_to_login(req, res) unless utils.is_authenticated(req.session)
+    unless utils.is_authenticated(req.session)
+      req.flash("info", "You must sign in to see this group.")
+      return www_methods.redirect_to_login(req, res)
     schema.Group.findOne {slug: req.params.slug}, (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
       return not_found(req, res) unless doc?

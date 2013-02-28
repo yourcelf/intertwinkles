@@ -101,10 +101,17 @@ describe "resolve", ->
       expect(proposal.revisions[0].user_id).to.be(@session.auth.user_id)
 
     , (err, proposal, event, si, notices) =>
+      expect(err).to.be(null)
       expect(proposal).to.not.be(null)
       expect(event.type).to.be("create")
+      expect(event.absolute_url).to.be(
+        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
+      )
       expect(event.application).to.be("resolve")
       expect(si.entity.toString()).to.be(proposal.id)
+      expect(si.absolute_url).to.be(
+        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
+      )
       expect(notices.length).to.be(_.size(group.members))
       @proposal_with_notices = proposal
       www_schema.Notification.find {entity: @proposal_with_notices.id}, (err, docs) =>
@@ -145,6 +152,9 @@ describe "resolve", ->
       expect(proposal.resolved).to.be(null)
     , (err, proposal, event, si, notices) =>
       expect(event.group.toString()).to.be(@proposal_with_notices.sharing.group_id.toString())
+      expect(event.absolute_url).to.be(
+        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
+      )
       expect(err).to.be(null)
       @proposal_with_notices = proposal
       done()
