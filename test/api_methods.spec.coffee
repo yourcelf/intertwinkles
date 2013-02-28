@@ -33,6 +33,14 @@ describe "api", ->
       _check_one_at_mockmyid_users_and_groups(data)
       done()
 
+  it "includes inviting user in groups", (done) ->
+    api_methods.get_groups "four@mockmyid.com", (err, data) ->
+      emails = (u.email for id,u of data.users)
+      emails.sort()
+      expect(emails).to.eql(["four@mockmyid.com", "one@mockmyid.com"])
+      expect(data.groups).to.eql({})
+      done()
+
   it "authenticates", (done) ->
     # Stub out mozilla persona, so that we don't need to hit their servers.
     common.stubBrowserID(@browser, {email: "one@mockmyid.com"})

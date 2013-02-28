@@ -5,6 +5,11 @@ block body
     div.row-fluid
       div.span6.offset3
         h1= group.name
+        for user in users
+          div.join-inline-user
+            img(src=user.icon.small)
+            &nbsp;
+            span.name= user.name
         div.well(style='text-align: center;')
           p(style='font-size: 2em; line-height: 1em') You've been invited to join us!
           br

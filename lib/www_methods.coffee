@@ -459,7 +459,7 @@ module.exports = (config) ->
         application: "www"
         type: if accepted then "join" else "decline"
         entity: group._id
-        entity_url: "/groups/#{group.slug}"
+        entity_url: "/groups/show/#{group.slug}"
         user: session.auth.user_id
         group: group._id
         data: {

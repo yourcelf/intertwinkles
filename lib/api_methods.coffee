@@ -67,21 +67,31 @@ module.exports = (config) ->
       groups: {}
     }
     schema.Group.find({
-      "members.user": user.id
+      "$or": [{"members.user": user._id}, {"invited_members.user": user._id}]
     }).populate("members.user").populate("invited_members.user").exec (err, groups) ->
       return callback(err) if err?
-      if groups.length == 0
-        output.users[user.id] = user
+
+      output.users[user.id] = user
       for group in groups or []
-        for member in group.members
-          output.users[member.user.id] = member.user
-          member.user = member.user.id
-        for member in group.invited_members
-          if not output.users[member.user.id]?
-            u = member.user
-            output.users[member.user.id] = {_id: u.id, id: u.id, email: u.email}
-            member.user = u.id
-        output.groups[group.id] = group
+        # Are we a member of this group?
+        if _.find(group.members, (m) -> m.user.id == user.id)
+          for member in group.members
+            output.users[member.user.id] = member.user
+            member.user = member.user.id
+          for member in group.invited_members
+            if not output.users[member.user.id]?
+              u = member.user
+              output.users[member.user.id] = {_id: u.id, id: u.id, email: u.email}
+              member.user = u.id
+          output.groups[group.id] = group
+        else
+          # Not a member, we must be an invitee.  Just add the user who invited us.
+          invitation = _.find(group.invited_members, (i) -> i.user.id == user.id)
+          if invitation.invited_by?
+            invitor_id = invitation.invited_by.toString()
+            invitor = _.find(group.members, (m) -> m.user.id == invitor_id)
+            if invitor?
+              output.users[invitor_id] = invitor.user
       return callback(null, output)
 
   # Resolves the first argument into a user object, then gets the user's
