@@ -5,6 +5,7 @@ the node modules, including: solr, etherpad-lite, and everything listed in
 package.json.
 """
 import os
+import re
 import sys
 import json
 import time
@@ -137,13 +138,31 @@ def install_etherpad():
     proc = subprocess.Popen(["node",
         os.path.join("node_modules", "ep_etherpad-lite", "node", "server.js")
     ], cwd=dest)
-     # Wait for server to start.
-    time.sleep(1)
+    # Wait for server to start.
+    time.sleep(2)
 
-     # Access the server to trigger final initialization.
-     # XXX: this URL/port should be de-duplicated.
-    print "Accessing etherpad to install dependencies..."
-    req = urllib2.urlopen("http://0.0.0.0:9001")
+    # Get the URL to the server from etherpad's json config. This is
+    # complicated by etherpad's choice to extend the json to include comments;
+    # so we must remove those before parsing the json.
+    with open(os.path.join(dest, "settings.json")) as fh:
+        content = comment_remover(fh.read()) 
+        try:
+            settings = json.loads(content)
+        except ValueError:
+            print "Error parsing JSON-with-comments. Stripped JSON:"
+            print content
+            proc.kill()
+            raise ValueError(
+                    "Couldn't parse JSON-with-comments in '{0}'".format(
+                        os.path.join(dest, "settings.json")
+                    )
+            )
+        ep_ip = settings.get("ip", "0.0.0.0")
+        ep_port = settings.get("port", 9001)
+
+    # Access the server to trigger final initialization.
+    print "Accessinpg etherpad to install dependencies..."
+    req = urllib2.urlopen("http://{0}:{1}".format(ep_ip, ep_port))
     req.read()
     status = req.getcode()
     print "Status", status
@@ -156,6 +175,19 @@ def _overwrite_link(source, dest):
     except OSError:
         pass
     os.symlink(os.path.relpath(source, os.path.dirname(dest)), dest)
+
+def comment_remover(text):
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('/'):
+            return ""
+        else:
+            return s
+    pattern = re.compile(
+        r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+        re.DOTALL | re.MULTILINE
+    )
+    return re.sub(pattern, replacer, text)
 
 if __name__ == "__main__":
     install_all()
