@@ -68,6 +68,9 @@ describe "www methods", ->
       expect(user.email_change_request).to.be("new_one@mockmyid.com")
       expect(user.icon.pk).to.be('42')
       expect(user.icon.color).to.be("FF0088")
+      expect(user.icon.sizes["16"]).to.be("user_icons/FF0088-Sardines-16.png")
+      expect(user.icon.sizes["32"]).to.be("user_icons/FF0088-Sardines-32.png")
+      expect(user.icon.sizes["64"]).to.be("user_icons/FF0088-Sardines-64.png")
       expect(user.mobile.number).to.be("1234567890")
       expect(user.mobile.carrier).to.be("T-Mobile")
       www_methods.edit_profile @session, {

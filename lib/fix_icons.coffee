@@ -4,29 +4,48 @@ Utility script to fix missing user icons.
 
 _ = require 'underscore'
 fs = require "fs"
+path = require 'path'
 logger = require("log4js").getLogger()
 async = require "async"
 icons = require "./icons"
 
-BASE = __dirname + "/"
+BASE = __dirname + "/../uploads/"
+SIZES = ["16", "32", "64"]
 
-# Wrap fs.exists to use null as first argument to done, for better
-# compatability with async.
-exists = (path, cb) -> fs.exists path, (exists) -> cb(null, exists)
+exists_with_base = (path, cb) ->
+  fs.exists BASE + path, (exists) ->
+    cb(null, exists)
 
 # Ensure that each icon for a particular user exists.
 check_user_icons = (user, cb) ->
-  paths = (BASE + user.icon.sizes[k] for k in ["16", "32", "64"])
+  paths = (user.icon.sizes[k] for k in SIZES)
   unless _.every(paths, (p) -> !!p)
     cb(null, [user, false])
   else
-    async.map(paths, exists, (err, results) ->
-      cb(null, [user, _.every(results, (r) -> r)])
+    async.map(paths, exists_with_base, (err, results) ->
+      all_exist = _.every(results, (r) -> r)
+      all_normal = true
+      if all_exist
+        # Ensure that the paths are properly normalized.
+        for filepath in paths
+          rel = path.relative(BASE, BASE + filepath)
+          if rel != filepath
+            console.log rel, filepath
+            all_normal = false
+            break
+      cb(null, [user, all_exist and all_normal])
     )
 
+# Draw the icon.
 rebuild_icon = (user, cb) ->
   if user?.icon?.pk and user?.icon?.color
-    icons.render_icon(user.icon.pk, user.icon.color, cb)
+    icons.render_icon(user.icon.pk, user.icon.color, (err, icon) ->
+      return cb(err) if err?
+      user.icon = icon
+      user.save (err, user) ->
+        return cb(err, true))
+  else
+    cb(null, false)
 
 module.exports = fix_icons = (config, callback) ->
   schema = require("./schema").load(config)
@@ -56,5 +75,14 @@ module.exports = fix_icons = (config, callback) ->
     ], (err, results) ->
       # All done.
       return callback(err) if err?
-      logger.info("#{results.length} icons rebuilt.")
+      fixed = 0
+      skipped = 0
+      for result in results
+        if result
+          fixed += 1
+        else
+          skipped += 1
+      logger.info("#{fixed} users' icons fixed.")
+      if skipped > 0
+        logger.info("#{skipped} users were skipped due to missing fields.")
       callback()

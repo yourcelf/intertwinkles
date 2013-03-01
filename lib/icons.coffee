@@ -33,7 +33,7 @@ render_icon = (pk, color, cb) ->
 
   for size in sizes
     dest_icon = __dirname + "/../uploads/user_icons/#{color}-#{name_map[pk]}-#{size}.png"
-    paths[size] = path.relative(__dirname + "/../assets/", dest_icon)
+    paths[size] = path.relative(__dirname + "/../uploads/", dest_icon)
 
     do (size, dest_icon) ->
       fs.exists dest_icon, (exists) ->
@@ -65,10 +65,9 @@ get_random_icon = (cb) ->
     if val.length == 1
       val = "0#{val}"
     colors.push(val)
-  render_icon(pk, colors.join(""), cb)
+  render_icon(pk, colors.join("").toUpperCase(), cb)
 
 get_icon_name = (pk) ->
-  # could make this faster with a binary search
-  return _.find name_list, (n) -> n.pk == pk
+  return name_map[pk]
 
 module.exports = { render_icon, get_random_icon, get_icon_name }
