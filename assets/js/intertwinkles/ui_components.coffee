@@ -5,7 +5,7 @@
 user_menu_template = _.template("""
   <a class='user-menu dropdown-toggle' href='#' data-toggle='dropdown' role='button'>
     <% if (user.icon && user.icon.tiny) { %>
-      <img src='<%= user.icon.tiny %>' alt='<%= user.icon.color %> <%= user.icon.name %>' />
+      <img src='<%= user.icon.tiny %>' />
     <% } else { %>
       <i class='icon-user'></i>
     <% } %>
