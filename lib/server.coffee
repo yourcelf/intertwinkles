@@ -80,8 +80,7 @@ start = (config) ->
       maxAge: 1000*60*60*24*7 # one week?
     }
   })
-  # Might want this later...
-  #app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
+  app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
   app.set 'view engine', 'jade'
   app.set 'view options', {layout: false}
   app.set "views", view_folders
