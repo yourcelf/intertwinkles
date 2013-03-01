@@ -1,3 +1,7 @@
+###
+Utility script to fix missing user icons.
+###
+
 _ = require 'underscore'
 fs = require "fs"
 logger = require("log4js").getLogger()
@@ -26,10 +30,13 @@ rebuild_icon = (user, cb) ->
 
 module.exports = fix_icons = (config, callback) ->
   schema = require("./schema").load(config)
+  # Grab all the users.
   schema.User.find {}, {'icon'}, (err, users) ->
     return callback(err) if err?
+
     async.waterfall [
       (done) ->
+        # Find the users who have missing icons.
         needs_fix = []
         async.map users, check_user_icons, (err, results) ->
           return callback(err) if err?
@@ -40,10 +47,14 @@ module.exports = fix_icons = (config, callback) ->
           done(null, needs_fix)
 
       (needs_fix, done) ->
-        logger.info("#{needs_fix.length} users missing icons.")
+        # Render the icons for missing users.
+        logger.info(
+          "#{needs_fix.length} of #{users.length} users missing icons."
+        )
         async.map(needs_fix, rebuild_icon, done)
 
     ], (err, results) ->
+      # All done.
       return callback(err) if err?
       logger.info("#{results.length} icons rebuilt.")
       callback()
