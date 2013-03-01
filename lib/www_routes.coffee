@@ -355,16 +355,17 @@ route = (config, app, sockrooms) ->
   return {app}
 
 route_errors = (config, app) ->
+  ###
+  Be sure to include this *after* everything else, as it intercepts all
+  otherwise un-rotued URLs.  Also, make sure any static/asset middleware is
+  loaded *before* any routing, so that the routing middleware comes last.
+  ###
   www_methods = require("./www_methods")(config)
   app.use (err, req, res, next) ->
     if err?
       www_methods.handle_error(req, res, err)
     else
       next()
-  #XXX There should be a cleaner way to capture unrouted 404's.. This won't
-  #work with the current strategy of directory-passing to connect-assets,
-  #unless we can get connect-assets to work prior to the router.  This
-  #intercepts all connect-assets urls currently.
   app.get /.*/, www_methods.not_found
 
 

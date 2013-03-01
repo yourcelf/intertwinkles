@@ -68,7 +68,7 @@ get_random_icon = (cb) ->
   render_icon(pk, colors.join(""), cb)
 
 get_icon_name = (pk) ->
-  #XXX could make this faster with a binary search
+  # could make this faster with a binary search
   return _.find name_list, (n) -> n.pk == pk
 
 module.exports = { render_icon, get_random_icon, get_icon_name }

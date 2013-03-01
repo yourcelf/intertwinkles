@@ -176,6 +176,7 @@ def _overwrite_link(source, dest):
         pass
     os.symlink(os.path.relpath(source, os.path.dirname(dest)), dest)
 
+# http://stackoverflow.com/a/241506
 def comment_remover(text):
     def replacer(match):
         s = match.group(0)

@@ -181,7 +181,7 @@ module.exports = (config) ->
     if params.sharing?
       update.sharing = params.sharing
     # options = {upsert: true, 'new': true}
-    # XXX: findOneAndUpdate here was leading to
+    # NOTE: findOneAndUpdate here was leading to
     # [RangeError: Maximum call stack size exceeded]
     # and 
     # Object [object Object],[object Object]  has mo method 'getRequestId'

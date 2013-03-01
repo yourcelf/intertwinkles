@@ -492,14 +492,10 @@ class intertwinkles.InviteHelper extends Backbone.View
     event.preventDefault()
     event.stopPropagation()
     loading = $("<span></span>").html("<img src='/static/img/spinner.gif' /> ...")
-    @$(".barcode").replaceWith(loading)
+    qrcode = $("<div></div>")
+    @$(".barcode").replaceWith(qrcode)
     url = $(event.currentTarget).attr("data-url")
-    #TODO: Replace this with a local or https-safe option.
-    img =  $("<img class='qurcode' />").attr("src",
-      "http://api.qrserver.com/v1/create-qr-code/" +
-      "?size=150x150&data=#{encodeURIComponent(url)}")
-    img.on "load", -> loading.remove()
-    loading.after img
+    qrcode.qrcode({width: 150, height: 150, text: url})
 
   getShortUrl: (event) =>
     event.preventDefault()

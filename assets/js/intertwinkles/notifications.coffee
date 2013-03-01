@@ -47,10 +47,8 @@ class intertwinkles.NotificationMenu extends Backbone.View
         @fetchNotifications()
         clearInterval(interval)
     , 100
-     
-    #XXX This will fire unnecessarily on name changes etc., but properly on
-    # login/logout.
-    intertwinkles.user.on "change", @fetchNotifications
+    intertwinkles.user.on "login", @fetchNotifications
+    intertwinkles.user.on "logout", @fetchNotifications
 
   remove: =>
     intertwinkles.socket.off "notifications", @handleNotifications
@@ -58,7 +56,7 @@ class intertwinkles.NotificationMenu extends Backbone.View
     view.remove() for view in @dateViews
     super()
 
-  fetchNotifications: (data) =>
+  fetchNotifications: =>
     if intertwinkles.is_authenticated()
       @notices = new NotificationCollection()
       intertwinkles.socket.send "get_notifications" # should result in 'render'
