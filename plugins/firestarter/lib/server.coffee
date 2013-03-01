@@ -6,6 +6,7 @@ logger        = require('log4js').getLogger("firestarter")
 
 start = (config, app, sockrooms) ->
   schema = require('./schema').load(config)
+  www_methods = require("../../../lib/www_methods")(config)
 
   sockrooms.addChannelAuth "firestarter", (session, room, callback) ->
     name = room.split("/")[1]
@@ -25,7 +26,7 @@ start = (config, app, sockrooms) ->
 
   index_res = (req, res, initial_data) ->
     utils.list_accessible_documents schema.Firestarter, req.session, (err, docs) ->
-      return res.send(500) if err?
+      return www_methods.handle_error(req, res, err) if err?
       res.render 'firestarter/index', {
         title: "Firestarter"
         initial_data: _.extend(
@@ -42,10 +43,10 @@ start = (config, app, sockrooms) ->
   app.get '/firestarter/new', (req, res) -> index_res(req, res, {})
   app.get '/firestarter/f/:slug', (req, res) ->
     schema.Firestarter.with_responses {slug: req.params.slug}, (err, doc) ->
-      return res.send(500) if err?
-      return res.send(404) if not doc?
+      return www_methods.handle_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless doc?
       #FIXME: Redirect to login instead.
-      return res.send(403) if not utils.can_view(req.session, doc)
+      return www_methods.redirect_to_login(req, res) if not utils.can_view(req.session, doc)
 
       api_methods.post_event {
         type: "visit"
@@ -58,24 +59,25 @@ start = (config, app, sockrooms) ->
         data: {
           title: doc.name
         }
-      }, 5000 * 60, (->)
+      }, 5000 * 60, (err) -> return socket_error(socket, err) if err?
 
       doc.sharing = utils.clean_sharing(req.session, doc)
       index_res(req, res, {
         firestarter: doc.toJSON()
       })
   #
+  # Socket errors
+  #
+  socket_error = (socket, err) ->
+    logger.error(err)
+    socket.sendJSON "error", {error: err}
+  #
   # Add an event entry for the given firestarter.
   #
-  add_firestarter_event = (firestarter, event_params, timeout, callback) ->
-    respond = (err) ->
-      if err?
-        logger.error("add_firestarter_event", err)
-      callback?(err)
-
+  add_firestarter_event = (firestarter, event_params, timeout, callback=(->)) ->
     for key in ["type", "anon_id", "data"]
       if not event_params[key]?
-        return respond("Missing event param #{key}")
+        return callback("Missing event param #{key}")
 
     event_data = _.extend({
       application: "firestarter"
@@ -84,29 +86,27 @@ start = (config, app, sockrooms) ->
       group: firestarter.sharing.group_id
     }, event_params)
 
-    api_methods.post_event(event_data, timeout, respond)
+    api_methods.post_event(event_data, timeout, callback)
 
   #
   # Add or update the search index for the given firestarter.
   #
-  add_firestarter_search = (firestarter, callback) ->
-    respond = ->
-      if err?
-        logger.error("add_firestarter_search", err)
-      callback?(err)
+  add_firestarter_search = (firestarter, responses, callback) ->
+    callback or= (->)
     # Post search content
-    search_content = [firestarter.name, firestarter.prompt].concat((
-        r.response for r in firestarter.responses
-      )).join("\n")
+    search_content = [firestarter.name, firestarter.prompt].concat(
+      (r.response for r in responses)
+    ).join("\n")
     api_methods.add_search_index({
       application: "firestarter"
+      entity: firestarter.id
       type: "firestarter"
       url: "/f/#{firestarter.slug}"
       title: firestarter.name
-      summary: firestarter.promt
+      summary: firestarter.prompt
       text: search_content
       sharing: firestarter.sharing
-    }, respond)
+    }, callback)
 
   #
   # Get a valid slug for a firestarter that hasn't yet been used.
@@ -164,7 +164,7 @@ start = (config, app, sockrooms) ->
           anon_id: session.anon_id
           data: { action: { name: model.name, prompt: model.prompt } }
         }, 0)
-        add_firestarter_search(model)
+        add_firestarter_search(model, [])
 
   #
   # Edit a firestarter
@@ -178,34 +178,39 @@ start = (config, app, sockrooms) ->
         changes = true
     if not changes then return socket.sendJSON "error", {error: "No edits specified."}
 
-    schema.Firestarter.findOne({
-      _id: data.model._id
-    }).populate('responses').exec (err, doc) ->
-      if err? then return socket.sendJSON "error", {error: err}
-      unless utils.can_edit(session, doc)
-        return socket.sendJSON("error", {error: "Permission denied"})
-      unless utils.can_change_sharing(session, doc)
-        delete updates.sharing
-      for key, val of updates
-        doc[key] = val
-      doc.save (err, doc) ->
-        if err? then return socket.sendJSON "error", {error: err}
-        doc.sharing = utils.clean_sharing(session, doc)
-        res = {model: doc.toJSON()}
-        delete res.model.responses
-        if data.callback? then socket.sendJSON data.callback, res
-        sockrooms.broadcast("firestarter/" + doc.slug,
-          "firestarter",
-          res,
-          socket.sid)
+    schema.Firestarter.findOne {_id: data.model._id}, (err, doc) ->
+      return socket_error(socket, err) if err?
+      schema.Response.find {firestarter_id: data.model._id}, (err, responses) ->
+        return socket_error(socket, err) if err?
+        unless utils.can_edit(session, doc)
+          return socket.sendJSON("error", {error: "Permission denied"})
+        unless utils.can_change_sharing(session, doc)
+          delete updates.sharing
+        for key, val of updates
+          doc[key] = val
+        doc.save (err, doc) ->
+          return socket_error(socket, err) if err?
+          async.parallel [
+            (done) ->
+              add_firestarter_event(doc, {
+                type: "update"
+                user: session.auth?.user_id
+                anon_id: session.anon_id
+                data: { action: updates }
+              }, 0, done)
+            (done) ->
+              add_firestarter_search(doc, responses, done)
+          ], (err) ->
+            return socket_error(socket, err) if err?
+            doc.sharing = utils.clean_sharing(session, doc)
+            res = {model: doc.toJSON()}
+            delete res.model.responses
+            if data.callback? then socket.sendJSON data.callback, res
+            sockrooms.broadcast("firestarter/" + doc.slug,
+              "firestarter",
+              res,
+              socket.sid)
 
-        add_firestarter_event(doc, {
-          type: "update"
-          user: session.auth?.user_id
-          anon_id: session.anon_id
-          data: { action: updates }
-        }, 0)
-        add_firestarter_search(doc)
 
   #
   # Retrieve a firestarter with responses.
@@ -215,11 +220,11 @@ start = (config, app, sockrooms) ->
       socket.sendJSON("error", {error: "Missing slug!"})
     schema.Firestarter.with_responses {slug: data.slug}, (err, model) ->
       if err?
-        socket.sendJSON("error", {error: err})
+        return socket_error(socket, err)
       else if not model?
-        socket.sendJSON("firestarter", {error: 404})
+        return socket_error(socket, "not found")
       else if not utils.can_view(session, model)
-        socket.sendJSON("error", {error: "Permission denied"})
+        return socket_error(socket, "Permission denied")
       else
         model.sharing = utils.clean_sharing(session, model)
         socket.sendJSON("firestarter", {
@@ -230,7 +235,7 @@ start = (config, app, sockrooms) ->
           user: session.auth?.user_id
           anon_id: session.anon_id
           data: {}
-        }, 5000 * 60)
+        }, 5000 * 60, (err) -> return socket_error(socket, err) if err?)
   
   sockrooms.on "firestarter/get_firestarter_list", (socket, session, data) ->
     if not data.callback?
@@ -238,7 +243,7 @@ start = (config, app, sockrooms) ->
     else
       utils.list_accessible_documents(
         schema.Firestarter, session, (err, docs) ->
-          if err? then return socket.sendJSON data.callback, {error: err}
+          return socket_error(socket, err) if err?
           socket.sendJSON data.callback, {docs: docs}
       )
 
@@ -254,7 +259,7 @@ start = (config, app, sockrooms) ->
         application: "firestarter"
         entity: doc.id
       }, (err, events) ->
-        return socket.sendJSON "error", {error: err} if err?
+        return socket_error(socket, err) if err?
         socket.sendJSON data.callback, {events: events}
 
 
@@ -263,20 +268,19 @@ start = (config, app, sockrooms) ->
   #
   sockrooms.on "firestarter/save_response", (socket, session, data) ->
     async.waterfall [
-      # Grab the firestarter. Populate responses so we can build search
-      # content.
+      # Grab the firestarter and responses.
       (done) ->
-        schema.Firestarter.findOne({
-          _id: data.model.firestarter_id
-        }).populate("responses").exec (err, firestarter) ->
+        schema.Firestarter.findOne {_id: data.model.firestarter_id}, (err, firestarter) ->
           return done(err) if err?
-          unless utils.can_edit(session, firestarter)
-            done("Permission denied")
-          else
-            done(null, firestarter)
+          schema.Response.find {firestarter_id: data.model.firestarter_id}, (err, responses) ->
+            return done(err) if err?
+            unless utils.can_edit(session, firestarter)
+              done("Permission denied")
+            else
+              done(null, firestarter, responses)
 
       # Save the response.
-      (firestarter, done) ->
+      (firestarter, responses, done) ->
         updates = {
           user_id: data.model.user_id
           name: data.model.name
@@ -289,39 +293,38 @@ start = (config, app, sockrooms) ->
           }
           options = {upsert: true, 'new': true}
           schema.Response.findOneAndUpdate conditions, updates, options, (err, doc) ->
-            done(err, firestarter, doc)
+            done(err, firestarter, responses, doc)
         else
           new schema.Response(updates).save (err, doc) ->
-            done(err, firestarter, doc)
+            done(err, firestarter, responses, doc)
 
       # Replace or insert the response, build search content
-      (firestarter, response, done) ->
+      (firestarter, responses, new_response, done) ->
         found = false
-        for orig_response,i in firestarter.responses
-          if orig_response._id == response._id
-            firestarter.responses.splice(i, 1, response)
+        for orig_response,i in responses
+          if orig_response.id == new_response.id
+            firestarter.responses.splice(i, 1, new_response._id)
             found = true
             break
         if not found
-          firestarter.responses.push(response)
+          firestarter.responses.push(new_response._id)
 
         # Get the search content.
         search_content = [firestarter.name, firestarter.prompt].concat((
-          r.response for r in firestarter.responses
-        )).join("\n")
+          r.response for r in responses
+        ).concat([new_response.response])).join("\n")
 
-        # If this is a new response, un-populate responses and save it to
-        # the firestarter's list.
+        # If this is a new response, save it to the firestarter's list.
         if not found
           firestarter.save (err, doc) ->
-            done(err, doc, response, search_content)
+            done(err, doc, responses, new_response, search_content)
         else
-          done(err, firestarter, response, search_content)
+          done(null, firestarter, responses, new_response, search_content)
 
-    ], (err, firestarter, response, search_content) ->
+    ], (err, firestarter, responses, new_response, search_content) ->
       # Call back to sockets.
-      return socket.sendJSON "error", {error: err} if err?
-      responseData = {model: response.toJSON()}
+      return socket_error(socket, err) if err?
+      responseData = {model: new_response.toJSON()}
       sockrooms.broadcast("firestarter/" + firestarter.slug,
         "response",
         responseData,
@@ -331,12 +334,13 @@ start = (config, app, sockrooms) ->
       # Post search data
       add_firestarter_event(firestarter, {
         type: "append"
-        user: response.user_id or null
+        user: new_response.user_id or null
         anon_id: session.anon_id
         via_user: session.auth?.user_id
-        data: { action: response.toJSON() }
+        data: { action: new_response.toJSON() }
       }, 0)
-      add_firestarter_search(firestarter)
+      responses.push(new_response)
+      add_firestarter_search(firestarter, responses)
 
   #
   # Delete a response
@@ -347,33 +351,42 @@ start = (config, app, sockrooms) ->
     async.waterfall [
       (done) ->
         # Fetch firestarter and validate permissions.
-        schema.Firestarter.findOne({
-          _id: data.model.firestarter_id
-          responses: data.model._id
-        }).populate('responses').exec (err, firestarter) ->
+        schema.Firestarter.findOne {_id: data.model.firestarter_id}, (err, firestarter) ->
           return done(err) if err?
-          return done("Firestarter not found.") unless firestarter?
-          unless utils.can_edit(session, firestarter)
-            return done("Permission denied")
+          schema.Response.find {firestarter_id: data.model.firestarter_id}, (err, responses) ->
+            return done(err) if err?
+            return done("Firestarter not found.") unless firestarter?
+            unless utils.can_edit(session, firestarter)
+              return done("Permission denied")
           
-          for response,i in firestarter.responses
-            if response._id.toString() == data.model._id
-              firestarter.responses.splice(i, 1)
-              return done(null, firestarter, response)
-          return done("Error: response not found")
+            deleted_response = null
+            # Get the deleted response.
+            for response,i in responses
+              if response._id.toString() == data.model._id
+                deleted_response = responses.splice(i, 1)[0]
+                break
+            if deleted_response?
+              # Remove the response ID from the firestarter model.
+              for response_id,i in firestarter.responses
+                if response_id.toString() == data.model._id
+                  firestarter.responses.splice(i, 1)
+                  break
+              return done(null, firestarter, responses, deleted_response)
+            else
+              return done("Response not found")
 
-      (firestarter, response, done) ->
+      (firestarter, responses, deleted_response, done) ->
         # Build search content, save firestarter and response.
         search_content = [firestarter.name, firestarter.prompt].concat((
-          r.response for r in firestarter.responses
+          r.response for r in responses
         )).join("\n")
         async.parallel [
           (done) -> firestarter.save(done)
-          (done) -> response.remove(done)
+          (done) -> deleted_response.remove(done)
         ], (err) ->
-          done(err, firestarter, response, search_content)
+          done(err, firestarter, responses, deleted_response, search_content)
 
-      (firestarter, response, search_content, done) ->
+      (firestarter, responses, deleted_response, search_content, done) ->
         # Respond to the sockets
         responseData = {model: {_id: data.model._id}}
         socket.sendJSON(data.callback, responseData) if data.callback?
@@ -386,12 +399,12 @@ start = (config, app, sockrooms) ->
           type: "trim"
           user: session.auth?.user_id
           anon_id: session.anon_id
-          data: { action: response?.toJSON() }
+          data: { action: deleted_response?.toJSON() }
         }, 0)
-        add_firestarter_search(firestarter)
+        add_firestarter_search(firestarter, responses)
 
     ], (err) ->
-      socket.sendJSON "error", {error: err} if err?
+      return socket_error(socket, err) if err?
 
   return { app }
 

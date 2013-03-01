@@ -91,11 +91,10 @@ module.exports = (config) ->
 
     solr.execute_search params, params.user, (err, results) ->
       return callback(err) if err?
-      docs = results?.docs or []
-      for doc in docs
+      for doc in results?.response?.docs
         # Absolutize urls
-        doc.url = "#{config.apps[doc.application].url}" + doc.url
-      callback(null, docs)
+        doc.absolute_url = "#{config.apps[doc.application].url}" + doc.url
+      callback(null, results)
 
   #
   # Edit profile

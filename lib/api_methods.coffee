@@ -195,7 +195,8 @@ module.exports = (config) ->
         doc[key] = val
       doc.save (err, doc) ->
         return callback(err) if err?
-        solr.post_search_index(doc, (err) -> callback(err, doc))
+        solr.post_search_index doc, (err) ->
+          callback(err, doc)
 
   m.add_search_index = (params, timeout, callback) ->
     if timeout and isNaN(timeout)

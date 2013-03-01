@@ -117,17 +117,17 @@ route = (config, app, sockrooms) ->
 
   utils.append_slash(app, "/search")
   app.get '/search/', (req, res) ->
-    respond = (err, docs) ->
+    respond = (err, results) ->
       return www_methods.handle_error(req, res, err) if err?
       res.render 'home/search', context(req, {
         authenticated: utils.is_authenticated(req.session)
         title: "Search",
-        docs: docs
-        highlighting: results?.highlighting
+        docs: results?.response?.docs or []
+        highlighting: results?.highlighting or {}
         q: req.query.q
       })
 
-    return respond(null, []) unless req.query.q
+    return respond(null, {}) unless req.query.q
 
     www_methods.search(
       req.session, req.query.q, not req.query.public == 'false', respond

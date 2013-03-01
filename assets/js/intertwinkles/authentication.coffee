@@ -65,12 +65,8 @@ intertwinkles.onlogin = (assertion) ->
       intertwinkles.request_logout()
       flash "error", data.error or "Error signing in."
 
-  if intertwinkles.socket.isIdentified()
-    intertwinkles.socket.once "login", handle
-    intertwinkles.socket.send "verify", {callback: "login", assertion: assertion}
-  else
-    if confirm("Lost connection. Refresh page?")
-      window.location.href = window.location.href
+  intertwinkles.socket.once "login", handle
+  intertwinkles.socket.send "verify", {callback: "login", assertion: assertion}
 
 intertwinkles.onlogout = (count) ->
   intertwinkles.users = null

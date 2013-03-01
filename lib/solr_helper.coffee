@@ -90,7 +90,8 @@ module.exports = (config) ->
 
     ], (err, solr_query) ->
       return callback(err) if err?
-      client.search solr_query, callback
+      client.search solr_query, (err, results) ->
+        callback(err, results)
 
   #
   # Remove the given SearchIndex mongo doc from solr.
