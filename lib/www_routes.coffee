@@ -273,13 +273,12 @@ route = (config, app, sockrooms) ->
     unless utils.is_authenticated(req.session)
       return www_methods.permission_denied(req, res)
 
-    schema.Group.findOne {slug: req.params.slug}, (err, doc) ->
+    schema.Group.findOne {slug: req.params.slug}, (err, group) ->
       return www_methods.handle_error(req, res) if err?
-      return not_found(req, res) unless doc?
+      return not_found(req, res) unless group?
 
       # Ensure that we are a member of this group.
-      user = _.find(req.session.users, (u) -> u.email == req.session.auth.email)
-      membership = _.find doc.members, (m) -> m.user.email == user.email
+      membership = _.find group.members, (m) -> m.user.toString() == req.session.auth.user_id
       unless membership?
         return www_methods.permission_denied(req, res)
 
