@@ -90,7 +90,7 @@ describe "Notifications", ->
           type: "needs_my_response"
           recipient: "two@mockmyid.com"
           sender: "one@mockmyid.com"
-          url: "/resolve/p/nonsense"
+          url: "/p/nonsense"
           formats: {
             sms: "Needs yr response"
             email: {

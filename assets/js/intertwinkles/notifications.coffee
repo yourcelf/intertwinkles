@@ -8,7 +8,7 @@ notification_menu_template = _.template("""
     <% for (var i = 0; i < notices.length; i++) { %>
       <% var notice = notices[i]; %>
       <li class='notification <%= notice.read ? "read" : "" %>'>
-        <a href='<%= INTERTWINKLES_APPS[notice.application].url + notice.url %>' data-notification-id='<%= notice._id %>'>
+        <a href='<%= notice.absolute_url %>' data-notification-id='<%= notice._id %>'>
           <div class='sender'>
             <% var sender = intertwinkles.users[notice.sender]; %>
             <% if (sender) { %>

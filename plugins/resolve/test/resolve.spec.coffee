@@ -73,6 +73,8 @@ describe "resolve", ->
       expect(err).to.be(null)
       expect(tw).to.not.be(null)
       expect(tw.sender.toString()).to.be(@session.auth.user_id)
+      expect(tw.url).to.be(@proposal.url)
+      expect(tw.absolute_url).to.be(@proposal.absolute_url)
       @twinkle_to_remove = tw
       done()
 
@@ -99,6 +101,10 @@ describe "resolve", ->
       expect(proposal).to.not.be(null)
       expect(proposal.revisions[0].text).to.be("This is my proposal.")
       expect(proposal.revisions[0].user_id).to.be(@session.auth.user_id)
+      expect(proposal.url).to.be("/p/#{proposal.id}")
+      expect(proposal.absolute_url).to.be(
+        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
+      )
       @proposal_with_notices = proposal
 
     , (err, proposal, event, si, notices) =>
@@ -106,15 +112,14 @@ describe "resolve", ->
       return done() if process.env.SKIP_SOLR_TESTS
       expect(proposal).to.not.be(null)
       expect(event.type).to.be("create")
-      expect(event.absolute_url).to.be(
-        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
-      )
+      expect(event.absolute_url).to.be(proposal.absolute_url)
       expect(event.application).to.be("resolve")
       expect(si.entity.toString()).to.be(proposal.id)
-      expect(si.absolute_url).to.be(
-        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
-      )
+      expect(si.absolute_url).to.be(proposal.absolute_url)
       expect(notices.length).to.be(_.size(group.members))
+      for notice in notices
+        expect(notice.url).to.be(proposal.url)
+        expect(notice.absolute_url).to.be(proposal.absolute_url)
       @proposal_with_notices = proposal
       www_schema.Notification.find {entity: @proposal_with_notices.id}, (err, docs) =>
         expect(err).to.be(null)
@@ -155,9 +160,12 @@ describe "resolve", ->
       expect(proposal.resolved).to.be(null)
     , (err, proposal, event, si, notices) =>
       expect(event.group.toString()).to.be(@proposal_with_notices.sharing.group_id.toString())
-      expect(event.absolute_url).to.be(
-        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
-      )
+      expect(event.entity_url).to.be(proposal.url)
+      expect(event.absolute_url).to.be(proposal.absolute_url)
+      for notice in notices
+        expect(notice.url).to.be(proposal.url)
+        expect(notice.absolute_url).to.be(proposal.absolute_url)
+
       expect(err).to.be(null)
       @proposal_with_notices = proposal
       done()

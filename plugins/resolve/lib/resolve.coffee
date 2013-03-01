@@ -15,7 +15,7 @@ module.exports = (config) ->
     event = _.extend {
         application: "resolve"
         type: type
-        entity_url: "/p/#{proposal.id}"
+        entity_url: proposal.url
         entity: proposal._id
         user: session.auth?.user_id
         via_user: session.auth?.user_id
@@ -52,7 +52,7 @@ module.exports = (config) ->
       application: "resolve"
       entity: doc.id
       type: "proposal"
-      url: "/p/#{doc._id}"
+      url: doc.url
       title: doc.title
       summary: "Proposal with #{doc.opinions.length} responses."
       text: parts.join("\n")
@@ -95,7 +95,7 @@ module.exports = (config) ->
           application: "resolve"
           entity: doc._id
           subentity: subentity
-          url: "/resolve/p/#{doc._id}/"
+          url: doc.url
           sender: session.auth?.user_id
           sender_anon_id: session.anon_id
           recipient: recipient_id
@@ -161,7 +161,7 @@ module.exports = (config) ->
             type: notice_type
             entity: proposal._id.toString()
             recipient: user_id
-            url: "/resolve/p/#{proposal._id}/"
+            url: proposal.url
             sender: proposal.revisions[0].user_id
             formats: { web }
           })

@@ -106,6 +106,24 @@ load = (config) ->
   ).set(
     (taglist) -> @set 'tags', taglist.split(/,\s*/)
   )
+  IdeaSchema.methods.incImageVersion = ->
+    @set "imageVersion", (@imageVersion or 0) + 1
+  IdeaSchema.methods.DIMS = { x: 600, y: 600 }
+  IdeaSchema.methods.getDrawingPath = (size) ->
+    if @drawingURLs[size]?
+      return thumbnails.UPLOAD_PATH + @drawingURLs[size]
+    return null
+  IdeaSchema.methods.getPhotoPath = (size) ->
+    if @photoURLs[size]?
+      return thumbnails.UPLOAD_PATH + @photoURLs[size]
+    return null
+  IdeaSchema.methods.serialize = ->
+    json = @toJSON()
+    json.drawingURLs = @drawingURLs
+    json.photoURLs = @photoURLs
+    json.taglist = @taglist
+    return json
+
   IdeaSchema.statics.findOneLight = (constraint, cb) ->
     return @findOne constraint, { "drawing": 0 }, cb
   IdeaSchema.statics.findLight = (constraint, cb) ->
@@ -142,6 +160,11 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
+  DotstormSchema.methods.serialize = -> return @toJSON()
+  DotstormSchema.statics.withLightIdeas = (constraint, cb) ->
+    return schemas.Dotstorm.findOne(constraint).populate(
+      'groups.ideas', { 'drawing': 0 }
+    ).exec cb
 
   schemas = {}
   for name, schema of {Dotstorm: DotstormSchema, Idea: IdeaSchema, IdeaGroup: IdeaGroupSchema}
@@ -149,34 +172,6 @@ load = (config) ->
       schemas[name] = mongoose.model(name)
     catch e
       schemas[name] = mongoose.model(name, schema)
-
-
-  #TODO: Put these in "methods" or some other schema-based part, not prototype.
-  schemas.Idea.prototype.incImageVersion = ->
-    @set "imageVersion", (@imageVersion or 0) + 1
-  schemas.Idea.prototype.DIMS = { x: 600, y: 600 }
-  schemas.Idea.prototype.getDrawingPath = (size) ->
-    if @drawingURLs[size]?
-      return thumbnails.UPLOAD_PATH + @drawingURLs[size]
-    return null
-  schemas.Idea.prototype.getPhotoPath = (size) ->
-    if @photoURLs[size]?
-      return thumbnails.UPLOAD_PATH + @photoURLs[size]
-    return null
-  schemas.Idea.prototype.serialize = ->
-    json = @toJSON()
-    json.drawingURLs = @drawingURLs
-    json.photoURLs = @photoURLs
-    json.taglist = @taglist
-    return json
-
-
-  schemas.Dotstorm.withLightIdeas = (constraint, cb) ->
-    return schemas.Dotstorm.findOne(constraint).populate(
-      'groups.ideas', { 'drawing': 0 }
-    ).exec cb
-  schemas.Dotstorm.prototype.serialize = ->
-    return @toJSON()
 
   return schemas
 

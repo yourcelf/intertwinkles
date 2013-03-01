@@ -7,6 +7,32 @@ carriers  = require './carriers'
 schema = null
 
 load = (config) ->
+  absolute_url = ->
+    ###
+    We reuse a pattern in several models of having an 'application' property
+    that refers to the key of a configured application, and a 'url' property
+    that refers to an entity within that application.
+
+    To get to the absolute URL for an entity, we must prefix it with the URL
+    for its application.  This way, applications can live on the local server,
+    or another server, and the data is portable if the application changes
+    location.
+
+    Example:
+      application: firestarter
+      application URL: http://localhost/firestarter/
+
+      The firestarter with full URL "http://localhost/firestarter/f/slug" will
+      thus have @url: "/f/slug"
+    
+    This method encodes that logic to build a virtual "absolute_url" property
+    for each entity.
+    ###
+    if config.apps[@application]?.url?
+      return config.apps[@application].url + (@url or @entity_url)
+    return null
+
+
   UserSchema = new Schema {
     name: String
     joined: Date
@@ -163,10 +189,7 @@ load = (config) ->
       join: "joined"
       decline: "declined"
     }[@type] or @type + "ed"
-  EventSchema.virtual("absolute_url").get ->
-    if config.apps[@application]?.url?
-      return config.apps[@application].url + @entity_url
-    return null
+  EventSchema.virtual("absolute_url").get(absolute_url)
   EventSchema.virtual("title").get ->
     return (
       @data?.title or
@@ -218,6 +241,7 @@ load = (config) ->
       cleared: {$ne: true}
       suppressed: {$ne: true}
     }, constraint)).populate("recipient").exec(callback)
+  NotificationSchema.virtual('absolute_url').get(absolute_url)
 
 
   SearchIndexSchema = new Schema {
@@ -240,11 +264,7 @@ load = (config) ->
       advertise: Boolean
     }
   }
-  SearchIndexSchema.virtual('absolute_url').get ->
-    if config.apps[@application]?.url?
-      config.apps[@application].url + @url
-    else
-      null
+  SearchIndexSchema.virtual('absolute_url').get(absolute_url)
   SearchIndexSchema.pre "save", (next) ->
     @modified = new Date()
     next()
@@ -263,6 +283,7 @@ load = (config) ->
     recipient: {type: Schema.ObjectId, ref: 'User', required: false}
     date: Date
   }
+  TwinkleSchema.virtual('absolute_url').get(absolute_url)
   TwinkleSchema.pre "save", (next) ->
     @date = new Date() unless @date?
 

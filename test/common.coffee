@@ -35,9 +35,11 @@ catch e
   TestModel = mongoose.model("TestModel", TestModelSchema)
 
 startUp = (done) ->
+  log4js.getLogger("www").setLevel(log4js.levels.FATAL)
   srv = server.start(config)
-  # Squelch logging to preserve mocha's reporter
+  # Re-Squelch logging to preserve mocha's reporter
   logger.setLevel(log4js.levels.FATAL)
+  log4js.getLogger("www").setLevel(log4js.levels.FATAL)
   browser = new Browser()
   # Prepare mail server
   mail = {
