@@ -59,7 +59,6 @@ class intertwinkles.EditNewProfile extends intertwinkles.BaseModalFormView
 
   saveProfile: (cleaned_data) =>
     intertwinkles.socket.once "profile_updated", (data) =>
-      console.log data
       @$("input[type=submit]").removeClass("loading")
       if data.error?
         flash "error", "Oh Noes... Server errorrrrrrr........."

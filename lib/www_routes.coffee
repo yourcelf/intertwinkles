@@ -62,6 +62,12 @@ route = (config, app, sockrooms) ->
         groups: req.session.groups
       })
 
+  utils.append_slash(app, "/feedback")
+  app.get '/feedback/', (req, res) ->
+    res.render 'home/feedback', context(req, {
+      title: "Feedback &amp; Support"
+    })
+
   utils.append_slash(app, "/about")
   app.get '/about/', (req, res) ->
     res.render 'home/about/index', context(req, {
