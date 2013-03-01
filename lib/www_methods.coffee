@@ -86,8 +86,11 @@ module.exports = (config) ->
   #
   www.search = (session, q, include_public, callback) ->
     params = {q}
-    params.public = true if include_public == true
-    params.user = session.auth.user_id if session.auth.user_id?
+    if not session?.auth?.user_id?
+      params.public = true
+    else
+      params.user = session.auth.user_id
+      params.public = true if include_public == true
 
     solr.execute_search params, params.user, (err, results) ->
       return callback(err) if err?
