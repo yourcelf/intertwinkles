@@ -35,7 +35,7 @@ enable_multiple_view_folders(express)
 start = (config) ->
   # Logger: log4js
   log4js.configure(__dirname + '/../config/logging.json')
-  logger = log4js.getLogger()
+  logger = log4js.getLogger("www")
 
   # App: express
   app = express.createServer()
