@@ -99,9 +99,11 @@ describe "resolve", ->
       expect(proposal).to.not.be(null)
       expect(proposal.revisions[0].text).to.be("This is my proposal.")
       expect(proposal.revisions[0].user_id).to.be(@session.auth.user_id)
+      @proposal_with_notices = proposal
 
     , (err, proposal, event, si, notices) =>
-      expect(err).to.be(null)
+      # If we don't have solr, any part of the notice creation may have failed.
+      return done() if process.env.SKIP_SOLR_TESTS
       expect(proposal).to.not.be(null)
       expect(event.type).to.be("create")
       expect(event.absolute_url).to.be(
@@ -115,6 +117,7 @@ describe "resolve", ->
       expect(notices.length).to.be(_.size(group.members))
       @proposal_with_notices = proposal
       www_schema.Notification.find {entity: @proposal_with_notices.id}, (err, docs) =>
+        expect(err).to.be(null)
         expect(docs.length).to.be(2)
         done()
 
