@@ -50,7 +50,7 @@ route = (config, app, sockrooms) ->
       return www_methods.handle_error(req, res, err) if err?
       [user_events, group_events, recent_docs] = results
       if user_events.length == group_events.length == recent_docs.length == 0
-        return res.redirect("/starting/")
+        return res.redirect("/about/starting/")
       res.render 'home/dashboard', context(req, {
         title: "InterTwinkles"
         hero_apps: hero_apps
@@ -62,28 +62,35 @@ route = (config, app, sockrooms) ->
         groups: req.session.groups
       })
 
-  utils.append_slash(app, "/starting")
-  app.get '/starting/', (req, res) ->
-    res.render 'home/starting', context(req, {
-      title: "Getting Started with InterTwinkles"
-    })
-
-  utils.append_slash(app, "/more")
-  app.get '/more/', (req, res) ->
-    res.render 'home/more', context(req, {
-      title: "More InterTwinkles"
-    })
-
   utils.append_slash(app, "/about")
   app.get '/about/', (req, res) ->
     res.render 'home/about/index', context(req, {
       title: "About InterTwinkles"
     })
 
+  utils.append_slash(app, "/about/starting")
+  app.get '/about/starting/', (req, res) ->
+    res.render 'home/starting', context(req, {
+      title: "Getting Started with InterTwinkles"
+    })
+
+  utils.append_slash(app, "/about/more")
+  app.get '/about/more/', (req, res) ->
+    res.render 'home/more', context(req, {
+      title: "More InterTwinkles"
+    })
+
+
   utils.append_slash(app, "/about/terms")
   app.get '/about/terms/', (req, res) ->
     res.render 'home/about/terms', context(req, {
       title: "Terms of Use"
+    })
+
+  utils.append_slash(app, "/about/dmca")
+  app.get '/about/dmca/', (req, res) ->
+    res.render 'home/about/dmca', context(req, {
+      title: "DMCA"
     })
 
   utils.append_slash(app, "/about/privacy")

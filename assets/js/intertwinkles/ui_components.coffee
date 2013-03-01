@@ -177,7 +177,12 @@ toolbar_template = _.template("""
               <% var app = apps[i]; %>
               <li class='<%= i == 0 ? "active" : "" %>'>
                 <a href='<%= app.url + "/" %>'>
-                  <b><%= app.name %></b>: <%= app.about %>
+                  <b><%= app.name %></b>:
+                  <% if (app.name == "Home" && !intertwinkles.is_authenticated()) { %>
+                    Introducing InterTwinkles
+                  <% } else { %>
+                    <%= app.about %>
+                  <% } %>
                 </a>
               </li>
             <% } %>
@@ -242,10 +247,12 @@ footer_template = _.template("""
       <div class='span4 about-links'>
         <h2>About</h2>
         <ul>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/'>About</a><small>: Free software revolutionary research</small></li>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/terms/'>Terms of Use</a><small>: Play nice</small></li>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/privacy/'>Privacy Policy</a><small>: You own it</small></li>
-          <li><a href='http://github.com/yourcelf/intertwinkles/'>Source Code</a><small>: Run your own!</small></li>
+          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/'>About</a></li>
+          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/starting/'>Getting Started</a></li>
+          <li style='margin-left: -0.5em; font-size: smaller;'>Legal:</li>
+          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/terms/'>Terms of Use</a></li>
+          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/privacy/'>Privacy Policy</a></li>
+          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/dmca/'>DMCA</a></li>
         </ul>
       </div>
       <div class='span4 community'>
@@ -254,6 +261,7 @@ footer_template = _.template("""
           <li><a href='http://lists.byconsens.us/mailman/listinfo/design'>Codesign mailing list</a></li>
           <li><a href='http://project.intertwinkles.org/'>Project tracker</a></li>
           <li><a href='#{INTERTWINKLES_APPS.www.url}/about/related/'>Related projects</a></li>
+          <li><a href='http://github.com/yourcelf/intertwinkles/'>Source Code</a><small>: Run your own!</small></li>
         </ul>
       </div>
       <div class='span4 sponsors'>
