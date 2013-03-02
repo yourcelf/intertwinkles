@@ -48,7 +48,7 @@ load = (config) ->
     if parts.length < 20
       return @revisions[0].text
     return parts.slice(0, 20).join(" ") + "..."
-  ProposalSchema.virtual('url').get -> "/p/#{@_id}"
+  ProposalSchema.virtual('url').get -> "/p/#{@_id}/"
   ProposalSchema.virtual('absolute_url').get ->
     return "#{config.apps.resolve.url}#{@url}"
 

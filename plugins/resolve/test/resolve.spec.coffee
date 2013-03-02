@@ -101,9 +101,9 @@ describe "resolve", ->
       expect(proposal).to.not.be(null)
       expect(proposal.revisions[0].text).to.be("This is my proposal.")
       expect(proposal.revisions[0].user_id).to.be(@session.auth.user_id)
-      expect(proposal.url).to.be("/p/#{proposal.id}")
+      expect(proposal.url).to.be("/p/#{proposal.id}/")
       expect(proposal.absolute_url).to.be(
-        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
+        "http://localhost:#{config.port}/resolve/p/#{proposal.id}/"
       )
       @proposal_with_notices = proposal
 
@@ -117,9 +117,9 @@ describe "resolve", ->
       expect(si.entity.toString()).to.be(proposal.id)
       expect(si.absolute_url).to.be(proposal.absolute_url)
       expect(notices.length).to.be(_.size(group.members))
-      expect(proposal.url).to.be("/p/#{proposal.id}")
+      expect(proposal.url).to.be("/p/#{proposal.id}/")
       expect(proposal.absolute_url).to.be(
-        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
+        "http://localhost:#{config.port}/resolve/p/#{proposal.id}/"
       )
       for notice in notices
         expect(notice.url).to.be(proposal.url)

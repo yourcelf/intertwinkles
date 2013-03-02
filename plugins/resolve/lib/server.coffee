@@ -63,6 +63,7 @@ start = (config, app, sockrooms) ->
       title: "New proposal"
     })
 
+  utils.append_slash(app, "/resolve/p/([^/]+)")
   app.get "/resolve/p/:id/", (req, res) ->
     schema.Proposal.findOne {_id: req.params.id}, (err, doc) ->
       return server_error(req, res, err) if err?
