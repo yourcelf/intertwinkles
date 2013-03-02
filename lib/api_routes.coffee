@@ -208,10 +208,4 @@ route = (config, app) ->
         long_url: short_doc.absolute_long_url
       }
 
-  app.get "/r/:shortpath", (req, res) ->
-    schema.ShortURL.findOne { short_path: req.params.shortpath }, (err, doc) ->
-      return server_error(res, err) if err?
-      return res.send("Not found", 404) unless config.apps[doc.application]?
-      res.redirect(doc.absolute_long_url)
-
 module.exports = {route}

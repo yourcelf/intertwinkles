@@ -391,6 +391,13 @@ route = (config, app, sockrooms) ->
           docs: search_indexes
         })
 
+  app.get "/r/:shortpath", (req, res) ->
+    schema.ShortURL.findOne { short_path: req.params.shortpath }, (err, doc) ->
+      return www_methods.handle_error(req, res, err) if err?
+      unless doc? and config.apps[doc.application]?
+        return www_methods.not_found(req, res)
+      res.redirect(doc.absolute_long_url)
+
   return {app}
 
 route_errors = (config, app) ->
