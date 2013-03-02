@@ -117,6 +117,10 @@ describe "resolve", ->
       expect(si.entity.toString()).to.be(proposal.id)
       expect(si.absolute_url).to.be(proposal.absolute_url)
       expect(notices.length).to.be(_.size(group.members))
+      expect(proposal.url).to.be("/p/#{proposal.id}")
+      expect(proposal.absolute_url).to.be(
+        "http://localhost:#{config.port}/resolve/p/#{proposal.id}"
+      )
       for notice in notices
         expect(notice.url).to.be(proposal.url)
         expect(notice.absolute_url).to.be(proposal.absolute_url)

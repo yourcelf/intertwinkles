@@ -200,6 +200,8 @@ load = (config) ->
     if not @date?
       @date = new Date()
     next()
+  EventSchema.set('toObject', {virtuals: true})
+  EventSchema.set('toJSON', {virtuals: true})
 
   NotificationSchema = new Schema {
     application: String # Application label, if any
@@ -231,7 +233,6 @@ load = (config) ->
     @suppressed = false if not @suppressed?
     @date = new Date() if not @date?
     next()
-
   NotificationSchema.static 'findSendable', (constraint, callback) ->
     # No notifications older than 1 day.
     one_day = 1000 * 60 * 60 * 24
@@ -246,7 +247,8 @@ load = (config) ->
       date: {$gte: from_date}
     }, constraint)).populate("recipient").exec(callback)
   NotificationSchema.virtual('absolute_url').get(absolute_url)
-
+  NotificationSchema.set('toObject', {virtuals: true})
+  NotificationSchema.set('toJSON', {virtuals: true})
 
   SearchIndexSchema = new Schema {
     application: {type: String, required: true}
@@ -272,6 +274,9 @@ load = (config) ->
   SearchIndexSchema.pre "save", (next) ->
     @modified = new Date()
     next()
+  SearchIndexSchema.set('toObject', {virtuals: true})
+  SearchIndexSchema.set('toJSON', {virtuals: true})
+
 
   #
   # Twinkles
@@ -290,6 +295,8 @@ load = (config) ->
   TwinkleSchema.virtual('absolute_url').get(absolute_url)
   TwinkleSchema.pre "save", (next) ->
     @date = new Date() unless @date?
+  TwinkleSchema.set('toObject', {virtuals: true})
+  TwinkleSchema.set('toJSON', {virtuals: true})
 
   #
   # Short URLs
@@ -315,6 +322,8 @@ load = (config) ->
       return next(err) if err?
       @short_path = short_path
       next()
+  ShortURLSchema.set('toObject', {virtuals: true})
+  ShortURLSchema.set('toJSON', {virtuals: true})
 
   schemas = {}
   for name, schema of {

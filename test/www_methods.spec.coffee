@@ -33,9 +33,10 @@ describe "www methods", ->
 
   it "Gets user events", (done) ->
     event_params = {
-      application: "testy"
+      application: "www"
       entity: "123"
       type: "test"
+      entity_url: "/groups/hey"
       user: @user.id
       group: _.keys(@session.groups)[0]
       date: new Date()
@@ -49,7 +50,13 @@ describe "www methods", ->
         delete evt.__v
         evt.user = evt.user.toString()
         evt.group = evt.group.toString()
-        expect(evt).to.eql(event_params)
+        result_params = _.extend({
+          id: evt.id,
+          absolute_url: "http://localhost:#{config.port}/groups/hey"
+          verbed: 'tested'
+          title: "Home"
+        }, event_params)
+        expect(evt).to.eql(result_params)
         events[0].remove(done)
 
   it "Edits profiles", (done) ->
@@ -148,12 +155,22 @@ describe "www methods", ->
             expect(event.absolute_url).to.eql(
               "http://localhost:#{config.port}/groups/show/my-awesome-group"
             )
+            expect(event.toObject().absolute_url).to.eql(event.absolute_url)
+            expect(event.toJSON().absolute_url).to.eql(event.absolute_url)
 
             # Check notice properties.
             expect(notices.length).to.be(3)
             user_id = @session.auth.user_id
             expect(n.type for n in notices).to.eql(["invitation", "invitation", "invitation"])
             expect(n.entity for n in notices).to.eql([group.id, group.id, group.id])
+            join_url = "/groups/join/my-awesome-group"
+            join_abs_url = "http://localhost:#{config.port}#{join_url}"
+            expect(n.absolute_url for n in notices).to.eql([
+              join_abs_url, join_abs_url, join_abs_url
+            ])
+            expect(n.url for n in notices).to.eql([
+              join_url, join_url, join_url
+            ])
             expect(n.sender.toString() for n in notices).to.eql([user_id, user_id, user_id])
             # make a "set" to compare unordered recipients
             recipients = {}
@@ -265,6 +282,7 @@ describe "www methods", ->
           expect(n.formats.web.indexOf("You've been invited")).to.not.be(-1)
           expect(n.formats.email.subject.indexOf("[InterTwinkles]")).to.not.be(-1)
           expect(n.formats.email.text.indexOf("Unsubscribe")).to.not.be(-1)
+          expect(n.formats.email.html.indexOf("Unsubscribe")).to.not.be(-1)
           expect(n.formats.email.html.indexOf("<!DOCTYPE")).to.not.be(-1)
           expect(n.formats.email.text.indexOf("<%")).to.be(-1)
           expect(n.formats.email.html.indexOf("<%")).to.be(-1)
