@@ -138,14 +138,14 @@ class MembershipTable extends Backbone.View
 
     # Existing invitees
     @$(".has-been-invited-header").after((@membershipRowTemplate({
-      email: @users[invitee.user].email
+      email: invitee.user.email
       user: null
-      voting: if @change_set.update[invitee.email]?.voting? then not invitee.voting else invitee.voting
-      voting_changed: @change_set.update[invitee.email]?
-      role: @change_set.update[invitee.email]?.role or invitee.role
-      role_changed: @change_set.update[invitee.email]?.role?
+      voting: if @change_set.update[invitee.user.email]?.voting? then not invitee.voting else invitee.voting
+      voting_changed: @change_set.update[invitee.user.email]?
+      role: @change_set.update[invitee.user.email]?.role or invitee.role
+      role_changed: @change_set.update[invitee.user.email]?.role?
       new_invitee: false
-      removed: @change_set.remove[@users[invitee.user].email]?
+      removed: @change_set.remove[invitee.user.email]?
     }) for invitee in @group.invited_members or []))
 
     @$(".has-been-invited-header").toggle(@group.invited_members?.length > 0)
