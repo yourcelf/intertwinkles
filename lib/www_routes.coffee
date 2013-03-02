@@ -221,6 +221,7 @@ route = (config, app, sockrooms) ->
     www_methods.edit_profile req.session, req.body, (err, user) ->
       return www_methods.handle_error(req, res, err) if err?
       return www_methods.permission_denied(req, res) unless user?
+      req.flash("success", "Settings updated.")
       req.session.users[user.id] = user
       return res.redirect(req.query.next or "/")
 
