@@ -233,6 +233,9 @@ load = (config) ->
     next()
 
   NotificationSchema.static 'findSendable', (constraint, callback) ->
+    # No notifications older than 1 day.
+    one_day = 1000 * 60 * 60 * 24
+    from_date = new Date(new Date().getTime() - one_day)
     @find(_.extend({
       $or: [
         {"sent.email": null, "formats.email": {$exists: true}}
@@ -240,6 +243,7 @@ load = (config) ->
       ],
       cleared: {$ne: true}
       suppressed: {$ne: true}
+      date: {$gte: from_date}
     }, constraint)).populate("recipient").exec(callback)
   NotificationSchema.virtual('absolute_url').get(absolute_url)
 

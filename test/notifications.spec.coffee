@@ -4,6 +4,7 @@ config = require './test_config'
 common = require './common'
 schema = require('../lib/schema').load(config)
 notifier = require("../lib/email_notices").load(config)
+api_methods = require("../lib/api_methods")(config)
 
 describe "Notifications", ->
   mail = null
@@ -28,7 +29,6 @@ describe "Notifications", ->
           expect(user.mobile.number).to.be(null)
           user.save(done)
       (done) ->
-        api_methods = require("../lib/api_methods")(config)
         schema.Group.findOne {slug: "two-members"}, (err, group) ->
           expect(err).to.be(null)
           api_methods.post_notifications [{
@@ -134,3 +134,35 @@ describe "Notifications", ->
           done()
     ], done
 
+  it "Doesn't send old notices", (done) ->
+    mail.outbox.length = 0
+    async.series [
+      (done) ->
+        more_than_one_day = 1000*60*60*24 + 1
+        api_methods.post_notifications [{
+          application: "resolve"
+          entity: "absofrigginlutely"
+          type: "needs_my_response"
+          recipient: "two@mockmyid.com"
+          url: "/p/absofrigginlutely"
+          formats: {
+            sms: "Needs yr response"
+            email: {
+              subject: "Needs yr response subject"
+              text: "needs yr response text"
+              html: "<p>Needs yr response</p>"
+            }
+          }
+          date: new Date(new Date().getTime() - more_than_one_day)
+        }], (err, docs) ->
+          return done(err) if err?
+          expect(err).to.be(null)
+          expect(docs.length).to.be(1)
+          done()
+      (done) ->
+        notifier.send_notifications (err, notices) ->
+          return done(err) if err?
+          expect(notices.length).to.be(0)
+          expect(mail.outbox.length).to.be(0)
+          done()
+    ], done
