@@ -49,14 +49,29 @@ block body
                         option(value=carrier)= carrier
             span.help-inline Optional, For SMS notifications only
         div.control-group
-          div.controls TODO: Notification settings
+          label.control-label Notifications:
+          div.controls#notice_settings
         div.control-group
           div.controls
             input.btn.btn-primary.btn-large(type="submit", value="Save")
+  script#user_attrs(type='text/template')!= JSON.stringify(user)
 
 block append postscripts
   :coffeescript
+    user = JSON.parse($("#user_attrs").html());
     profile_editor = $("#edit_profile")
+    notification_settings = new intertwinkles.NotificationSettings({user})
+    $("#notice_settings").html(notification_settings.el)
+    notification_settings.render()
+    $("#id_mobile_number, #id_mobile_carrier").on "change", ->
+      if $("#id_mobile_number").val() and $("#id_mobile_carrier").val()
+        unless notification_settings.show_sms
+          notification_settings.show_sms = true
+          notification_settings.render()
+      else
+        if notification_settings.show_sms
+          notification_settings.show_sms = false
+          notification_settings.render()
 
     $(".image-chooser-lite", profile_editor).each ->
       chooser = new intertwinkles.IconChooserLite(chosen: $(this).attr("data-pk"))

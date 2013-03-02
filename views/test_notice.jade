@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+head
+  title Test Notification Rendering
+  style(type='text/css')
+    td { vertical-align: top; border: 1px solid #999; }
+
+body
+  table.bordered
+    tr
+      th SMS
+      td
+        pre!= sms
+    tr
+      th Web
+      td!= web
+    tr
+      th Subject
+      td
+        pre!= email.subject
+    tr
+      th Text
+      td
+        pre!= email.text
+    tr
+      th HTML
+      td
+        iframe#target(src="about:blank", width=600, height=400)
+
+  script#email_html(type='text/template')
+    != email.html
+
+  script(type='text/javascript')
+    var content = document.getElementById("email_html").innerHTML;
+    var frame = document.getElementById('target');
+    frame.onload = function() {
+      frame.contentWindow.document.documentElement.innerHTML = content;
+    }
+

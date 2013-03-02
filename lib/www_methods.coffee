@@ -8,6 +8,7 @@ module.exports = (config) ->
   schema = require('./schema').load(config)
   solr = require("./solr_helper")(config)
   api_methods = require("./api_methods")(config)
+  render_notifications = require("./email_notices").load(config).render_notifications
 
   www = {}
 
@@ -124,6 +125,11 @@ module.exports = (config) ->
         doc.mobile.number = params.mobile_number or null
       if params.mobile_carrier?
         doc.mobile.carrier = params.mobile_carrier or null
+      for key in ["invitation", "activity_summaries", "group_members_changed", "needs_my_response"]
+        doc.notifications[key].email = !!params["notifications_#{key}_email"]
+        doc.notifications[key].sms = (
+          (!!params["notifications_#{key}_sms"]) and doc.mobile.number and doc.mobile.carrier
+        )
       doc.save(callback)
 
   #
@@ -331,7 +337,7 @@ module.exports = (config) ->
         if group_update.name
           group.name = group_update.name
           event_data.name = group_update.name
-          # The URL slug. XXX: Should we allow this to chaneg? Breaks URLs...
+          # The URL slug. XXX: Should we allow this to change? Breaks URLs...
           group.slug = utils.slugify(group.name)
         done()
       
@@ -390,21 +396,37 @@ module.exports = (config) ->
 
           (done) ->
             return done() unless notice_ids.invitation?.length
-            notice_params = ({
-              application: "www"
-              type: "invitation"
-              entity: group.id
-              recipient: id
-              url: "/groups/join/#{group.slug}"
-              sender: session.auth.user_id
-              formats: {
-                web: """
-                  You've been invited to join #{group.name}!  Please accept
-                  or refuse the invitation.
-                """
-              }
-            } for id in notice_ids.invitation)
-            api_methods.post_notifications(notice_params, done)
+            # Render notifications for each recipient.
+            formats = {}
+            get_user = (id, cb) ->
+              user = user_map[id.toString()]
+              if user then cb(null, user) else schema.User.findOne {_id: id}, cb
+            get_user session.auth.user_id, (err, sender) ->
+              return done(err) if err?
+              async.map notice_ids.invitation, (recipient_id, done) ->
+                get_user recipient_id, (err, recipient) ->
+                  return done(err) if err?
+                  render_notifications "../emails/invitation", {
+                    group: group
+                    sender: sender
+                    recipient: recipient
+                    url: config.api_url + "/groups/join/#{group.slug}"
+                    application: "www"
+                  }, (err, rendered) ->
+                    formats[recipient_id.toString()] = rendered
+                    done()
+              , (err) ->
+                # All rendered.  Now generate the notifications.
+                notice_params = ({
+                  application: "www"
+                  type: "invitation"
+                  entity: group.id
+                  recipient: id
+                  url: "/groups/join/#{group.slug}"
+                  sender: session.auth.user_id
+                  formats: format
+                } for id, format of formats)
+                api_methods.post_notifications(notice_params, done)
 
           (done) ->
             # Refresh our session's definition of groups and users. This will

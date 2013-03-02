@@ -150,6 +150,8 @@ module.exports = (config) ->
     # configured app URL.  That way, we can change where the application lives,
     # without breaking short URLs.
     long_path = user_parts.path.substring(app_url_parts.path.length)
+    unless long_path.substring(0, 1) == "/"
+      long_path = "/#{long_path}"
 
     # Use find, save pattern rather than an upsert pattern, so that we get the
     # mongoose pre save triggers to fire.

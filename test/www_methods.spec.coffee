@@ -60,6 +60,8 @@ describe "www methods", ->
       color: "ff0088"
       mobile_number: "1234567890"
       mobile_carrier: "T-Mobile"
+      notifications_invitation_email: true
+      notifications_group_members_changed_sms: true
     }
     www_methods.edit_profile @session, params, (err, user) =>
       expect(err).to.be(null)
@@ -73,6 +75,10 @@ describe "www methods", ->
       expect(user.icon.sizes["64"]).to.be("user_icons/FF0088-Sardines-64.png")
       expect(user.mobile.number).to.be("1234567890")
       expect(user.mobile.carrier).to.be("T-Mobile")
+      expect(user.notifications.invitation.email).to.be(true)
+      expect(user.notifications.group_members_changed.sms).to.be(true)
+      expect(user.notifications.activity_summaries.email).to.be(false)
+      expect(user.notifications.invitation.sms).to.be(false)
       www_methods.edit_profile @session, {
         name: @user.name
         email: @user.email
@@ -123,7 +129,8 @@ describe "www methods", ->
       (user, done) =>
         www_methods.create_group @session, params, (err, group, event, notices) =>
           expect(err).to.be(null)
-          # Get a map of all the users for use in checking recipients of notifications.
+          # Get a map of all the users for use in checking recipients of
+          # notifications.
           www_schema.User.find {}, (err, docs) =>
             expect(err).to.be(null)
             user_map = {}
@@ -253,7 +260,14 @@ describe "www methods", ->
         }, (err, docs) =>
           expect(err).to.be(null)
           expect(docs.length).to.be(1)
-          expect(docs[0].recipient.toString()).to.eql(@new_user._id.toString())
+          n = docs[0]
+          expect(n.recipient.toString()).to.eql(@new_user._id.toString())
+          expect(n.formats.web.indexOf("You've been invited")).to.not.be(-1)
+          expect(n.formats.email.subject.indexOf("[InterTwinkles]")).to.not.be(-1)
+          expect(n.formats.email.text.indexOf("Unsubscribe")).to.not.be(-1)
+          expect(n.formats.email.html.indexOf("<!DOCTYPE")).to.not.be(-1)
+          expect(n.formats.email.text.indexOf("<%")).to.be(-1)
+          expect(n.formats.email.html.indexOf("<%")).to.be(-1)
           done()
     ], done
 

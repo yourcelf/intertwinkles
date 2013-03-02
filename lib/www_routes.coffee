@@ -10,6 +10,7 @@ route = (config, app, sockrooms) ->
   api_methods = require("./api_methods")(config)
   www_methods = require("./www_methods")(config)
   solr = require("./solr_helper")(config)
+  render_notifications = require("./email_notices").load(config).render_notifications
 
   #
   # Routes
@@ -124,6 +125,18 @@ route = (config, app, sockrooms) ->
   utils.append_slash(app, "/403")
   app.get '/403/', (req, res) -> www_methods.permission_denied(req, res)
 
+  app.get '/test/notices/invitation/', (req, res) ->
+    render_notifications "../emails/invitation", {
+      group: {name: "The Awesomest Group"}
+      sender: {name: "John Dough"}
+      recipient: {name: "Super Happypants"}
+      url: config.api_url + "/groups/join/the-awesomest-group"
+      application: "www"
+    }, (err, rendered) ->
+      return ww_methods.handle_error(req, res, err) if err?
+      res.render('test_notice', rendered)
+
+
   #
   # Search
   #
@@ -176,6 +189,24 @@ route = (config, app, sockrooms) ->
           pk: doc.icon.pk, name: doc.icon.name, color: doc.icon.color,
           tiny: doc.icon.tiny, small: doc.icon.small,
           medium: doc.icon.medium, large: doc.icon.large
+        }
+        notifications: {
+          invitation: {
+            email: doc.notifications.invitation.email
+            sms: doc.notifications.invitation.sms
+          }
+          needs_my_response: {
+            email: doc.notifications.needs_my_response.email
+            sms: doc.notifications.needs_my_response.sms
+          }
+          activity_summaries: {
+            email: doc.notifications.activity_summaries.email
+            sms: doc.notifications.activity_summaries.sms
+          }
+          group_members_changed: {
+            email: doc.notifications.group_members_changed.email
+            sms: doc.notifications.group_members_changed.sms
+          }
         }
       }
       res.render 'home/profiles/edit', context(req, {
@@ -303,6 +334,8 @@ route = (config, app, sockrooms) ->
       req.flash("info", "You must sign in to join a group.")
       return www_methods.redirect_to_login(req, res)
     www_methods.verify_invitation req.session, req.params.slug, (err, group) ->
+      return www_methods.handle_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless group?
       user_ids = []
       for m in group.members
         user_ids.push(m.user)

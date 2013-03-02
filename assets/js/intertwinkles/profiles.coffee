@@ -196,3 +196,72 @@ class intertwinkles.IconChooserLite extends Backbone.View
       "background-image": "url('#{@chooser_image}')"
       "background-position": "#{-32 * (parseInt(pk) - 1)}px 0px"
     })
+
+notification_settings_template = _.template("""
+  <table class='profile-notification-table'>
+    <% for (var i = 0; i < notice_types.length; i++) { %>
+      <% var n = notice_types[i]; %>
+      <tr>
+        <td>
+          <span rel='popover' class='popover-trigger'
+              data-placement='top'
+              data-title='<%= n.title %>'
+              data-content='<%= n.description %>'
+              data-trigger='hover'>
+            <%= n.title %>
+          </span>
+        </td>
+        <td>
+          <label>
+            <input name='<%= n.key %>_email' type='checkbox'
+              <%= user.notifications[n.key].email ? "checked" : "" %> />
+            Email
+          </label>
+        </td>
+        <% if (show_sms) { %>
+          <td>
+            <label>
+              <input name='<%= n.key %>_sms' type='checkbox'
+                <%= user.notifications[n.key].sms ? "checked" : "" %> />
+            Text Message
+            </label>
+          </td>
+        <% } %>
+      </tr>
+    <% } %>
+  </table>
+""")
+
+
+class intertwinkles.NotificationSettings extends Backbone.View
+  template: notification_settings_template
+  notice_types: [
+    {
+      key: "invitation",
+      title: "Invitations to groups",
+      description: "When you've been invited to join a group, or to work on a document with a group."
+    }
+#    {
+#      key: "group_members_changed",
+#      title: "Group Members Changed",
+#      description: "Someone has been added, invited, or removed from one of your groups."
+#    }
+    {
+      key: "needs_my_response",
+      title: "Your input is needed"
+      description: "When your vote or response is needed for something your group is working on."
+    }
+    {
+      key: "activity_summaries",
+      title: "Activity summaries",
+      description: "A summary of the activity in all of your groups, no more than once per day."
+    }
+  ]
+  initialize: (options) ->
+    @user_json = options.user
+    console.log @user_json
+    @show_sms = @user_json.mobile.number and @user_json.mobile.carrier
+
+  render: =>
+    @$el.html(@template(user: @user_json, show_sms: @show_sms, notice_types: @notice_types))
+    @$("[rel=popover]").popover()

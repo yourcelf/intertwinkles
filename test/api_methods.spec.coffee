@@ -188,3 +188,31 @@ describe "api", ->
               expect(data).to.eql([1, 2])
               done()
         , 51
+
+  it "Makes short URLs 1", (done) ->
+    api_methods.make_short_url "/firestarter/f/goodone", "firestarter", (err, short_doc) ->
+      expect(err).to.be(null)
+      expect(short_doc.application).to.be("firestarter")
+      expect(short_doc.long_path).to.be("/f/goodone")
+      expect(
+        short_doc.absolute_short_url.substring(0, config.short_url_base.length)
+      ).to.be(config.short_url_base)
+      expect(short_doc.absolute_long_url).to.be(
+        "http://localhost:#{config.port}/firestarter/f/goodone"
+      )
+      done()
+
+  it "Makes short URLs 2", (done) ->
+    api_methods.make_short_url "/groups/join/this-one", "www", (err, short_doc) ->
+      expect(err).to.be(null)
+      expect(short_doc.application).to.be("www")
+      expect(short_doc.long_path).to.be("/groups/join/this-one")
+      expect(
+        short_doc.absolute_short_url.substring(0, config.short_url_base.length)
+      ).to.be(config.short_url_base)
+      expect(short_doc.absolute_long_url).to.be(
+        "http://localhost:#{config.port}/groups/join/this-one"
+      )
+      done()
+
+
