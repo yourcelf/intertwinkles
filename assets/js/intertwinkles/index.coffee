@@ -38,7 +38,6 @@
 #= require ./notifications
 #= require ./twinkles
 #= require ./utilities
-#= require ./alphawarning
 
 $.fn.modal.defaults.maxHeight = -> $(window).height() - 165
 

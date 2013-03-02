@@ -65,6 +65,8 @@ h3
   .app-title
     titley-font()
     text-transform: uppercase
+    &.hover, &:hover
+      color: #ff0088
 
   tile-border-width = 6px
   tile-margin-width = (tile-border-width + 2px)
@@ -79,7 +81,7 @@ h3
     padding: 2em
     border: tile-border-width solid black
     background-color: white
-    &:hover
+    &:hover, &.hover
       border-color: #ff0088
 
   .app-blurb

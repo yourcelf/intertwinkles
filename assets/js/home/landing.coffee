@@ -7,7 +7,15 @@ resizeH1 = ->
   $("h1").css("font-size", Math.min(600, Math.max(30, width * 0.8)) + "%")
 $(window).on "resize", resizeH1
 resizeH1()
-$("body").scrollspy({ target: "#sidenav" })
+
+$(".app-image").hover(
+  (evt) -> $(this).closest(".app-tile").find(".app-title").addClass("hover")
+  (evt) -> $(this).closest(".app-tile").find(".app-title").removeClass("hover")
+)
+$(".app-title").hover(
+  (evt) -> $(this).closest(".app-tile").find(".app-image").addClass("hover")
+  (evt) -> $(this).closest(".app-tile").find(".app-image").removeClass("hover")
+)
 
 got_click = false
 $(".signin-link").on "click", (event) ->
