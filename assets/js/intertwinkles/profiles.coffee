@@ -213,7 +213,7 @@ notification_settings_template = _.template("""
         </td>
         <td>
           <label>
-            <input name='<%= n.key %>_email' type='checkbox'
+            <input name='notifications_<%= n.key %>_email' type='checkbox'
               <%= user.notifications[n.key].email ? "checked" : "" %> />
             Email
           </label>
@@ -221,7 +221,7 @@ notification_settings_template = _.template("""
         <% if (show_sms) { %>
           <td>
             <label>
-              <input name='<%= n.key %>_sms' type='checkbox'
+              <input name='notifications_<%= n.key %>_sms' type='checkbox'
                 <%= user.notifications[n.key].sms ? "checked" : "" %> />
             Text Message
             </label>

@@ -16,7 +16,9 @@ user_menu_template = _.template("""
   </a>
   <ul class='dropdown-menu' role='menu'>
     <li><a tabindex='-1' href='<%= INTERTWINKLES_APPS.www.url %>'><i class='icon icon-th'></i> Dashboard</a></li>
+    <li class='divider'></li>
     <li><a tabindex='-1' href='<%= INTERTWINKLES_APPS.www.url %>/profiles/edit'><i class='icon icon-cog'></i> Settings</a></li>
+    <li class='divider'></li>
     <li><a tabindex='-1' href='<%= INTERTWINKLES_APPS.www.url %>/feedback/'><i class='icon-gift'></i> Feedback</a></li>
     <li class='divider'></li>
     <li><a tabindex='-1' class='sign-out' href='#'>Sign out</a></li>
