@@ -345,7 +345,7 @@ describe "www methods", ->
 
   it "Uploads a file", (done) ->
     www_methods.update_group @session, @group, {
-      logo_file: __dirname + "/test_logo.png"
+      logo_file: {path: __dirname + "/test_logo.png"}
     }, (err, group, event, notices) =>
       expect(err).to.be(null)
       prefix = __dirname + "/../uploads/"

@@ -366,7 +366,7 @@ module.exports = (config) ->
         if group_update.logo_file?
           _remove_group_logo group, (err) ->
             return done(err) if err?
-            _add_group_logo(session, group, group_update.logo_file
+            _add_group_logo(session, group, group_update.logo_file.path
             , (err, paths) ->
               return done(err) if err?
               event_data.logo = paths
