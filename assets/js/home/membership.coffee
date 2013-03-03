@@ -137,16 +137,18 @@ class MembershipTable extends Backbone.View
     }) for email, new_invitee of @change_set.add))
 
     # Existing invitees
-    @$(".has-been-invited-header").after((@membershipRowTemplate({
-      email: invitee.user.email
-      user: null
-      voting: if @change_set.update[invitee.user.email]?.voting? then not invitee.voting else invitee.voting
-      voting_changed: @change_set.update[invitee.user.email]?
-      role: @change_set.update[invitee.user.email]?.role or invitee.role
-      role_changed: @change_set.update[invitee.user.email]?.role?
-      new_invitee: false
-      removed: @change_set.remove[invitee.user.email]?
-    }) for invitee in @group.invited_members or []))
+    for invitee in @group.invited_members or []
+      email = invitee.user?.email or @users[invitee.user].email
+      @$(".has-been-invited-header").after(@membershipRowTemplate({
+        email: email
+        user: null
+        voting: if @change_set.update[email]?.voting? then not invitee.voting else invitee.voting
+        voting_changed: @change_set.update[email]?
+        role: @change_set.update[email]?.role or invitee.role
+        role_changed: @change_set.update[email]?.role?
+        new_invitee: false
+        removed: @change_set.remove[invitee.user.email]?
+      }))
 
     @$(".has-been-invited-header").toggle(@group.invited_members?.length > 0)
     @$(".to-be-invited-header").toggle(_.keys(@change_set.add).length > 0)
