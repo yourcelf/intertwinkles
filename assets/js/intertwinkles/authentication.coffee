@@ -72,7 +72,7 @@ intertwinkles.onlogout = (count) ->
   intertwinkles.users = null
   intertwinkles.groups = null
   if not intertwinkles.socket?
-    if count > 15
+    if count > 200
       return alert("Socket connection failed.")
     count ?= 0
     console.log "onlogout awaiting socket #{count}..."
