@@ -5,7 +5,7 @@
   "scripts": {
       "start": "bin/run.js",
       "test": "mocha --compilers coffee:coffee-script --globals css,js,img,lineno --timeout 10000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
-      "postinstall": "bin/install_dependencies.py secrets"
+      "postinstall": "bin/install_dependencies.py config secrets"
   },
   "repository": "",
   "author": "Charlie DeTar",

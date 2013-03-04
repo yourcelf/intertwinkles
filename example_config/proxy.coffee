@@ -2,7 +2,7 @@
 # Configuration of proxy server, for resolving public-facing URLs to the
 # backend host and etherpad instances.
 #
-# Launch the proxy server with `cake runproxy`.
+# Launch the proxy server with `bin/proxy.js`
 #
 
 fs                = require 'fs'

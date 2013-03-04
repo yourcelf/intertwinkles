@@ -37,19 +37,19 @@ def install_all():
     args = parser.parse_args()
     include = set(args.include or ["config", "node", "secrets", "solr", "etherpad"])
     if "config" in include:
-        print("Copying configuration")
+        print("Copying configuration...")
         copy_configuration()
     if "secrets" in include:
-        print("Creating secrets")
+        print("Creating secrets...")
         create_secrets()
     if "node" in include:
-        print("Installing node dependencies")
+        print("Installing node dependencies...")
         install_node_dependencies()
     if "solr" in include:
-        print("Installing solr")
+        print("Installing solr...")
         install_solr()
     if "etherpad" in include:
-        print("Installing etherpad")
+        print("Installing etherpad...")
         install_etherpad()
     print "All done!"
 
@@ -72,7 +72,7 @@ def copy_configuration():
     if not os.path.exists(CONFIG_DIR):
         os.makedirs(CONFIG_DIR)
     count = 0
-    for root, files, dirs in os.walk(EXAMPLE_CONFIG_DIR):
+    for root, dirs, files in os.walk(EXAMPLE_CONFIG_DIR):
         for dirname in dirs:
             _make_config_file(os.path.join(root, dirname))
         for filename in files:
