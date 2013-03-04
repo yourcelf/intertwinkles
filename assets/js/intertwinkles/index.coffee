@@ -61,14 +61,16 @@ intertwinkles.modalvidify = (scope) ->
   $(".modal-video", scope or document).on "click", ->
     width = parseInt($(this).attr("data-width"))
     height = parseInt($(this).attr("data-height"))
+    console.log width, height
     mod = $("<div class='modal' role='dialog'></div>").css {
       display: "none"
-      width: "#{width + 10}px"
+      "min-width": "#{width + 10}px"
       height: "#{height + 10}px"
       "background-color": "black"
       "text-align": "center"
       padding: "5px 5px 5px 5px"
     }
+    mod.append("<span class='close-lightbox' data-dismiss='modal'>&times;</span>")
     mod.append("<iframe width='#{width}' height='#{height}' src='#{$(this).attr("data-url")}?autoplay=1&cc_load_policy=1' frameborder='0' allowfullscreen></iframe>")
     $("body").append(mod)
     mod.on('hidden', -> mod.remove())
