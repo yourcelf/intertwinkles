@@ -8,3 +8,9 @@ vendor
 !assets/js/vendor
 config/secrets
 uploads/
+config/
+views/analytics.html
+deploy/
+fabfile.py
+.vagrant
+Vagrantfile

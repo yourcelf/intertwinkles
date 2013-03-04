@@ -3,21 +3,34 @@
 # in config/proxy.  It's useful for resolving disparate apps (e.g. etherpad
 # and InterTwinkles) running on different domains to their backends.
 #
-http      = require 'http'
 httpProxy = require 'http-proxy'
 url       = require 'url'
+logger    = require('log4js').getLogger("proxy")
 
 start = (config) ->
   router = {}
   for app in config.routes
-    console.log app.url, "=>", "#{app.host}:#{app.port}"
+    logger.info("#{app.url} => #{app.host}:#{app.port}")
     frontend_parsed = url.parse(app.url)
     router[frontend_parsed.hostname] = "#{app.host}:#{app.port}"
 
-  proxyServer = httpProxy.createServer({
+  options = {
     hostnameOnly: true
     router: router
-  })
+  }
+  use_ssl = false
+  if config.https?.key and config.https?.cert
+    use_ssl = true
+    options.https = {
+      key: config.https.key
+      cert: config.https.cert
+    }
+
+  proxyServer = httpProxy.createServer(options)
   proxyServer.listen(config.listen)
+  logger.info(
+    "#{"SSL enabled. " if use_ssl}Listening for HTTP#{"S" if use_ssl} " +
+    "on port #{config.listen}"
+  )
 
 module.exports = {start}

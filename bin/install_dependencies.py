@@ -22,18 +22,23 @@ SOLR_INSTALLER = "http://apache.mirrors.pair.com/lucene/solr/{0}/solr-{0}.tgz".f
 ETHERPAD_REPOSITORY = "https://github.com/ether/etherpad-lite.git"
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
 VENDOR_DIR = os.path.join(PROJECT_ROOT, "vendor")
+EXAMPLE_CONFIG_DIR = os.path.join(PROJECT_ROOT, "example_config")
 CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
 SECRETS_DIR = os.path.join(CONFIG_DIR, "secrets")
+ANALYTICS_FILE = os.path.join(PROJECT_ROOT, "views", "analytics.html")
 SECRET_LENGTH = 64
 
 parser = argparse.ArgumentParser(
         description="Install prerequisites for InterTwinkles.")
 parser.add_argument("include", metavar='APP', nargs='*',
-        help="List tasks to complete: ['node', 'secrets', 'solr', 'etherpad']")
+        help="List tasks to complete: ['config', 'node', 'secrets', 'solr', 'etherpad']")
 
 def install_all():
     args = parser.parse_args()
-    include = set(args.include or ["node", "secrets", "solr", "etherpad"])
+    include = set(args.include or ["config", "node", "secrets", "solr", "etherpad"])
+    if "config" in include:
+        print("Copying configuration")
+        copy_configuration()
     if "secrets" in include:
         print("Creating secrets")
         create_secrets()
@@ -46,18 +51,54 @@ def install_all():
     if "etherpad" in include:
         print("Installing etherpad")
         install_etherpad()
+    print "All done!"
+
+def _make_config_file(example_path):
+    # Check for the existance of the given config file or dir from
+    # EXAMPLE_CONFIG_DIR in CONFIG_DIR.  If it doesn't exist in CONFIG_DIR,
+    # copy it over.
+    dest_path = os.path.join(CONFIG_DIR,
+        os.path.relpath(example_path, EXAMPLE_CONFIG_DIR))
+    if not os.path.exists(dest_path):
+        if os.path.isdir(example_path):
+            os.makedirs(dest_path)
+            return True
+        else:
+            shutil.copy(example_path, dest_path)
+            return True
+    return False
+
+def copy_configuration():
+    if not os.path.exists(CONFIG_DIR):
+        os.makedirs(CONFIG_DIR)
+    count = 0
+    for root, files, dirs in os.walk(EXAMPLE_CONFIG_DIR):
+        for dirname in dirs:
+            _make_config_file(os.path.join(root, dirname))
+        for filename in files:
+            copied = _make_config_file(os.path.join(root, filename))
+            if copied:
+                count += 1
+    if not os.path.exists(ANALYTICS_FILE):
+        with open(ANALYTICS_FILE, 'w') as fh:
+            fh.write("# Place analytics (e.g. piwik or google analytics) here.")
+            count += 1
+    print "Copied", count, "files."
 
 def create_secrets():
     if not os.path.exists(SECRETS_DIR):
         os.makedirs(SECRETS_DIR)
+    count = 0
     for fname in ("API_KEY.txt", "SECRET.txt"):
         key_path = os.path.join(SECRETS_DIR, fname)
         if not os.path.exists(key_path):
+            count += 1
             with open(key_path, 'w') as fh:
                 secret = base64.urlsafe_b64encode(os.urandom(SECRET_LENGTH))
                 # base64 encoding makes it bigger; chomp it down.
                 secret = secret[0:SECRET_LENGTH]
                 fh.write(secret)
+    print "Created", count, "files."
 
 def install_node_dependencies():
     subprocess.check_call(["npm", "install"], cwd=PROJECT_ROOT)

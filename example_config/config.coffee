@@ -19,6 +19,7 @@ base_url = domains.front_end_url
 config = {
   # The port on which intertwinkles listens.
   port: domains.base_port
+  redirect_port: domains.redirect_port
   # Email configuration
   email: email_config
   from_email: domains.from_email
@@ -79,6 +80,7 @@ config = {
         cookie_domain: domains.etherpad_cookie_domain
       }
     }
+#    tenpoints: { url: "#{base_url}/tenpoints" }
 #    clock: {
 #      name: "Progressive Clock"
 #      about: "Keep time in meetings by identity category"
