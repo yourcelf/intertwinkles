@@ -3,7 +3,7 @@ module.exports = {
   # user: "user"
   # password: "secret"
   host: "localhost"
-  port: 2525
+  port: 25
   # ssl: true
   # tls: true
   # timeout: 5000
