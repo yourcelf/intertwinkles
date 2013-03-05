@@ -7,7 +7,7 @@ fs           = require 'fs'
 _            = require 'underscore'
 Backbone     = require 'backbone'
 clientModels = ds = {}
-eval(coffee.compile(fs.readFileSync(__dirname + "/../assets/dotstorm/js/dotstorm/models.coffee").toString()))
+eval(coffee.compile(fs.readFileSync(__dirname + "/../assets/dotstorm/js/models.coffee").toString()))
 
 
 describe "Dotstorm idea reordering", ->

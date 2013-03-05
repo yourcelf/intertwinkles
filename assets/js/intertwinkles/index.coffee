@@ -61,7 +61,6 @@ intertwinkles.modalvidify = (scope) ->
   $(".modal-video", scope or document).on "click", ->
     width = parseInt($(this).attr("data-width"))
     height = parseInt($(this).attr("data-height"))
-    console.log width, height
     mod = $("<div class='modal' role='dialog'></div>").css {
       display: "none"
       "min-width": "#{width + 10}px"

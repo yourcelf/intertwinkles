@@ -30,7 +30,6 @@ check_user_icons = (user, cb) ->
         for filepath in paths
           rel = path.relative(BASE, BASE + filepath)
           if rel != filepath
-            console.log rel, filepath
             all_normal = false
             break
       cb(null, [user, all_exist and all_normal])

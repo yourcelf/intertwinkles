@@ -259,7 +259,6 @@ class intertwinkles.NotificationSettings extends Backbone.View
   ]
   initialize: (options) ->
     @user_json = options.user
-    console.log @user_json
     @show_sms = @user_json.mobile.number and @user_json.mobile.carrier
 
   render: =>
