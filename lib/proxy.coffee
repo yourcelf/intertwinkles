@@ -29,8 +29,8 @@ start = (config) ->
   proxyServer = httpProxy.createServer(options)
   proxyServer.listen(config.listen)
   logger.info(
-    "#{"SSL enabled. " if use_ssl}Listening for HTTP#{"S" if use_ssl} " +
-    "on port #{config.listen}"
+    "#{if use_ssl then "SSL enabled. " else ""}Listening for " +
+    "HTTP#{if use_ssl then "S" else ""} on port #{config.listen}"
   )
 
 module.exports = {start}
