@@ -162,8 +162,9 @@ class ShowFirestarter extends Backbone.View
     'click .edit-prompt':  'editPrompt'
 
   initialize: (options) ->
-    if not fire.model?
+    if not fire.model? or fire.model.get("slug") != options.slug
       fire.model = new Firestarter()
+      fire.responses = null
     if not fire.responses?
       fire.responses = new ResponseCollection()
     @responseViews = []
@@ -521,11 +522,13 @@ load_firestarter_data = (data) ->
     while fire.responses.pop()
       null
     for response in data.responses
-      fire.responses.add(new Response(response))
-    data.responses = (a._id for a in data.responses)
+      fire.responses.add(new Response(_.extend({}, response)))
   if not fire.model?
     fire.model = new Firestarter()
-  fire.model.set(data)
+  # Clone (shallow) the data object so we don't mess up the responses.
+  fire_data = _.extend({}, data)
+  fire_data.responses = (a._id for a in data.responses)
+  fire.model.set(fire_data)
 
 #
 # Load initial data if any
