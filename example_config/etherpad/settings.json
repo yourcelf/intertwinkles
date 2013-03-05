@@ -16,18 +16,9 @@
   "port" : 9001,
   //The Type of the database. You can choose between dirty, postgres, sqlite and mysql
   //You shouldn't use "dirty" for for anything else than testing or development
-  "dbType" : "postgres",
-  //the database specific settings
   "dbSettings" : {
-               "user"    : "twinklepad", 
-               "host"    : "localhost", 
-               "password": "airae2xie6Quah5e", 
-               "database": "twinklepad"
-             },
-
-//  "dbSettings" : {
-//                   "filename" : "var/dirty.db"
-//                 },
+                   "filename" : "var/dirty.db"
+                 },
                  
   /* An Example of MySQL Configuration
    "dbType" : "mysql",
