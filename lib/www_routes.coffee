@@ -118,6 +118,8 @@ route = (config, app, sockrooms) ->
   utils.append_slash(app, "/test")
   app.get '/test/', (req, res) ->
     res.render 'test', context(req, {title: "Test"})
+  app.get '/test/sockets/', (req, res) ->
+    res.render 'test_sockets', context(req, {title: "Test"})
 
   utils.append_slash(app, "/500")
   app.get '/500/', (req, res) -> throw new Error("Test error, ignore")

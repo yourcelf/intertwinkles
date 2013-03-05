@@ -483,17 +483,21 @@ class Router extends Backbone.Router
     'firestarter/new':     'newFirestarter'
     'firestarter/':        'index'
 
+  onReconnect: -> # Override per view to handle reconnections.
+
   index: =>
     @view?.remove()
     @view = new SplashView()
     $("#app").html(@view.el)
     @view.render()
+    @onReconnect = @index
 
   newFirestarter: =>
     @view?.remove()
     @view = new AddFirestarterView()
     $("#app").html(@view.el)
     @view.render()
+    @onReconnect = (=>)
 
   room: (roomName) =>
     @view?.remove()
@@ -502,6 +506,10 @@ class Router extends Backbone.Router
     @view = new ShowFirestarter({slug: slug})
     $("#app").html(@view.el)
     @view.render()
+    @onReconnect = =>
+      @view.roomUsersMenu.connect()
+      fire.socket.send "firestarter/get_firestarter", {slug: fire.model.get("slug")}
+
 
 fire.firestarter_url = (slug) ->
   return "#{INTERTWINKLES_APPS["firestarter"].url}/firestarter/f/#{slug}"
@@ -537,3 +545,6 @@ intertwinkles.connect_socket ->
     fire.app = new Router()
     Backbone.history.start(pushState: true, silent: false)
     fire.started = true
+    fire.socket.on "reconnected", ->
+      fire.socket.once "identified", ->
+        fire.app.onReconnect()

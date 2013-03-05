@@ -1,0 +1,27 @@
+extends layout
+
+block body
+  div.row-fluid
+    div.span6
+      h2 Sockets:
+      button.btn#connectSocket Connect
+      button.btn#simulateClose Simulate close
+      button.btn#intentionalDisconnect Intentional Disconnect
+      p
+        | State:
+        pre#state(style='max-height: 600px; overflow: auto;')
+
+block postscripts
+  :coffeescript
+    append_state = (state) -> $("#state").append(state)
+    intertwinkles.connect_socket ->
+      intertwinkles.socket.on "error",        -> append_state("error\n")
+      intertwinkles.socket.on "connecting",   -> append_state("connecting\n")
+      intertwinkles.socket.on "identified",   -> append_state("identified\n")
+      intertwinkles.socket.on "reconnecting", -> append_state("reconnecting\n")
+      intertwinkles.socket.on "reconnected",  -> append_state("reconnected\n")
+      intertwinkles.socket.on "closed",       -> append_state("closed\n")
+      intertwinkles.socket.on "fail",         -> append_state("fail\n")
+      $("#connectSocket").on "click",         -> intertwinkles.socket.connect()
+      $("#simulateClose").on "click",         -> intertwinkles.socket._onClose()
+      $("#intentionalDisconnect").on "click", -> intertwinkles.socket.disconnect()

@@ -1,1 +1,12 @@
-#= require dotstorm/index
+#= require jquery.color
+#= require backbone-socket.client
+#= require common
+#= require models
+#= require intro
+#= require topic
+#= require votes
+#= require ideas
+#= require editor
+#= require organizer
+#= require router
+#= require socket

@@ -86,8 +86,12 @@ class intertwinkles.RoomUsersMenu extends Backbone.View
   initialize: (options={}) ->
     @room = options.room
     intertwinkles.socket.on "room_users", @roomList
-    intertwinkles.socket.send "join", {room: @room}
     @list = []
+    @connect()
+
+  connect: =>
+    console.log "trying to join", @room
+    intertwinkles.socket.send "join", {room: @room}
 
   remove: =>
     intertwinkles.socket.off "room_users", @roomList

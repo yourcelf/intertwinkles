@@ -203,9 +203,10 @@ class ShowProposalView extends intertwinkles.BaseView
     if not resolve.model.id?
       return @$el.html("<img src='/static/img/spinner.gif' /> Loading...")
     @$el.html @template({ vote_order: @vote_order })
-    @addView ".room-users", new intertwinkles.RoomUsersMenu({
+    @roomUsersMenu =  new intertwinkles.RoomUsersMenu({
       room: "resolve/" + resolve.model.id
     })
+    @addView ".room-users", @roomUsersMenu
 
     sharingButton = new intertwinkles.SharingSettingsButton(model: resolve.model)
     # Handle changes to sharing settings.
@@ -629,6 +630,9 @@ class Router extends Backbone.Router
     'resolve/new/':       'newProposal'
     'resolve/':           'index'
 
+  onReconnect: ->
+    # override this with appropriate logic to execute when a reconnect happens.
+
   index: =>
     view = new SplashView()
     if @view?
@@ -640,20 +644,28 @@ class Router extends Backbone.Router
       resolve.socket.send "resolve/get_proposal_list", {callback: "proposal_list"}
     @_display(view)
     $("title").html "Resolve: Decide Something"
+    @onReconnect = @index
         
 
   newProposal: =>
     @_display(new AddProposalView())
+    @onReconnect = (->)
 
   room: (id) =>
-    if resolve.model?.id != id
-      resolve.model = new Proposal()
+    fetch = ->
       resolve.socket.once "load_proposal", (data) ->
         resolve.model.set(data.proposal)
       resolve.socket.send "resolve/get_proposal",
         proposal: {_id: id}
         callback: "load_proposal"
-    @_display(new ShowProposalView(id: id))
+    if resolve.model?.id != id
+      resolve.model = new Proposal()
+      fetch()
+    proposal_view = new ShowProposalView(id: id)
+    @_display(proposal_view)
+    @onReconnect = ->
+      proposal_view.roomUsersMenu.connect()
+      fetch()
 
   _display: (view) =>
     @view?.remove()
@@ -669,3 +681,6 @@ intertwinkles.connect_socket ->
     resolve.app = intertwinkles.app = new Router()
     Backbone.history.start(pushState: true)
     resolve.started = true
+    intertwinkles.socket.on "reconnected", ->
+      intertwinkles.socket.once "identified", ->
+        resolve.app.onReconnect()

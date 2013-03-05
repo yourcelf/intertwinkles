@@ -118,30 +118,32 @@ class ds.Router extends Backbone.Router
       }
       return false
 
-room_view = null
-sharing_view = null
+ds.room_view = null
+ds.sharing_view = null
 ds.leaveRoom = ->
-  room_view?.remove()
-  sharing_view?.remove()
+  ds.room_view?.remove()
+  ds.sharing_view?.remove()
   $(".dotstorm-read-only-link").hide()
+  ds.room_view = null
+  ds.sharing_view = null
 
 ds.joinRoom = (newModel) ->
   ds.leaveRoom()
 
-  room_view = new intertwinkles.RoomUsersMenu(room: "dotstorm/" + newModel.id)
-  $(".sharing-online-group .room-users").replaceWith(room_view.el)
-  room_view.render()
+  ds.room_view = new intertwinkles.RoomUsersMenu(room: "dotstorm/" + newModel.id)
+  $(".sharing-online-group .room-users").replaceWith(ds.room_view.el)
+  ds.room_view.render()
 
-  sharing_view = new intertwinkles.SharingSettingsButton(model: newModel)
-  $(".sharing-online-group .sharing").html(sharing_view.el)
-  sharing_view.render()
-  sharing_view.on "save", (sharing_settings) =>
+  ds.sharing_view = new intertwinkles.SharingSettingsButton(model: newModel)
+  $(".sharing-online-group .sharing").html(ds.sharing_view.el)
+  ds.sharing_view.render()
+  ds.sharing_view.on "save", (sharing_settings) =>
     ds.model.save {sharing: sharing_settings}, {
       error: (model, err) =>
         console.info(err)
         flash "error", "Server error!"
         ds.model.set(model)
     }
-    sharing_view.close()
+    ds.sharing_view.close()
 
   $(".dotstorm-read-only-link").show()

@@ -81,7 +81,7 @@ def copy_configuration():
                 count += 1
     if not os.path.exists(ANALYTICS_FILE):
         with open(ANALYTICS_FILE, 'w') as fh:
-            fh.write("# Place analytics (e.g. piwik or google analytics) here.")
+            fh.write("<!-- Place analytics (e.g. piwik or google analytics) here. -->")
             count += 1
     print "Copied", count, "files."
 

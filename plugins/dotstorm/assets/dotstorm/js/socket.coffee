@@ -2,8 +2,27 @@
 # Socket data!!!!!!!!!!!!!!
 #
 intertwinkles.connect_socket (socket) ->
+  intertwinkles.build_toolbar($("header"), {applabel: "dotstorm"})
+  intertwinkles.build_footer($("footer"))
   ds.socket = socket
   Backbone.setSocket(ds.socket)
+  # Re-fetch models if we get disconnected.
+  ds.socket.on "reconnected", ->
+    ds.socket.once "identified", ->
+      console.log "re-fetching..."
+      if ds.model?
+        ds.model.fetch {
+          query: {_id: ds.model.id}
+          success: (model) -> console.log "re-fetched", model
+        }
+      if ds.ideas?
+        ds.ideas.fetch {
+          query: {dotstorm_id: ds.model.id}
+          fields: drawing: 0
+          success: (coll) -> console.log "re-fetched", coll
+        }
+      if ds.room_view?
+        ds.room_view.connect()
 
   ds.app = new ds.Router
   Backbone.history.start pushState: true
@@ -19,17 +38,23 @@ intertwinkles.connect_socket (socket) ->
           when "create"
             ds.ideas.add(new ds.Idea(data.model))
           when "update"
-            model = ds.ideas.get(data.model._id)
+            model = ds.ideas.get(data.model.id)
             if model?
               model.set(data.model)
             else
-              ds.ideas.fetch({fields: drawing: 0})
+              ds.ideas.fetch({
+                query: {dotstorm_id: ds.model.id}
+                fields: {drawing: 0}
+              })
           when "delete"
             model = ds.ideas.get(data.model._id)
             if model?
               ds.ideas.remove(model)
             else
-              ds.ideas.fetch({fields: drawing: 0})
+              ds.ideas.fetch({
+                query: {dotstorm_id: ds.model.id}
+                fields: drawing: 0
+              })
 
       when "Dotstorm"
         switch data.signature.method
@@ -41,12 +66,6 @@ intertwinkles.connect_socket (socket) ->
       switch data.collectionName
         when "Idea"
           ds.ideas.get(data.id).trigger data.event
-
-  ds.socket.on 'closed', ->
-    # Timeout prevents a flash when you are just closing a tab.
-    setTimeout ->
-      flash "error", "Connection lost.  <a href='' onclick='window.location.reload(); return false;'>Click to reconnect</a>."
-    , 1000
 
 window.addEventListener 'message', (event) ->
   if event.origin == "file://"
