@@ -131,7 +131,7 @@ socket_status_view_template = _.template("""
   <% if (state == "error") { %>
     Sorry, there has been a server error. <a href='' class='reload'>Reload?</a>
   <% } else if (state == "connecting") { %>
-    Connecting ... <img src='/static/img/spinner.gif' />
+    Connecting ...
   <% } else if (state == "reconnecting") { %>
     Reconnecting... <img src='/static/img/spinner.gif' />
   <% } else if (state == "fail") { %>
@@ -159,17 +159,20 @@ class intertwinkles.SocketStatusView extends Backbone.View
     if state == "hide"
       @$el.hide()
     else if state == "ok"
+      clearTimeout(@_showTimeout) if @_showTimeout?
       setTimeout (=> @$el.slideUp()), 300
     else
       if @$el.is(":hidden")
-        @$el.slideDown()
+        unless @_showTimeout?
+          @_showTimeout = setTimeout((=> @$el.slideDown()), 500)
     @$el.html(@template({state}))
 
-intertwinkles.add_socket_status_view = (socket, state="connecting") ->
+intertwinkles.add_socket_status_view = (socket, state="hide") ->
   status_view = new intertwinkles.SocketStatusView({socket})
   $("body").append(status_view.el)
   status_view.render(state)
-  $(window).on "unload", -> status_view.remove()
+  window.onunload = ->
+    status_view.remove()
 
 intertwinkles.connect_socket = (cb) ->
   if intertwinkles.socket? and intertwinkles.socket.isAlive()
