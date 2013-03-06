@@ -19,8 +19,19 @@ if INITIAL_DATA.users?
 #
 
 intertwinkles.request_logout = ->
-  frame = $("#auth_frame")[0].contentWindow
-  frame.postMessage {action: 'intertwinkles_logout'}, INTERTWINKLES_API_URL
+  navigator.id.logout()
+
+intertwinkles.request_login = ->
+  opts = {
+    siteName: "InterTwinkles"
+    termsOfService: "/about/terms/"
+    privacyPolicy: "/about/privacy/"
+    returnTo: "/"
+  }
+  if window.location.protocol == "https:"
+    opts.siteLogo = "/static/img/star-icon.png"
+  navigator.id.request(opts)
+
 
 intertwinkles.onlogin = (assertion) ->
   if window.INTERTWINKLES_AUTH_LOGOUT?
@@ -28,11 +39,10 @@ intertwinkles.onlogin = (assertion) ->
 
   if not intertwinkles.socket?
     console.log "onlogin awaiting socket"
-    return setTimeout(->
-      intertwinkles.onlogin(assertion)
-    , 100)
+    return setTimeout((-> intertwinkles.onlogin(assertion)), 100)
 
-  console.log "onlogin"
+  console.info "onlogin"
+
   finish = ->
     intertwinkles.user.trigger("login")
     if window.INTERTWINKLES_AUTH_REDIRECT?
@@ -46,8 +56,10 @@ intertwinkles.onlogin = (assertion) ->
       user = _.find intertwinkles.users, (e) -> e.email == data.email
       if user?
         if data.message == "NEW_ACCOUNT" or user.name == ""
+          # don't trigger user changed yet -- we want to edit the profile first.
           intertwinkles.user.set(user, silent: true)
         else
+          # triggers user changed.
           intertwinkles.user.set(user)
       else
         intertwinkles.user.clear()
@@ -75,11 +87,11 @@ intertwinkles.onlogout = (count) ->
     if count > 200
       return alert("Socket connection failed.")
     count ?= 0
-    console.log "onlogout awaiting socket #{count}..."
+    console.info "onlogout awaiting socket #{count}..."
     return setTimeout( ->
       intertwinkles.onlogout(count + 1)
     , 100)
-  console.log "onlogout"
+  console.info "onlogout"
   intertwinkles.socket.once "logout", ->
     reload = intertwinkles.is_authenticated()
     intertwinkles.user.clear()
@@ -89,16 +101,9 @@ intertwinkles.onlogout = (count) ->
       window.location.pathname = "/"
   intertwinkles.socket.send "logout", {callback: "logout"}
 
-onmessage = (event) ->
-  if event.origin == INTERTWINKLES_API_URL
-    switch event.data.action
-      when 'onlogin' then intertwinkles.onlogin(event.data.assertion)
-      when 'onlogout' then intertwinkles.onlogout()
-window.addEventListener('message', onmessage, false)
-
 intertwinkles.is_authenticated = -> return intertwinkles.user.get("email")?
 
-intertwinkles.auth_frame_template = _.template("""<iframe id='auth_frame'
-  src='#{INTERTWINKLES_API_URL}/static/auth_frame.html'
-  style='border: none; overflow: hidden;' width=97 height=29></iframe>""")
-
+navigator.id.watch({
+  onlogin: intertwinkles.onlogin
+  onlogout: intertwinkles.onlogout
+})

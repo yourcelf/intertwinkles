@@ -47,9 +47,9 @@ class intertwinkles.UserMenu extends Backbone.View
 
   setAuthFrameVisibility: =>
     if intertwinkles.is_authenticated()
-      $("#auth_frame").hide()
+      $(".auth_button").hide()
     else
-      $("#auth_frame").show()
+      $(".auth_button").show()
 
   signOut: (event) =>
     event.preventDefault()
@@ -130,7 +130,6 @@ intertwinkles.build_toolbar = (destination, options) ->
   toolbar = new intertwinkles.Toolbar(options)
   $(destination).html(toolbar.el)
   toolbar.render()
-  $(".auth_frame").html(intertwinkles.auth_frame_template())
   toolbar.setAuthFrameVisibility()
   intertwinkles.twunklify($(destination))
 
@@ -162,7 +161,9 @@ toolbar_template = _.template("""
           </li>
           <li class='notifications dropdown'></li>
           <li class='user-menu dropdown'></li>
-          <li class='auth_frame'></li>
+          <li class='auth_button'>
+            <a href='#' class='sign-in'><img src='/static/img/sign_in_blue.png' /></a>
+          </li>
         </ul>
         <a class='brand dropdown-toggle'
            data-target='.nav-collapse' data-toggle='collapse' href='#'
@@ -202,6 +203,8 @@ toolbar_template = _.template("""
 
 class intertwinkles.Toolbar extends Backbone.View
   template: toolbar_template
+  events:
+    'click .sign-in':  'signIn'
   initialize: (options={}) ->
     @applabel = options.applabel
 
@@ -238,6 +241,11 @@ class intertwinkles.Toolbar extends Backbone.View
     this
 
   setAuthFrameVisibility: => @user_menu.setAuthFrameVisibility()
+
+  signIn: (event) =>
+    event.preventDefault()
+    intertwinkles.request_login()
+
 
 #
 # Footer

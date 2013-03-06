@@ -2,8 +2,9 @@ extends ../layout
 
 block body
   div.sign-in
-    iframe(src='/static/auth_frame.html', width=97, height=29,
-           style='border: none; overflow: hidden;')
+    a.signin-link(href='#')
+      img(src='/static/img/sign_in_blue.png')
+
   div.row-fluid
     div.span1
     
