@@ -10,13 +10,13 @@
   "repository": "",
   "author": "Charlie DeTar",
   "dependencies": {
-    "coffee-script": "~1.4",
+    "coffee-script": "~1.6",
     "sockjs": "~0.3",
     "underscore": "~1",
     "canvas": "~0.13",
-    "stylus": "*",
-    "less": "*",
-    "nib": "*",
+    "stylus": "~0",
+    "less": "~1.3",
+    "nib": "~0",
     "connect-redis": "~1",
     "express": "~2",
     "imagemagick": "~0",
@@ -30,11 +30,10 @@
     "emailjs": "~0",
     "simplesmtp": "~0",
     "mailparser": "~0",
-    "better-stack-traces": "~0.0",
-    "snockets": "*",
-    "etherpad-lite-client": "git://github.com/yourcelf/etherpad-lite-client-js.git",
-    "browserid-consumer": "git://github.com/yourcelf/node-browserid-consumer.git",
-    "http-proxy": "git://github.com/yourcelf/node-http-proxy.git"
+    "snockets": "~1.3",
+    "etherpad-lite-client": "~0.5",
+    "http-proxy": "git://github.com/yourcelf/node-http-proxy.git",
+    "better-stack-traces": "~0.0"
   },
   "devDependencies": {
     "mocha": "~1",

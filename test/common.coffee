@@ -141,8 +141,8 @@ stubBrowserID = (browser, browserid_response) ->
         };
       """
     }
-  browserid = require("../node_modules/browserid-consumer")
-  browserid.verify = (assertion, audience, callback, options) ->
+  persona = require("../lib/persona_consumer")
+  persona.verify = (assertion, audience, callback, options) ->
     callback(null, _.extend {
       status: "okay"
       email: "test@mock"

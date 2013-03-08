@@ -4,7 +4,7 @@ url           = require 'url'
 icons         = require './icons'
 email_notices = require './email_notices'
 logger        = require('log4js').getLogger()
-browserid     = require 'browserid-consumer'
+persona       = require './persona_consumer'
 
 module.exports = (config) ->
   schema = require("./schema").load(config)
@@ -108,7 +108,7 @@ module.exports = (config) ->
 
   m.verify_assertion = (assertion, callback) ->
     audience = url.parse(config.api_url).host
-    browserid.verify assertion, audience, callback
+    persona.verify assertion, audience, callback
 
   m.authenticate = (session, assertion, callback) ->
     m.verify_assertion assertion, (err, persona_response) ->
