@@ -6,8 +6,10 @@ html
     meta(name='viewport', content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
     meta(name="apple-mobile-web-app-capable", content="yes")
     link(rel="shortcut icon", href="/static/img/favicon.ico")
-    !=css("css/bootstrap")
-    !=css("css/intertwinkles")
+    link(rel="stylesheet", type="text/css", href="/static/css/bootstrap.css")
+    link(rel="stylesheet", type="text/css", href="/static/css/intertwinkles.css")
+    //!=css("css/bootstrap")
+    //!=css("css/intertwinkles")
     block poststyles
     title= title
 
@@ -36,7 +38,8 @@ html
     </script>
     // Intertwinkles library
     script(src='https://login.persona.org/include.js')
-    !=js('js/intertwinkles/index')
+    //!=js('js/intertwinkles/index')
+    script(src='/static/js/intertwinkles/index.js')
     // Flash messages
     <script type='text/javascript'>
     for msg in (flash.error || [])

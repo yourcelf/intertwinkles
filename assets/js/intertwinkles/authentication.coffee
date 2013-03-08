@@ -85,9 +85,10 @@ intertwinkles.onlogout = (count) ->
   intertwinkles.groups = null
   if not intertwinkles.socket?
     if count > 200
-      return alert("Socket connection failed.")
+      console.error("Socket connection failed.")
+      return
     count ?= 0
-    console.info "onlogout awaiting socket #{count}..."
+    #console.info "onlogout awaiting socket #{count}..."
     return setTimeout( ->
       intertwinkles.onlogout(count + 1)
     , 100)

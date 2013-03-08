@@ -1,7 +1,8 @@
 extends ../layout
 
 block poststyles
-  !=css("css/home")
+  link(rel="stylesheet", type="text/css", href="/static/css/home.css")
 
 block postscripts
-  !=js("js/home/home")
+  script(src="/static/js/home/home.js")
+  //!=js("js/home/home")

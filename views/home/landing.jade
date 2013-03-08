@@ -100,8 +100,8 @@ block body
         include includes/get_involved  
 
 block poststyles
-  !=css("css/landing")
+  link(rel="stylesheet", type="text/css", href="/static/css/landing.css")
 
 block postscripts
-  <script src='https://login.persona.org/include.js'></script>
-  !=js("js/home/landing")
+  //!=js("js/home/landing")
+  script(src="/static/js/home/landing.js")

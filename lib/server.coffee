@@ -1,9 +1,9 @@
+#require("nodetime").profile() # debug analytics
 express        = require 'express'
 RedisStore     = require('connect-redis')(express)
 mongoose       = require 'mongoose'
 sockjs         = require 'sockjs'
 _              = require 'underscore'
-connect_assets = require 'connect-assets'
 stylus         = require 'stylus'
 log4js         = require 'log4js'
 
@@ -12,6 +12,7 @@ RoomManager    = require("./socket_server").RoomManager
 socket_routes  = require './socket_routes'
 www_routes     = require "./www_routes"
 api_routes     = require "./api_routes"
+
 # Include code lines in stack traces.
 require "better-stack-traces"
 
@@ -54,20 +55,13 @@ start = (config) ->
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
 
-  # Paths to view, asset, and static folders.
-  view_folders = [__dirname + "/../views"]
-  asset_pipeline_folders = [__dirname + "/../assets"]
-  static_folders = [__dirname + "/../assets"]
-  for key, appconf of config.apps
-    continue if key == "www"
-    view_folders.push("#{__dirname}/../plugins/#{key}/views")
-    asset_pipeline_folders.push("#{__dirname}/../plugins/#{key}/assets")
-    static_folders.push("#{__dirname}/../plugins/#{key}/assets")
-
   ###
   # Configure express
   ###
 
+  app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
+  app.configure 'development', -> logger.setLevel(log4js.levels.DEBUG)
+  app.configure 'production',  -> logger.setLevel(log4js.levels.ERROR)
   app.use express.bodyParser({keepExtensions: true})
   app.use express.cookieParser()
   app.use express.session({
@@ -80,32 +74,22 @@ start = (config) ->
       maxAge: 1000*60*60*24*7 # one week?
     }
   })
-  app.use log4js.connectLogger(logger, {level: log4js.levels.INFO})
+  
+  # Templates
   app.set 'view engine', 'jade'
   app.set 'view options', {layout: false}
+  view_folders = [__dirname + "/../views"]
+  for key, appconf of config.apps
+    continue if key == "www"
+    view_folders.push("#{__dirname}/../plugins/#{key}/views")
   app.set "views", view_folders
 
   ###
   # static files
   ###
-  
-  app.use connect_assets(src: asset_pipeline_folders)
-  # Don't prefix connect-assets' css and js paths by default.
-  css.root = ''
-  js.root = ''
+  app.use "/uploads/", express.static(__dirname + "/../uploads")
+  app.use "/static/", express.static(__dirname + "/../builtAssets")
 
-  app.configure 'development', ->
-    logger.setLevel(log4js.levels.DEBUG)
-    app.use "/uploads/", express.static(__dirname + '/../uploads')
-    for folder in static_folders
-      app.use "/static/", express.static(folder)
-
-  app.configure 'production', ->
-    logger.setLevel(log4js.levels.ERROR)
-    timeout = {maxAge: 1000*60*60*24}
-    app.use "/uploads/", express.static(__dirname + '/../uploads')
-    for folder in static_folders
-      app.use "/static/", express.static(folder)
 
   ###
   # Express routes

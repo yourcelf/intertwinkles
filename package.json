@@ -32,8 +32,8 @@
     "simplesmtp": "~0",
     "mailparser": "~0",
     "better-stack-traces": "~0.0",
+    "snockets": "*",
     "etherpad-lite-client": "git://github.com/yourcelf/etherpad-lite-client-js.git",
-    "connect-assets": "git://github.com/yourcelf/connect-assets.git",
     "browserid-consumer": "git://github.com/yourcelf/node-browserid-consumer.git",
     "http-proxy": "git://github.com/yourcelf/node-http-proxy.git"
   },
