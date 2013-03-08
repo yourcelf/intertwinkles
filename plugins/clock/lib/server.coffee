@@ -22,7 +22,7 @@ start = (config, app, io, sessionStore) ->
 
   index_res = (req, res, initial_data) ->
     utils.list_accessible_documents schema.ProgTime, req.session, (err, docs) ->
-      return res.send(500) if err?
+      return res.status(500).send("server error") if err?
       for doc in docs
         doc.sharing = utils.clean_sharing(req.session, doc)
       res.render 'clock/index', {
@@ -42,9 +42,9 @@ start = (config, app, io, sessionStore) ->
   app.get /\/clock\/c\/([^/]+)$/, (req, res) -> res.redirect "/clock/c/#{req.params[0]}/"
   app.get '/clock/c/:id/', (req, res) ->
     schema.ProgTime.findOne {_id: req.params.id}, (err, doc) ->
-      return res.send("Server Error", 500) if err?
-      return res.send("Not found", 404) unless doc?
-      return res.send("Permission denied", 403) unless intetwinkles.can_view(req.session, doc)
+      return res.status(500).send("Server Error") if err?
+      return res.status(404).send("Not found") unless doc?
+      return res.status(403).send("Permission denied") unless intetwinkles.can_view(req.session, doc)
       api_methods.post_event {
         type: "visit"
         application: "clock"

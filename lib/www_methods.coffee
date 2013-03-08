@@ -28,7 +28,8 @@ module.exports = (config) ->
 
   www.ajax_handle_error = (req, res, err, msg) ->
     logger.error(err, msg)
-    res.send({error: msg or "Server error", status: 500}, 500)
+    res.statusCode = 500
+    res.send({error: msg or "Server error", status: 500})
 
   www.redirect_to_login = (req, res) ->
     res.redirect("/profiles/login/?next=" + encodeURIComponent(req.url))
@@ -61,7 +62,8 @@ module.exports = (config) ->
     })
 
   www.ajax_bad_request = (req, res, msg) ->
-    res.send({error: msg or "Bad Request", status: 400}, 400)
+    res.statusCode = 400
+    res.send({error: msg or "Bad Request", status: 400})
 
   #
   # Recent events attributed to the given session

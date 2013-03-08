@@ -69,7 +69,7 @@ startUp = (done) ->
 shutDown = (srv, done) ->
   async.series([
     (done) -> email_server.stop(done)
-    (done) -> srv.app.close() ; done()
+    (done) -> srv.server.close() ; done()
     (done) -> clearDb(done)
     (done) -> srv.db.disconnect(done)
   ], done)

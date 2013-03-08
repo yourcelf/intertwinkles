@@ -42,18 +42,20 @@ to "join" with the joined room channel/name.
 Server acknowledges with message to "leave" with the left room channel/name.
 
 ###
-events = require 'events'
-_      = require 'underscore'
-logger = require("log4js").getLogger("socket_server")
-uuid   = require "node-uuid"
-async  = require "async"
+events  = require 'events'
+_       = require 'underscore'
+logger  = require("log4js").getLogger("socket_server")
+uuid    = require "node-uuid"
+async   = require "async"
+connect = require "connect"
 
 class RoomManager extends events.EventEmitter
-  constructor: (socketServer, sessionStore) ->
+  constructor: (socketServer, sessionStore, secret) ->
     @channelAuth = {}
     # Allow blank channel without authorization.
     @addChannelAuth "", (session, room, cb) -> cb(null, true)
     @sessionStore = sessionStore
+    @secret = secret
 
     # Keep track of which sessions are in which rooms
     @roomToSockets = {}   # Room path to array of sockets
@@ -133,8 +135,9 @@ class RoomManager extends events.EventEmitter
   # Workflow
   #
 
-  identify: (socket, session_id) =>
-    return @handleError(socket, "Missing session id") unless session_id?
+  identify: (socket, raw_session_id) =>
+    return @handleError(socket, "Missing session id") unless raw_session_id?
+    session_id = connect.utils.parseSignedCookie(raw_session_id, @secret)
     
     # remove existing socket/session association if needed.
     prev_session_id = @socketIdToSessionId[socket.sid]

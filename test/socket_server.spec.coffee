@@ -3,11 +3,13 @@ _             = require 'underscore'
 async         = require 'async'
 sockjs        = require 'sockjs'
 express       = require 'express'
+http          = require 'http'
 RedisStore    = require('connect-redis')(express)
 config        = require './test_config'
 common        = require './common'
 RoomManager   = require('../lib/socket_server').RoomManager
 log4js        = require 'log4js'
+
 logger        = log4js.getLogger("socket_server")
 logger.setLevel(log4js.levels.FATAL)
 require "better-stack-traces"
@@ -23,17 +25,18 @@ describe "Socket server", ->
     @sockserver = sockjs.createServer({
       log: (severity, message) -> logger[severity](message)
     })
-    @sockrooms = new RoomManager(@sockserver, new RedisStore())
-    @app = express.createServer()
-    @sockserver.installHandlers(@app, {prefix: "/sockjs"})
-    @app.listen(config.port)
+    @sockrooms = new RoomManager(@sockserver, new RedisStore(), config.secret)
+    app = express()
+    @server = http.createServer(app)
+    @sockserver.installHandlers(@server, {prefix: "/sockjs"})
+    @server.listen(config.port)
     @client = common.build_sockjs_client =>
       @client2 = common.build_sockjs_client =>
         @client3 = common.build_sockjs_client =>
           done()
 
   after (done) ->
-    @app.close()
+    @server.close()
     @client.close()
     @client2.close()
     @client3.close()

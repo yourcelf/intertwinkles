@@ -17,15 +17,9 @@ route = (config, app) ->
     res.statusCode = 500
     res.send({error: err})
 
-  get_ip_address = (req) ->
-    x_forwarded_for = req.header("X-Forwarded-For", null)
-    if x_forwarded_for?
-      return x_forwarded_for.split(",")[0].trim()
-    return req.socket.remoteAddress
-
   validate_request = (req, res, required_params, method='GET') ->
     # Validate requesting ip.
-    unless _.contains(config.api_clients, get_ip_address(req))
+    unless _.contains(config.api_clients, req.ip)
       res.statusCode = 400
       res.send({error: "Unauthorized client"})
       return false
@@ -52,7 +46,8 @@ route = (config, app) ->
       schema.User.findOne filter, (err, doc) ->
         return server_error(res, err) if err?
         unless doc?
-          return res.send {error: "No user found for '#{query}'", status: 404}, 404
+          res.statusCode = 404
+          return res.send {error: "No user found for '#{query}'", status: 404}
         return fn({model: doc})
     else
       res.statusCode = 403
@@ -81,7 +76,8 @@ route = (config, app) ->
     try
       query_event = JSON.parse(req.body.event)
     catch e
-      return res.send({error: "Invalid JSON for `event`", statusCode: 400}, 400)
+      res.statusCode = 400
+      return res.send({error: "Invalid JSON for `event`", statusCode: 400})
     api_methods.post_event query_event, (err, doc) ->
       return server_error(res, err) if err?
       return res.send {event: doc}
@@ -129,10 +125,11 @@ route = (config, app) ->
         (req.body.notification_id?) or
         (req.body.application? and req.body.entity? and req.body.type?) or
         (req.body.user or req.body.recipient))
+      res.statusCode = 400
       return res.send({
         error: "Notifications insufficiently specified. Requires either " +
                "(notification_id), (application, entity, type) or (user)."
-      }, 400)
+      })
 
     api_methods.clear_notifications {
       notification_id: req.body.notification_id
@@ -147,7 +144,8 @@ route = (config, app) ->
   app.get "/api/search/", (req, res) ->
     return unless validate_request(req, res, ["api_key"])
     if not req.query.user? and req.query.public != 'true'
-      return res.send({error: "Must set `public=true` or specify user"}, 400)
+      res.statusCode = 400
+      return res.send({error: "Must set `public=true` or specify user"})
     if req.query.public == 'true'
       req.query.public = true
     solr.execute_search req.query, req.query.user, (err, obj) ->
