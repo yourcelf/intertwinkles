@@ -35,13 +35,16 @@ parser.add_argument("include", metavar='APP', nargs='*',
 
 def install_all():
     args = parser.parse_args()
-    include = set(args.include or ["config", "node", "secrets", "solr", "etherpad"])
+    include = set(args.include or ["config", "secrets", "assets", "node", "solr", "etherpad"])
     if "config" in include:
         print("Copying configuration...")
         copy_configuration()
     if "secrets" in include:
         print("Creating secrets...")
         create_secrets()
+    if "assets" in include:
+        print("Building assets...")
+        build_assets()
     if "node" in include:
         print("Installing node dependencies...")
         install_node_dependencies()
@@ -99,6 +102,9 @@ def create_secrets():
                 secret = secret[0:SECRET_LENGTH]
                 fh.write(secret)
     print "Created", count, "files."
+
+def build_assets():
+    subprocess.check_call(["bin/build_assets.js"], cwd=PROJECT_ROOT)
 
 def install_node_dependencies():
     subprocess.check_call(["npm", "install"], cwd=PROJECT_ROOT)
