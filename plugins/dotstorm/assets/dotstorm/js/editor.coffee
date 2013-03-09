@@ -186,12 +186,17 @@ class ds.EditIdea extends Backbone.View
           canvas = document.createElement("canvas")
           canvas.width = 640
           canvas.height = 480
-          if img.width > img.height
-            w = Math.min(img.width, canvas.width)
-            h = img.height * canvas.width / img.width
+          srcAspect = img.width / img.height
+          destAspect = canvas.width / canvas.height
+          if img.width < canvas.width and img.height < canvas.height
+            w = img.width
+            h = img.height
+          else if img.width > img.height
+            w = canvas.width
+            h = w * img.height / img.width
           else
-            h = Math.min(canvas.height, img.height)
-            w = img.width * canvas.height / img.height
+            h = canvas.height
+            w = h * img.width / img.height
           x = (canvas.width - w)/2
           ctx = canvas.getContext('2d')
           ctx.drawImage(img, x, 0, w, h)

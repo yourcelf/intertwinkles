@@ -85,6 +85,22 @@ copy_files = (dir, parent, destRoot) ->
       mkdirs(path.dirname(dest))
       fs.writeFileSync(dest, fs.readFileSync(full_name))
 
+compile_one = (filename) ->
+  ext = path.extname(filename)
+  switch ext
+    when ".coffee"
+      new_ext = ".js"
+      compile = compile_coffee
+    when ".styl"
+      new_ext = ".css"
+      compile = compile_stylus
+    when ".less"
+      new_ext = ".css"
+      compile = compile_less
+  dest = filename.substring(0, filename.length - ext.length) + new_ext
+  logger.info("Compile", filename, "=>", dest)
+  compile(filename, dest)
+
 compile_all = (destRoot) ->
   destRoot = path.normalize(destRoot)
   # Copy *all* the assets to the destination.
@@ -93,20 +109,25 @@ compile_all = (destRoot) ->
 
   # Compile those that need compilation.
   for file in compiled_files
-    ext = path.extname(file)
-    switch ext
-      when ".coffee"
-        new_ext = ".js"
-        compile = compile_coffee
-      when ".styl"
-        new_ext = ".css"
-        compile = compile_stylus
-      when ".less"
-        new_ext = ".css"
-        compile = compile_less
-    src = destRoot + file
-    dest = src.substring(0, src.length - ext.length) + new_ext
-    logger.info("Compile", src, "=>", dest)
-    compile(src, dest)
+    compile_one(destRoot + file)
 
-module.exports = {compile_all}
+
+watchTimeout = null
+_watch = (dir, destRoot) ->
+  # Ugly, ugly, ugly. Re-build everything when anything changes.
+  for name in fs.readdirSync(dir)
+    filename = path.normalize(dir + "/" + name)
+    if filename.substring(0, 1) == "."
+      continue
+    if fs.statSync(filename).isDirectory()
+      _watch(filename, destRoot)
+    else
+      fs.watch filename, (event, filename) ->
+        clearTimeout(watchTimeout) if watchTimeout?
+        watchTimeout = setTimeout((-> compile_all destRoot), 100)
+
+watch = (destRoot) ->
+  for dir in asset_folders
+    _watch(dir, destRoot)
+
+module.exports = {compile_all, watch}
