@@ -10,9 +10,9 @@ support the needs of groups like cooperatives, collectives, affinity groups and
 participatory boards of directors.  The apps are all written in nodejs, and
 free for you to use on your own servers.
 
-The toolkit is under early development still, but a demo can be found here:
+The toolkit is under early development still.  Find the live server here:
 
-[http://dev.intertwinkles.org](http://dev.intertwinkles.org) (Data is periodically deleted from that installation, so use it for testing only!)
+[http://intertwinkles.org](http://intertwinkles.org)
 
 ## Installation
 
