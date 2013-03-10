@@ -15,18 +15,18 @@ block postapp
   script#dotstormTopic(type='text/template')
     div#dotstorm
       div.nameEdit
-        h1.clickToEdit <%= name || "[add name]" %>
+        h1.clickToEdit <%- name || "[add name]" %>
       div.topicEdit
-        span.clickToEdit <%- _.escapeHTML(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
+        span.clickToEdit <%= _.escape(topic || "[Click to edit topic]").replace(/\n/g, "\n<br />") %>
 
   script#dotstormInPlaceInput(type='text/template')
     form.editInPlace.input-append
-      <input type='text' value='<%= text %>' />
+      <input type='text' value='<%- text %>' />
       input.btn(type='submit', value='OK')
 
   script#dotstormInPlaceTextarea(type='text/template')
     form.inPlaceTextarea
-      textarea(rows="4", cols="40") <%= text %>
+      textarea(rows="4", cols="40") <%- text %>
       br
       input.btn(type='submit', value='save')
       a.cancel(href='#') cancel
@@ -58,11 +58,11 @@ block postapp
         div.photo
         div.canvas
         div.text
-          textarea#id_description <%= description %>
+          textarea#id_description <%- description %>
       form
         label(for='id_tags') Tags
         div.input-append
-          <input id='id_tags' name='tags' type='text' value="<%= tags %>" />
+          <input id='id_tags' name='tags' type='text' value="<%- tags %>" />
           //a.cta.cta-yellow.cta-thin Say more
           input.btn.btn-primary(type='submit', value='Share &raquo;', style='float: right')
       div(style='clear: both;')
@@ -72,7 +72,7 @@ block postapp
     div.front-matter
       div.topic
       div.add-link-block
-        <a href='/dotstorm/d/<%= slug %>/add/' class='btn btn-primary btn-large add-link'>+ Add</a>
+        <a href='/dotstorm/d/<%- slug %>/add/' class='btn btn-primary btn-large add-link'>+ Add</a>
       div#trash
         div.trash
           div.icon
@@ -84,9 +84,9 @@ block postapp
     div.tag-links
 
   script#dotstormSmallIdea(type='text/template')
-    <img src='<%= drawingURLs.medium %>' alt='<%= description %>' />
+    <img src='<%- drawingURLs.medium %>' alt='<%- description %>' />
     div.tags
-      <%= tags.join(", ") %>
+      <%- tags.join(", ") %>
     div.votes
     div.dragger
 
@@ -95,8 +95,8 @@ block postapp
       span.labelMask
         <% if (showGroup) { %>
         span.grouplabel.clickToEdit
-          <%= label || "[Click to add label]" %>
-        <a href='/dotstorm/g/<%= group_id %>/' class='embed group' title='Embed this group'>&#8734;</a> 
+          <%- label || "[Click to add label]" %>
+        <a href='/dotstorm/g/<%- group_id %>/' class='embed group' title='Embed this group'>&#8734;</a> 
         <% } else {%>
         | &nbsp;
         <% } %>
@@ -104,7 +104,7 @@ block postapp
 
   script#dotstormSmallIdeaGroupEditLabel(type='text/template')
     form.input-append
-      | <input type='text' value='<%= label %>' placeholder='label' />
+      | <input type='text' value='<%- label %>' placeholder='label' />
       input.btn(type='submit', value='OK')
 
   script#dotstormBigIdea(type='text/template')
@@ -117,7 +117,7 @@ block postapp
             span.vote-widget
             a.close(title='close') &#10006;
           div.canvasHolder
-            <img src='<%= drawingURLs.full %>' alt='<%= description %>' />
+            <img src='<%- drawingURLs.full %>' alt='<%- description %>' />
             <% if (hasPrev) { %>
             div.nav.prevHolder
               div.navlink.prev(title='previous') &laquo;
@@ -129,7 +129,7 @@ block postapp
           div.tags
             b tags:&nbsp;
             span.clickToEdit
-              <%= tags.join(", ") || "[Click to add]"%>
+              <%- tags.join(", ") || "[Click to add]"%>
         div(style='clear: both;')
 
   script#dotstormTagOverlay(type='text/template')

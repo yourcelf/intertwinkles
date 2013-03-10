@@ -5,21 +5,21 @@
 user_menu_template = _.template("""
   <a class='user-menu dropdown-toggle' href='#' data-toggle='dropdown' role='button'>
     <% if (user.icon && user.icon.tiny) { %>
-      <img src='<%= user.icon.tiny %>' />
+      <img src='<%- user.icon.tiny %>' />
     <% } else { %>
       <i class='icon-user'></i>
     <% } %>
     <span class='hidden-phone'>
-      <%= user.name %>
+      <%- user.name %>
     </span>
     <b class='caret'></b>
   </a>
   <ul class='dropdown-menu' role='menu'>
-    <li><a tabindex='-1' href='<%= INTERTWINKLES_APPS.www.url %>'><i class='icon icon-th'></i> Dashboard</a></li>
+    <li><a tabindex='-1' href='<%- INTERTWINKLES_APPS.www.url %>'><i class='icon icon-th'></i> Dashboard</a></li>
     <li class='divider'></li>
-    <li><a tabindex='-1' href='<%= INTERTWINKLES_APPS.www.url %>/profiles/edit'><i class='icon icon-cog'></i> Settings</a></li>
+    <li><a tabindex='-1' href='<%- INTERTWINKLES_APPS.www.url %>/profiles/edit'><i class='icon icon-cog'></i> Settings</a></li>
     <li class='divider'></li>
-    <li><a tabindex='-1' href='<%= INTERTWINKLES_APPS.www.url %>/feedback/'><i class='icon-gift'></i> Feedback</a></li>
+    <li><a tabindex='-1' href='<%- INTERTWINKLES_APPS.www.url %>/feedback/'><i class='icon-gift'></i> Feedback</a></li>
     <li class='divider'></li>
     <li><a tabindex='-1' class='sign-out' href='#'>Sign out</a></li>
   </ul>
@@ -70,11 +70,11 @@ room_users_menu_template = _.template("""
 room_users_menu_item_template = _.template("""
   <li><a>
     <% if (icon) { %>
-      <img src='<%= icon.tiny %>' />
+      <img src='<%- icon.tiny %>' />
     <% } else { %>
       <i class='icon icon-user'></i>
     <% } %>
-    <%= name %>
+    <%- name %>
   </a></li>
 """)
 
@@ -147,7 +147,7 @@ toolbar_template = _.template("""
             <ul class='dropdown-menu search' role='menu' aria-labeledby='dlogo'>
               <li class='linkless'>
                 <form class='form-search'
-                      action='<%= INTERTWINKLES_APPS.www.url %>/search/'
+                      action='<%- INTERTWINKLES_APPS.www.url %>/search/'
                       method='GET'>
                   <div class='input-append'>
                     <input class='input-medium search-query' type='text' name='q' />
@@ -170,11 +170,11 @@ toolbar_template = _.template("""
            role='button' id='dlogo'>
           <span class='visible-phone'>
             <img src='/static/img/star-icon.png' alt='IT' style='max-height: 24px;'/>
-            <span style='font-size: 12px;'><%= apps[0].name %></span>
+            <span style='font-size: 12px;'><%- apps[0].name %></span>
           </span>
           <span class='hidden-phone'>
             Inter<span class='intertwinkles'>Twinkles</span>:
-            <span class='appname'><%= apps[0].name %></span>
+            <span class='appname'><%- apps[0].name %></span>
             <b class='caret'></b>
             <span class='label' style='font-size: 50%;'>BETA</span>
           </span>
@@ -183,13 +183,13 @@ toolbar_template = _.template("""
           <ul class='nav appmenu'>
             <% for (var i = 0; i < apps.length; i++) { %>
               <% var app = apps[i]; %>
-              <li class='<%= i == 0 ? "active" : "" %>'>
-                <a href='<%= app.url + "/" %>'>
-                  <b><%= app.name %></b>:
+              <li class='<%- i == 0 ? "active" : "" %>'>
+                <a href='<%- app.url + "/" %>'>
+                  <b><%- app.name %></b>:
                   <% if (app.name == "Home" && !intertwinkles.is_authenticated()) { %>
                     Introducing InterTwinkles
                   <% } else { %>
-                    <%= app.about %>
+                    <%- app.about %>
                   <% } %>
                 </a>
               </li>
@@ -304,11 +304,11 @@ intertwinkles.build_footer = (destination) ->
 #
 
 user_choice_template = _.template("""
-  <input type='text' name='name' id='id_user' data-provide='typeahead' autocomplete='off' value='<%= name %>' />
+  <input type='text' name='name' id='id_user' data-provide='typeahead' autocomplete='off' value='<%- name %>' />
   <span class='icon-holder' style='width: 32px; display: inline-block;'>
-    <% if (icon) { %><img src='<%= icon %>' /><% } %>
+    <% if (icon) { %><img src='<%- icon %>' /><% } %>
   </span>
-  <input type='hidden' name='user_id' id='id_user_id' value='<%= user_id %>' />
+  <input type='hidden' name='user_id' id='id_user_id' value='<%- user_id %>' />
   <div class='form-hint unknown'></div>
 """)
 
@@ -412,7 +412,7 @@ group_choice_template = _.template("""
         <option value=''>----</option>
         <% for (var key in intertwinkles.groups) { %>
           <% group = intertwinkles.groups[key]; %>
-          <option value='<%= group.id %>'><%= group.name %></option>
+          <option value='<%- group.id %>'><%- group.name %></option>
         <% } %>
       </select>
     <% } else { %>
@@ -420,7 +420,7 @@ group_choice_template = _.template("""
       You don't have any groups yet.
     <% } %>
     <br />
-    (<%= has_group ? "or " : "" %><a href='<%= INTERTWINKLES_APPS.www.url %>/groups/new/'>create a new group</a>)
+    (<%- has_group ? "or " : "" %><a href='<%- INTERTWINKLES_APPS.www.url %>/groups/new/'>create a new group</a>)
   <% } else { %>
     Sign in to add a group.
   <% } %>
@@ -464,13 +464,13 @@ invite_helper_template = _.template("
 </a>
 <ul class='dropdown-menu invite-helper-menu' role='menu'>
   <li class='linkless'>
-    <%= message %><br />
-    <input readonly type='text' value='<%= url %>' />
+    <%- message %><br />
+    <input readonly type='text' value='<%- url %>' />
     <br />
-    <a class='barcode' data-url='<%= url %>' href='#'>Get barcode</a><br />
+    <a class='barcode' data-url='<%- url %>' href='#'>Get barcode</a><br />
     <a class='short-url'
-       data-url='<%= url %>'
-       data-application='<%= application %>'
+       data-url='<%- url %>'
+       data-application='<%- application %>'
        href='#'>Get short URL</a>
   </li>
 </ul>

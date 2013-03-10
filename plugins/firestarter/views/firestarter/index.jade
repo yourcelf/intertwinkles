@@ -34,15 +34,15 @@ block postscripts
 
   script(type="text/template", id="listedFirestarterTemplate")
     li.listed-firestarter
-      | <a href='<%= url %>'><%= doc.name %></a>
+      | <a href='<%- url %>'><%- doc.name %></a>
       | <span class='date' style='float: right;'></span>
       | <div>
       | <% if (group) { %>
-      |   <span class='name'><%= group.name %></span>
+      |   <span class='name'><%- group.name %></span>
       | <% } %>
       | </div>
-      | <blockquote class='prompt'><%- intertwinkles.markup(doc.prompt) %></blockquote>
-      | <span class='responses'>(<%= doc.responses.length %> responses)</span>
+      | <blockquote class='prompt'><%= intertwinkles.markup(doc.prompt) %></blockquote>
+      | <span class='responses'>(<%- doc.responses.length %> responses)</span>
 
   script(type="text/template", id="addFirestarterTemplate")
     div.row-fluid
@@ -119,7 +119,7 @@ block postscripts
         div.control-group
           label.control-label(for="id_firestarter_name") Event name:
           div.controls
-            <input type='text' name='name' value='<%= name %>' />
+            <input type='text' name='name' value='<%- name %>' />
       div.modal-footer
         a.btn.pull-left(data-dismiss="modal") Cancel
         input.btn.btn-primary(type='submit', value='Save')
@@ -130,7 +130,7 @@ block postscripts
         div.control-group
           label.control-label(for="id_firestarter_prompt") Prompt:
           div.controls
-            <textarea><%= prompt %></textarea>
+            <textarea><%- prompt %></textarea>
       div.modal-footer
         a.btn.pull-left(data-dismiss="modal") Cancel
         input.btn.btn-primary(type='submit', value='Save')
@@ -145,17 +145,17 @@ block postscripts
           label.control-label(for="id_response") Response
           div.controls
             textarea
-              <%= response %>
+              <%- response %>
       div.modal-footer
         a.btn.cancel.pull-left(data-dismiss="modal") Cancel
-        <input class='btn btn-danger' type='submit' value='<%= verb %>' />
+        <input class='btn btn-danger' type='submit' value='<%- verb %>' />
 
   script(type="text/template", id="responseTemplate")
     div.name
-      <%- intertwinkles.inline_user(user_id, name) %>
+      <%= intertwinkles.inline_user(user_id, name) %>
       span(style="float: right;").date-holder
     div.response
-      <%- intertwinkles.markup(response) %>
+      <%= intertwinkles.markup(response) %>
     div.foot
       <% if (!read_only) { %>
       a.delete(href='#', style='float: left;')
@@ -168,9 +168,9 @@ block postscripts
       button.close.modal(type='button', data-dismiss='modal', aria-hidden='true', value='&times;')
       h1 Really delete?
     div.modal-body
-      p Delete this response by <%- intertwinkles.inline_user(user_id, name) %>?
+      p Delete this response by <%= intertwinkles.inline_user(user_id, name) %>?
       blockquote.response
-        <%- intertwinkles.markup(response) %>
+        <%= intertwinkles.markup(response) %>
     div.modal-footer
       form
         a.btn(href='#', data-dismiss='modal') Close

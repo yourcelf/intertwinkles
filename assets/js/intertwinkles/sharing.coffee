@@ -74,9 +74,9 @@ sharing_control_template = _.template("""
           <span class='public-until'>
             until <select name='public_until'>
                     <option value='-1'>Forever</option>
-                    <option value='<%= 1000 * 60 * 60 %>'>One hour</option>
-                    <option value='<%= 1000 * 60 * 60 * 24 %>'>One day</option>
-                    <option value='<%= 1000 * 60 * 60 * 24 * 7 %>'>One week</option>
+                    <option value='<%- 1000 * 60 * 60 %>'>One hour</option>
+                    <option value='<%- 1000 * 60 * 60 * 24 %>'>One day</option>
+                    <option value='<%- 1000 * 60 * 60 * 24 * 7 %>'>One week</option>
                   </select>
           </span>
         </div>
@@ -397,7 +397,7 @@ intertwinkles.normalize_sharing = (sharing) ->
 
 sharing_settings_button_template = _.template("""
   <div class='sharing-settings-button'>
-    <a class='btn btn-success open-sharing'><i class='<%= icon_class %>'></i> Sharing</a>
+    <a class='btn btn-success open-sharing'><i class='<%- icon_class %>'></i> Sharing</a>
   </div>
 """)
 sharing_settings_modal_template = _.template("""
@@ -412,7 +412,7 @@ sharing_settings_modal_template = _.template("""
       </div>
       <div class='modal-footer'>
         <div class='url-to-share pull-left'>
-          Share this: <input readonly type='text' class='url' value='<%= window.location.href %>' />
+          Share this: <input readonly type='text' class='url' value='<%- window.location.href %>' />
         </div>
         <input type='submit' class='btn btn-primary' value='Save' />
       </div>

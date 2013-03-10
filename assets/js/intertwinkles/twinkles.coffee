@@ -1,7 +1,7 @@
 twinkle_template = "
-  <img src='/static/img/twinkle_<%= active ? '' : 'in' %>active-32.png'
-       alt='Twinkle (<%= active ? '' : 'in' %>active)' />
-  <%= count > 0 ? count : '' %>
+  <img src='/static/img/twinkle_<%- active ? '' : 'in' %>active-32.png'
+       alt='Twinkle (<%- active ? '' : 'in' %>active)' />
+  <%- count > 0 ? count : '' %>
 "
 class Twinkle extends Backbone.Model
   idAttribute: '_id'

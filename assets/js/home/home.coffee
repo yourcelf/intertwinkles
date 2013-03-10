@@ -1,13 +1,13 @@
 invite_view_template = """
   <% for (var i = 0; i < invites.length; i++) { %>
-    <div class='alert invitation' data-url='<%= invites[i].url %>' style='cursor: pointer;'>
+    <div class='alert invitation' data-url='<%- invites[i].url %>' style='cursor: pointer;'>
       <table>
         <tr>
           <td class='invitor'>
-            <%- intertwinkles.inline_user(invites[i].sender) %>
+            <%= intertwinkles.inline_user(invites[i].sender) %>
           </td>
           <td class='invitation'>
-            <%= invites[i].formats.web %>
+            <%- invites[i].formats.web %>
           </td>
         </tr>
       </table>

@@ -154,8 +154,8 @@ html_template = _.template("""
     <!-- Tables are the most common way to format your email consistently. Set your table widths inside cells and in most cases reset cellpadding, cellspacing, and border to zero. Use nested tables as a way to space effectively in your message. -->
     <table cellpadding="0" cellspacing="0" border="0" align="center">
       <tr>
-        <td valign="top"><img src='<%= static_url %>img/star-icon.png' /></td>
-        <td valign="top"><h1><a href='<%= home_url %>' style='color: black; text-decoration: none;'><span style='color: black;'>Inter</span></a><a href='<%= home_url %>' style='color: #ff0088; text-decoration: none;'><span style='color: #ff0088'>Twinkles</span></a></h1></td>
+        <td valign="top"><img src='<%- static_url %>img/star-icon.png' /></td>
+        <td valign="top"><h1><a href='<%- home_url %>' style='color: black; text-decoration: none;'><span style='color: black;'>Inter</span></a><a href='<%- home_url %>' style='color: #ff0088; text-decoration: none;'><span style='color: #ff0088'>Twinkles</span></a></h1></td>
       </tr>
     </table>
 
@@ -170,7 +170,7 @@ html_template = _.template("""
   <tr>
     <td>
       <span style='font-size: 12px;'>
-      Unsubscribe or edit preferences at <a href='<%= subscription_settings_link %>'>Your profile page</a>
+      Unsubscribe or edit preferences at <a href='<%- subscription_settings_link %>'>Your profile page</a>
       </span>
     </td>
   </tr>

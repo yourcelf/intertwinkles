@@ -6,13 +6,13 @@ edit_new_profile_template = _.template("""
     <div class='control-group'>
       <b>1: What is your name?</b><br />
       <div class='controls'></div><!-- keep this for a target for validation errors. -->
-      <input type='text' name='name' value='<%= name %>' />
+      <input type='text' name='name' value='<%- name %>' />
     </div>
     <div class='control-group'>
       <b>2: What is your favorite color?</b><br />
       <div class='controls'></div><!-- keep this for a target for validation errors. -->
       <div class='help-text color-label'></div>
-      <input type='text' name='color' value='<%= color %>' class='color' />
+      <input type='text' name='color' value='<%- color %>' class='color' />
     </div>
     <div class='control-group'>
       <b>3. Which icon do you like the best?</b><br />
@@ -84,7 +84,7 @@ class intertwinkles.EditNewProfile extends intertwinkles.BaseModalFormView
 #
 
 icon_chooser_template = _.template("""
-  <input name='icon' id='id_icon' value='<%= chosen %>' type='hidden' />
+  <input name='icon' id='id_icon' value='<%- chosen %>' type='hidden' />
   <div class='profile-image-chooser'><img src='/static/img/spinner.gif' alt='Loading...'/></div>
   <div>
     <a class='attribution-link' href='#{INTERTWINKLES_APPS.www.url}/profiles/icon_attribution/'>
@@ -122,7 +122,7 @@ class intertwinkles.IconChooser extends Backbone.View
     jscolor.bind()
 
 icon_chooser_lite_template = _.template("""
-  <input type='hidden' id='id_icon' name='icon' value='<%= chosen %>' />
+  <input type='hidden' id='id_icon' name='icon' value='<%- chosen %>' />
   <input type='text' id='id_icon_chooser' value='' disabled style='float: left;'/>
   <span class='chosen-image' style='float: left;'></span>
 """)
@@ -205,24 +205,24 @@ notification_settings_template = _.template("""
         <td>
           <span rel='popover' class='popover-trigger'
               data-placement='top'
-              data-title='<%= n.title %>'
-              data-content='<%= n.description %>'
+              data-title='<%- n.title %>'
+              data-content='<%- n.description %>'
               data-trigger='hover'>
-            <%= n.title %>
+            <%- n.title %>
           </span>
         </td>
         <td>
           <label>
-            <input name='notifications_<%= n.key %>_email' type='checkbox'
-              <%= user.notifications[n.key].email ? "checked" : "" %> />
+            <input name='notifications_<%- n.key %>_email' type='checkbox'
+              <%- user.notifications[n.key].email ? "checked" : "" %> />
             Email
           </label>
         </td>
         <% if (show_sms) { %>
           <td>
             <label>
-              <input name='notifications_<%= n.key %>_sms' type='checkbox'
-                <%= user.notifications[n.key].sms ? "checked" : "" %> />
+              <input name='notifications_<%- n.key %>_sms' type='checkbox'
+                <%- user.notifications[n.key].sms ? "checked" : "" %> />
             Text Message
             </label>
           </td>

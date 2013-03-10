@@ -45,12 +45,12 @@ class intertwinkles.AutoUpdatingDate extends Backbone.View
 intertwinkles.inline_user = (user_id, name) ->
   user = intertwinkles.users?[user_id]
   if user?
-    return "<img src='#{_.escapeHTML(user.icon.small)}' /> #{_.escapeHTML(user.name)}"
+    return "<img src='#{_.escape(user.icon.small)}' /> #{_.escape(user.name)}"
   else
     return "<span style='width: 32px;'><i class='icon icon-user'></i></span> #{name}"
 
 intertwinkles.markup = (response) ->
-  return urlize(response, 50, true, _.escapeHTML)
+  return urlize(response, 50, true, _.escape)
 
 html_colors = [
   [0x80, 0x00, 0x00, "maroon"],

@@ -36,28 +36,28 @@ membershipTableTemplate = _.template("""
       
 
 membershipRowTemplate = _.template("""
-  <tr class='member<%= removed ? " removed" : "" %> <%= new_invitee ? " newinvite" : "" %>'>
+  <tr class='member<%- removed ? " removed" : "" %> <%- new_invitee ? " newinvite" : "" %>'>
     <td>
       <% if (user && user.icon) { %>
-        <img src='<%= user.icon.small %>' /> <%= user.name %>
+        <img src='<%- user.icon.small %>' /> <%- user.name %>
       <% } else { %>
-        <%= email %>
+        <%- email %>
       <% } %>
     </td>
-    <td class='<%= voting_changed ? 'changed' : '' %>'>
+    <td class='<%- voting_changed ? 'changed' : '' %>'>
       <label>
-        <input class='voting' type='checkbox' data-email='<%= email %>'
-          <%= voting ? 'checked' : "" %> />
+        <input class='voting' type='checkbox' data-email='<%- email %>'
+          <%- voting ? 'checked' : "" %> />
         Can vote
       </label>
     </td>
-    <td class='<%= role_changed ? "changed" : "" %>'>
-      <input type='text' data-email='<%= email %>'
-             value='<%= role %>' placeholder='Optional' class='role' />
+    <td class='<%- role_changed ? "changed" : "" %>'>
+      <input type='text' data-email='<%- email %>'
+             value='<%- role %>' placeholder='Optional' class='role' />
     </td>
     <td class='link'>
-      <a href='#' data-email='<%= email %>' class='remove'>
-        <%= removed ? 'undo' : 'remove' %>
+      <a href='#' data-email='<%- email %>' class='remove'>
+        <%- removed ? 'undo' : 'remove' %>
       </a>
     </td>
   </tr>

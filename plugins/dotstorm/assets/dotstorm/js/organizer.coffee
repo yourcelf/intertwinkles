@@ -219,7 +219,7 @@ class ds.Organizer extends Backbone.View
           "data-tag": tag
           href: "/dotstorm/d/#{@model.get("slug")}/tag/#{encodeURIComponent(tag)}"
           style: "font-size: #{minPercent + ((max-(max-(count-min)))*(maxPercent - minPercent) / (max-min))}%"
-        }).html( "<nobr>#{_.escapeHTML tag}</nobr>" ), " "
+        }).html( "<nobr>#{_.escape tag}</nobr>" ), " "
       )
 
   renderTopic: =>

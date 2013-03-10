@@ -3,7 +3,7 @@ base = require "./base"
 
 sms = _.template("InterTwinkles! Invitation to join <%= group.name %>: <%= short_url %>")
 
-subject = _.template("Invitation to <%= group.name %> on InterTwinkles")
+subject = _.template("Invitation to <%- group.name %> on InterTwinkles")
 
 text = _.template("""
 <%= recipient.name %>,
@@ -15,21 +15,21 @@ You can accept or decline the invitation here:
 """.trim())
 
 html = _.template("""
-<p><%= recipient.name %>, </p>
+<p><%- recipient.name %>, </p>
 <p>
   <% if (sender) { %>
-    <%= sender.name %> invited you
+    <%- sender.name %> invited you
   <% } else { %>
     You've been invited
   <% } %>
   to join <b><%- group.name %></b>
-  at <a href='<%= home_url %>'>InterTwinkles</a></span>!
+  at <a href='<%- home_url %>'>InterTwinkles</a></span>!
 </p>
 <p><a href='<%- url %>'>Accept or Decline the invitation</a></p>
 """.trim())
 
 web = _.template("""
-You've been invited to join <%= group.name %>! Please accept
+You've been invited to join <%- group.name %>! Please accept
 or refuse the invitation.
 """.trim())
 

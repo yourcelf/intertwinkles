@@ -1,23 +1,23 @@
 notification_menu_template = _.template("""
   <a href='#'
-     class='dropdown-toggle notification-trigger<%= notices.length > 0 ? " unread" : "" %>'
+     class='dropdown-toggle notification-trigger<%- notices.length > 0 ? " unread" : "" %>'
      data-toggle='dropdown'
-     role='button'><%= notices.length > 50 ? "50+" : notices.length %></a>
+     role='button'><%- notices.length > 50 ? "50+" : notices.length %></a>
   <ul class='notifications dropdown-menu' role='menu'>
     <li class='linkless'><h3>Your Action Needed</h3></li>
     <% for (var i = 0; i < notices.length; i++) { %>
       <% var notice = notices[i]; %>
-      <li class='notification <%= notice.read ? "read" : "" %>'>
-        <a href='<%= notice.absolute_url %>' data-notification-id='<%= notice._id %>'>
+      <li class='notification <%- notice.read ? "read" : "" %>'>
+        <a href='<%- notice.absolute_url %>' data-notification-id='<%- notice._id %>'>
           <div class='sender'>
             <% var sender = intertwinkles.users[notice.sender]; %>
             <% if (sender) { %>
-              <img src='<%= sender.icon.small %>' /> <%= sender.name %>:
+              <img src='<%- sender.icon.small %>' /> <%- sender.name %>:
             <% } %>
           </div>
           <div class='message'>
-            <div class='body'><%= notice.formats.web %></div>
-            <div class='byline'><span class='date' data-date='<%= notice.date %>'></span></div>
+            <div class='body'><%- notice.formats.web %></div>
+            <div class='byline'><span class='date' data-date='<%- notice.date %>'></span></div>
           </div>
         </a>
       </li>

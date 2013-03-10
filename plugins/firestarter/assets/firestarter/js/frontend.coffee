@@ -267,7 +267,7 @@ class ShowFirestarter extends Backbone.View
 
   updateFirestarter: =>
     @$(".first-loading").hide()
-    @$(".firestarter-name").html(_.escapeHTML(fire.model.get("name")))
+    @$(".firestarter-name").html(_.escape(fire.model.get("name")))
     @$(".firestarter-prompt").html(intertwinkles.markup(fire.model.get("prompt")))
     @$(".firestarter-date").html(
       new Date(fire.model.get("created")).toString("htt dddd, MMMM dd, yyyy")

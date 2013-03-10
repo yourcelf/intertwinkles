@@ -19,13 +19,13 @@ block postapp
       div.control-group
         label.control-label(for="id_name") Name
         div.controls.
-          <input type="text" id="id_name" value="<%= model.name %>" />
+          <input type="text" id="id_name" value="<%- model.name %>" />
       div.control-group
         label.control-label Categories
         div.controls.
           <% for (var i = 0; i < max_num_categories; i++) { %>
-            <input type="text" class="cat-<%= i %>"
-              value="<%= i < model.categories.length > model.categories[i].name : '' %>"
+            <input type="text" class="cat-<%- i %>"
+              value="<%- i < model.categories.length > model.categories[i].name : '' %>"
               />
             <br />
           <% } %>
@@ -60,7 +60,7 @@ block postapp
     p.
       Elapsed times are in milliseconds, and time series are unix
       timestamps.
-    textarea.export(readonly=true) <%- exportJSON %>
+    textarea.export(readonly=true) <%= exportJSON %>
     div.bottom-nav
       a.back.btn(href='#') Back
 

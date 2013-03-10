@@ -15,12 +15,12 @@ ruled_timeline_template = "
   <div class='container timeline'>
     <% for (var i = 0; i < rows.length; i++) { %>
       <div class='row-fluid ruled'>
-        <div class='span2' style='text-align: right;'><%= rows[i].label %></div>
+        <div class='span2' style='text-align: right;'><%- rows[i].label %></div>
         <div class='span8' style='position: relative;'>
           <% for (var j = 0; j < rows[i].length; j++) { %>
             <% var point = rows[i][j]; %>
-            <span class='timeline-bump' style='left: <%= point.left %>%'>
-              <%- point.formatted %>
+            <span class='timeline-bump' style='left: <%- point.left %>%'>
+              <%= point.formatted %>
             </span>
           <% } %>
         </div>
@@ -31,8 +31,8 @@ ruled_timeline_template = "
       <div class='span8 ruled' style='position: relative;'>
         <% for (var i = 0; i < ticks.length; i++) { %>
           <span class='date-legend'
-                style='left: <%= ticks[i].left %>%'
-                ><%= ticks[i].label %></span>
+                style='left: <%- ticks[i].left %>%'
+                ><%- ticks[i].label %></span>
         <% } %>
       </div>
   </div>

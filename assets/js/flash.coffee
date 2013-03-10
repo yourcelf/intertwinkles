@@ -1,9 +1,8 @@
 #= require vendor/underscore
-#= require vendor/underscore-autoescape
 #= require vendor/backbone
 
 FlashTemplate = "
-      <%- message %>
+      <%= message %>
       <a href='#' class='close'>&#10006;</a>
 "
 

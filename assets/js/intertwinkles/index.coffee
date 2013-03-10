@@ -6,7 +6,6 @@
 #= require ../vendor/jquery.cookie.js
 #= require ../vendor/jquery.qrcode.min.js
 #= require ../vendor/underscore.js
-#= require ../vendor/underscore-autoescape.js
 #= require ../vendor/backbone.js
 #= require ../vendor/date.js
 #= require ../vendor/jscolor/jscolor.js
