@@ -1,10 +1,10 @@
 extends ../../../../views/layout
 
 block poststyles
-  !=css("clock/css/style")
+  link(rel="stylesheet", type="text/css", href=asset("clock/css/style.styl"))
 
 block postscripts
-  !=js("clock/js/frontend")
+  script(type='text/javascript', src=asset("clock/js/frontend.coffee"))
 
 block preapp
   div.pull-right

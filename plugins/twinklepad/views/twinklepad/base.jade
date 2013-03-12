@@ -1,9 +1,7 @@
 extends ../../../../views/layout
 
 block poststyles
-  link(rel="stylesheet", type="text/css", href="/static/css/twinklepad/css/style.css")
-  //!=css("twinklepad/css/style")
+  link(rel="stylesheet", type="text/css", href=asset("twinklepad/css/style.styl"))
 
 block postscripts
-  script(type="text/javascript", src="/static/twinklepad/js/frontend.js")
-  //!=js("twinklepad/js/frontend")
+  script(type="text/javascript", src=asset("twinklepad/js/frontend.coffee"))

@@ -100,8 +100,7 @@ block body
         include includes/get_involved  
 
 block poststyles
-  link(rel="stylesheet", type="text/css", href="/static/css/landing.css")
+  link(rel="stylesheet", type="text/css", href=asset("css/landing.styl"))
 
 block postscripts
-  //!=js("js/home/landing")
-  script(src="/static/js/home/landing.js")
+  script(src=asset("js/home/landing.coffee"))

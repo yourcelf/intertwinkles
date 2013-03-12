@@ -1,8 +1,7 @@
 extends ../../../../views/layout
 
 block poststyles
-  link(rel="stylesheet", type="text/css", href="/static/firestarter/css/style.css")
-  //!=css("firestarter/css/style")
+  link(rel="stylesheet", type="text/css", href=asset("firestarter/css/style.styl"))
  
 block body
   em Sparking...
@@ -176,5 +175,4 @@ block postscripts
         a.btn(href='#', data-dismiss='modal') Close
         input.btn.btn-danger.really-delete(type='submit', value='Delete')
 
-  script(type="text/javascript", src="/static/firestarter/js/frontend.js")
-  //!=js('firestarter/js/frontend')
+  script(type="text/javascript", src=asset("firestarter/js/frontend.coffee"))

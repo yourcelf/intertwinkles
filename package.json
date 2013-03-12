@@ -36,6 +36,7 @@
     "etherpad-lite-client": "~0.5",
     "http-proxy": "~0.9",
     "better-stack-traces": "~0.0"
+    "yaac": "~0"
   },
   "devDependencies": {
     "mocha": "~1",

@@ -13,6 +13,7 @@ RoomManager    = require("./socket_server").RoomManager
 socket_routes  = require './socket_routes'
 www_routes     = require "./www_routes"
 api_routes     = require "./api_routes"
+yaac           = require "yaac"
 
 # Include code lines in stack traces.
 require "better-stack-traces"
@@ -81,16 +82,23 @@ start = (config) ->
   # Templates
   app.set 'view engine', 'jade'
   view_folders = [__dirname + "/../views"]
+  asset_folders = [__dirname + "/../assets"]
   for key, appconf of config.apps
     continue if key == "www"
     view_folders.push("#{__dirname}/../plugins/#{key}/views")
+    asset_folders.push("#{__dirname}/../plugins/#{key}/assets")
   app.set "views", view_folders
 
   ###
   # static files
   ###
-  app.use "/uploads/", express.static(__dirname + "/../uploads")
-  app.use "/static/", express.static(__dirname + "/../builtAssets")
+  expiry = {maxAge: 1000 * 60 * 60 * 24}
+  app.use "/uploads/", express.static(__dirname + "/../uploads", expiry)
+  app.use "/static/", express.static(__dirname + "/../builtAssets", expiry)
+  app.locals.asset = yaac({
+    searchPath: asset_folders
+    dest: __dirname + "/../builtAssets"
+  }).asset
 
 
   ###

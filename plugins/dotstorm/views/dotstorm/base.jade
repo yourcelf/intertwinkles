@@ -1,9 +1,7 @@
 extends ../../../../views/layout
 
 block poststyles
-  link(rel="stylesheet", type="text/css", href="/static/dotstorm/css/style.css")
-  //!=css("dotstorm/css/style")
+  link(rel="stylesheet", type="text/css", href=asset("dotstorm/css/style.styl"))
 
 block postscripts
-  script(type="text/javascript", src="/static/dotstorm/js/frontend.js")
-  //!=js("dotstorm/js/frontend")
+  script(type="text/javascript", src=asset("dotstorm/js/frontend.coffee"))

@@ -1,8 +1,7 @@
 extends ../../../../views/layout
 
 block poststyles
-  link(rel="stylesheet", type="text/css", href="/static/resolve/css/style.css")
-  //!=css("resolve/css/style")
+  link(rel="stylesheet", type="text/css", href=asset("resolve/css/style.styl"))
 
 block body
   script(type='text/template', id='splashTemplate')
@@ -296,5 +295,4 @@ block body
     </table>
 
 block postscripts
-  script(src="/static/resolve/js/frontend.js", type="text/javascript")
-  //!=js('resolve/js/frontend')
+  script(src=asset("resolve/js/frontend.coffee"), type="text/javascript")

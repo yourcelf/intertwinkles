@@ -1,8 +1,7 @@
 extends ../layout
 
 block poststyles
-  link(rel="stylesheet", type="text/css", href="/static/css/home.css")
+  link(rel="stylesheet", type="text/css", href=asset("css/home.styl"))
 
 block postscripts
-  script(src="/static/js/home/home.js")
-  //!=js("js/home/home")
+  script(src=asset("js/home/home.coffee"))
