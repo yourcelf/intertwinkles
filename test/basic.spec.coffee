@@ -7,6 +7,8 @@ await = (fn) ->
   setTimeout (-> await fn), 100
 
 describe "basic", ->
+  this.timeout(20000)
+
   before (done) ->
     common.startUp (server, browser) =>
       @server = server
