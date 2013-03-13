@@ -24,6 +24,9 @@ start = (config) ->
     options.https = {
       key: config.https.key
       cert: config.https.cert
+      # mitigate BEAST
+      honorCipherOrder: true
+      ciphers: "ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH"
     }
 
   proxyServer = httpProxy.createServer(options)
