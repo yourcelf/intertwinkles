@@ -17,8 +17,9 @@ describe "basic", ->
     common.shutDown(@server, done)
 
   it "Loads the front page", (done) ->
+    @browser.maxWait = '10s'
     @browser.visit "http://localhost:8888/", (blank, browser, status, errors) ->
-      expect(status).to.be(200)
+      expect(browser.statusCode).to.be(200)
       done()
 
 #  it "Mocks http requests", (done) ->
