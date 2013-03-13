@@ -43,8 +43,8 @@ def install_all():
         print("Creating secrets...")
         create_secrets()
     if "assets" in include:
-        print("Building assets...")
-        build_assets()
+        print("Collecting assets...")
+        collect_assets()
     if "node" in include:
         print("Installing node dependencies...")
         install_node_dependencies()
@@ -103,8 +103,8 @@ def create_secrets():
                 fh.write(secret)
     print "Created", count, "files."
 
-def build_assets():
-    subprocess.check_call(["bin/build_assets.js"], cwd=PROJECT_ROOT)
+def collect_assets():
+    subprocess.check_call(["bin/collect_assets.js"], cwd=PROJECT_ROOT)
 
 def install_node_dependencies():
     subprocess.check_call(["npm", "install"], cwd=PROJECT_ROOT)

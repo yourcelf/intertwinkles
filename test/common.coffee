@@ -124,6 +124,11 @@ loadFixture = (callback) ->
     (done) -> async.parallel(groupAdders, done),
   ], callback)
 
+stubAuthenticate = (server, browser, email, callback) ->
+  # Log the session in with the server, and put a matching cookie in the
+  # browser, so that it can access authenticated pages.
+  
+
 stubBrowserID = (browser, browserid_response) ->
   # Mocking of browserid only works in zombie v2.
   if browser.resources.mock?

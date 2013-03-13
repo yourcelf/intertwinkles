@@ -286,6 +286,10 @@ footer_template = _.template("""
           <img alt='The MIT Center for Civic Media' src='/static/img/C4CM.png'>
         </a>
 
+        <a href='http://voqal.org'>
+          <img alt='Voqal' src='/static/img/voqal_logo.svg' />
+        </a>
+
         <a href='http://media.mit.edu/speech'>
           <img alt='The Speech + Mobility Group' src='/static/img/S_M.png'>
         </a>
