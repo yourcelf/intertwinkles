@@ -75,9 +75,11 @@ module.exports = (config) ->
       for group in groups or []
         # Are we a member of this group?
         if _.find(group.members, (m) -> m.user.id == user.id)
+          # Add full details of each member of this group.
           for member in group.members
             output.users[member.user.id] = member.user
             member.user = member.user.id
+          # Just include emails and user ID's for invitees.
           for member in group.invited_members
             if not output.users[member.user.id]?
               u = member.user
@@ -153,7 +155,7 @@ module.exports = (config) ->
     unless long_path.substring(0, 1) == "/"
       long_path = "/#{long_path}"
 
-    # Use find, save pattern rather than an upsert pattern, so that we get the
+    # Use find + save pattern rather than an upsert pattern, so that we get the
     # mongoose pre save triggers to fire.
     schema.ShortURL.findOne {
       long_path: long_path
