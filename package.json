@@ -10,7 +10,7 @@
   "repository": "",
   "author": "Charlie DeTar",
   "dependencies": {
-    "coffee-script": "<1.6",
+    "coffee-script": "<1.5",
     "sockjs": "~0.3",
     "underscore": "~1",
     "canvas": "~1.0",
