@@ -1,5 +1,6 @@
 #require("nodetime").profile() # debug analytics
 express        = require 'express'
+connect        = require 'connect'
 http           = require 'http'
 RedisStore     = require('connect-redis')(express)
 flash          = require 'connect-flash'
@@ -65,6 +66,7 @@ start = (config) ->
   app.configure 'development', -> logger.setLevel(log4js.levels.DEBUG)
   app.configure 'production',  -> logger.setLevel(log4js.levels.ERROR)
   app.enable "trust proxy"
+  app.use connect.compress()
   app.use express.bodyParser({keepExtensions: true})
   app.use express.cookieParser()
   app.use express.session({
