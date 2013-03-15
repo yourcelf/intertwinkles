@@ -7,9 +7,8 @@ common     = require '../../../test/common'
 describe "Dotstorm Canvas to image from idea", ->
   before (done) ->
     @mahId = undefined
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       done()
 
   after (done) ->

@@ -11,9 +11,8 @@ resolve = require("../lib/resolve")(config)
 
 describe "resolve", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
 
       # Establish a session
       @session = {}

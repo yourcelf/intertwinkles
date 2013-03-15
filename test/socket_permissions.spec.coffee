@@ -23,9 +23,8 @@ logger.setLevel(log4js.levels.FATAL)
 
 describe "Socket permissions", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       async.series [
         (done) =>
           www_schema.Group.findOne {name: "Two Members"}, (err, group) =>

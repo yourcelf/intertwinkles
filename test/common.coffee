@@ -53,30 +53,30 @@ startUp = (done) ->
   logger.setLevel(log4js.levels.FATAL)
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
   browser = fetchBrowser()
-  # Prepare mail server
+  async.series [
+    (done) ->
+      clearDb(done)
+    (done) ->
+      loadFixture(done)
+  ], (err, res) ->
+    expect(err).to.be(null)
+    done(srv)
+
+startMailServer = (callback) ->
   mail = {
     server: null
     client: null
     callback: (->)
     outbox: []
   }
-  async.series([
-    (done) ->
-      clearDb(done)
-    (done) ->
-      loadFixture(done)
-    (done) ->
-      mail.server = email_server.start( (message) ->
-          mail.outbox.push(message)
-          mail.callback(message)
-        , config.email.port
-        , ->
-          mail.client = email.server.connect(config.email)
-          done()
-      )
-  ], (err, res) ->
-    expect(err).to.be(null)
-    done(srv, browser, mail))
+  mail.server = email_server.start( (message) ->
+      mail.outbox.push(message)
+      mail.callback(message)
+    , config.email.port
+    , ->
+      mail.client = email.server.connect(config.email)
+      callback(mail)
+  )
 
 shutDown = (srv, done) ->
   async.series([
@@ -197,5 +197,5 @@ build_sockjs_client = (callback) ->
 
 
 module.exports = {stubBrowserID, stubAuthenticate, loadFixture,
-                  startUp, shutDown, TestModel, await,
+                  startUp, startMailServer, shutDown, TestModel, await,
                   build_sockjs_client, fetchBrowser}

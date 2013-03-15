@@ -8,9 +8,8 @@ common   = require '../../../test/common'
 
 describe "Dotstorm Mongoose connector", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       done()
 
   after (done) ->

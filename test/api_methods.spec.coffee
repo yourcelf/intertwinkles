@@ -10,9 +10,8 @@ api_methods   = require("../lib/api_methods")(config)
 
 describe "api", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       done()
 
   after (done) ->

@@ -49,9 +49,8 @@ describe "SOLR search", ->
   before (done) ->
     if process.env.SKIP_SOLR_TESTS
       return done()
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       clear_test_docs_from_solr(done)
 
   after (done) ->

@@ -14,9 +14,8 @@ require "better-stack-traces"
 
 describe "www methods", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       @session = {}
       common.stubBrowserID({email: "one@mockmyid.com"})
       async.series [

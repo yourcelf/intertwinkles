@@ -8,9 +8,8 @@ utils = require '../lib/utils'
 
 describe "Sharing", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       done()
 
   after (done) ->
