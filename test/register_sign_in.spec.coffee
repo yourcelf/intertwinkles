@@ -8,7 +8,7 @@ common  = require './common'
 timeoutSet = (a, b) -> setTimeout(b, a)
 
 describe "registration", ->
-  this.timeout(20000)
+  this.timeout(40000)
   before (done) ->
     common.startUp (server, browser) =>
       @server = server
