@@ -42,7 +42,7 @@ await = (fn, timeout=100) ->
 
 fetchBrowser = () ->
   browser = new Browser()
-  browser.maxWait = '15s'
+  browser.maxWait = '120s'
   browser.evaluate("console.log = function() {};")
   return browser
 
