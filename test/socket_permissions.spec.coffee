@@ -42,7 +42,7 @@ describe "Socket permissions", ->
           @sessions = {}
           authenticate = (user, done) =>
             @sessions[user.email] = {}
-            common.stubBrowserID(@browser, {email: user.email})
+            common.stubBrowserID({email: user.email})
             api_methods.authenticate(@sessions[user.email], "assertion", done)
           async.map(_.values(@user_map), authenticate, done)
         #
@@ -62,7 +62,7 @@ describe "Socket permissions", ->
                 done()
         (done) =>
           # authenty: Is authenticated, but not authorized.
-          common.stubBrowserID(@browser, {email: "no_group@mockmyid.com"})
+          common.stubBrowserID({email: "no_group@mockmyid.com"})
           session = {
             cookie: { maxAge: 2000 },
             session_id: "authenty",
@@ -76,7 +76,7 @@ describe "Socket permissions", ->
                   done()
         (done) =>
           # authory: Is authorized to access documents.
-          common.stubBrowserID(@browser, {email: "one@mockmyid.com"})
+          common.stubBrowserID({email: "one@mockmyid.com"})
           session = {
             cookie: { maxAge: 2000 },
             session_id: "authory",

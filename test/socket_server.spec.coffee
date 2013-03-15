@@ -14,11 +14,7 @@ logger        = log4js.getLogger("socket_server")
 logger.setLevel(log4js.levels.FATAL)
 require "better-stack-traces"
 
-await = (fn, timeout=100) ->
-  if fn() == true
-    return true
-  setTimeout(fn, timeout)
-
+await = common.await
 
 describe "Socket server", ->
   before (done) ->

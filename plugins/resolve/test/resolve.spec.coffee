@@ -17,7 +17,7 @@ describe "resolve", ->
 
       # Establish a session
       @session = {}
-      common.stubBrowserID(@browser, {email: "one@mockmyid.com"})
+      common.stubBrowserID({email: "one@mockmyid.com"})
       async.series [
         (done) =>
           www_schema.User.findOne {email: "one@mockmyid.com"}, (err, doc) =>

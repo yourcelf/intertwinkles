@@ -8,6 +8,7 @@ _            = require 'underscore'
 async        = require 'async'
 expect       = require 'expect.js'
 mongoose     = require 'mongoose'
+connect      = require 'connect'
 sockjs_client = require 'sockjs-client'
 Schema       = mongoose.Schema
 config       = require './test_config'
@@ -34,13 +35,24 @@ try
 catch e
   TestModel = mongoose.model("TestModel", TestModelSchema)
 
+await = (fn, timeout=100) ->
+  if fn() == true
+    return true
+  setTimeout(fn, timeout)
+
+fetchBrowser = () ->
+  browser = new Browser()
+  browser.maxWait = '15s'
+  browser.evaluate("console.log = function() {};")
+  return browser
+
 startUp = (done) ->
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
   srv = server.start(config)
   # Re-Squelch logging to preserve mocha's reporter
   logger.setLevel(log4js.levels.FATAL)
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
-  browser = new Browser()
+  browser = fetchBrowser()
   # Prepare mail server
   mail = {
     server: null
@@ -124,28 +136,30 @@ loadFixture = (callback) ->
     (done) -> async.parallel(groupAdders, done),
   ], callback)
 
-stubAuthenticate = (server, browser, email, callback) ->
-  # Log the session in with the server, and put a matching cookie in the
-  # browser, so that it can access authenticated pages.
-  
+stubAuthenticate = (browser, email, callback) ->
+  # Establish a session (if none exists) between browser and server. Then,
+  # authenticate the session.
 
-stubBrowserID = (browser, browserid_response) ->
-  # Mocking of browserid only works in zombie v2.
-  if browser.resources.mock?
-    browser.resources.mock "https://login.persona.org/include.js", {
-      statusCode: 200
-      headers: { "Content-Type": "text/javascript" }
-      body: """
-        var handlers = {};
-        navigator.id = {
-          _shimmed: true,
-          _mocked: true,
-          request: function() { handlers.onlogin("faux-assertion"); },
-          watch: function(obj) { handlers = obj; },
-          logout: function() { handlers.onlogout(); }
-        };
-      """
-    }
+  authenticate = () ->
+    stubBrowserID({email: email})
+    browser.evaluate("intertwinkles.onlogin('mock assertion')")
+    await ->
+      user_done = """intertwinkles.user && intertwinkles.user.get('email') == '#{email}'"""
+      if browser.evaluate(user_done)
+        callback(null)
+        return true
+      
+  try
+    cookie = browser.evaluate("$.cookie('express.sid')")
+  catch e
+
+  if cookie
+    authenticate()
+  else
+    browser.visit "http://localhost:#{config.port}/", (e, browser) ->
+      authenticate()
+
+stubBrowserID = (browserid_response) ->
   persona = require("../lib/persona_consumer")
   persona.verify = (assertion, audience, callback, options) ->
     callback(null, _.extend {
@@ -182,5 +196,6 @@ build_sockjs_client = (callback) ->
   return client
 
 
-module.exports = {stubBrowserID, loadFixture, startUp, shutDown, TestModel,
-  build_sockjs_client}
+module.exports = {stubBrowserID, stubAuthenticate, loadFixture,
+                  startUp, shutDown, TestModel, await,
+                  build_sockjs_client, fetchBrowser}

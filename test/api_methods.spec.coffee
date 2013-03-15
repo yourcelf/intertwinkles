@@ -43,7 +43,7 @@ describe "api", ->
 
   it "authenticates", (done) ->
     # Stub out mozilla persona, so that we don't need to hit their servers.
-    common.stubBrowserID(@browser, {email: "one@mockmyid.com"})
+    common.stubBrowserID({email: "one@mockmyid.com"})
     session = {}
     api_methods.authenticate session, "bogus assertion", (err, session, message) ->
       _check_one_at_mockmyid_users_and_groups(session)
@@ -52,7 +52,7 @@ describe "api", ->
       done()
 
   it "authenticates user without groups", (done) ->
-    common.stubBrowserID(@browser, {email: "no_group@mockmyid.com"})
+    common.stubBrowserID({email: "no_group@mockmyid.com"})
     session = {}
     api_methods.authenticate session, "bogus assertion", (err, session, message) ->
       expect(session.auth.email).to.be("no_group@mockmyid.com")
@@ -65,7 +65,7 @@ describe "api", ->
       done()
 
   it "clears session", (done) ->
-    common.stubBrowserID(@browser, {email: "one@mockmyid.com"})
+    common.stubBrowserID({email: "one@mockmyid.com"})
     session = {}
     api_methods.authenticate session, "bogus assertion", (err, session, message) ->
       api_methods.clear_session_auth session, (err, session) ->
