@@ -38,7 +38,7 @@ catch e
 await = (fn, timeout=100) ->
   if fn() == true
     return true
-  setTimeout(fn, timeout)
+  setTimeout((-> await(fn, timeout)), timeout)
 
 fetchBrowser = () ->
   browser = new Browser()
