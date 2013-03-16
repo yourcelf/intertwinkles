@@ -1,8 +1,5 @@
-Browser = require 'zombie'
 expect  = require 'expect.js'
-_       = require 'underscore'
 config  = require './test_config'
-schema  = require('../lib/schema').load(config)
 common  = require './common'
 
 timeoutSet = (a, b) -> setTimeout(b, a)
@@ -45,7 +42,6 @@ describe "registration", ->
         browser.evaluate("$($('div.profile-image')[2]).click()")
         expect(browser.text("div.profile-image.chosen")).to.be("Microwave Oven")
         browser.query(".modal-footer input.btn.btn-primary").click()
-        # and thus we bork zombie.. time for new browser.
         done()
 
   it "redirects to 'getting started'", (done) ->

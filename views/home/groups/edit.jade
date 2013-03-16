@@ -66,7 +66,7 @@ block body
               value=(group.name ? "Save changes" : "Create new group"))
 
 block append postscripts
-  != js('js/home/membership')
+  script(type='text/javascript', src=asset("js/home/membership.coffee"))
   <script type='text/javascript'>
   != "window.GROUP_ID = " + (group.id ? "'" + group.id + "'" : "null") + ";"
   </script>
