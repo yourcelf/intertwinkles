@@ -43,7 +43,10 @@ start = (messageHandler, port, started=(->)) ->
 
 stop = (callback) ->
   if smtp?
-    return smtp.end(callback)
+    try
+      return smtp.end(callback)
+    catch e
+      throw e unless e.message == "Not running"
   return callback(null)
 
 consoleHandler = (parsed_message) ->

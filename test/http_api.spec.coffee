@@ -11,9 +11,9 @@ api_methods   = require("../lib/api_methods")(config)
 
 describe "HTTP api", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
+      @browser = common.fetchBrowser()
       done()
 
   after (done) ->

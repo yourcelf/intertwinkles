@@ -9,11 +9,11 @@ api_methods = require("../lib/api_methods")(config)
 describe "Notifications", ->
   mail = null
   before (done) ->
-    common.startUp (server, browser, theMail) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
-      mail = theMail
-      done()
+      common.startMailServer (mailserver) ->
+        mail = mailserver
+        done()
 
   after (done) ->
     common.shutDown(@server, done)

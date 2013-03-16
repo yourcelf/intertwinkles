@@ -2,6 +2,7 @@
 *.~
 *.swp
 *.pyc
+attic
 server.log
 node_modules
 vendor

@@ -14,11 +14,10 @@ require "better-stack-traces"
 
 describe "www methods", ->
   before (done) ->
-    common.startUp (server, browser) =>
+    common.startUp (server) =>
       @server = server
-      @browser = browser
       @session = {}
-      common.stubBrowserID(@browser, {email: "one@mockmyid.com"})
+      common.stubBrowserID({email: "one@mockmyid.com"})
       async.series [
         (done) =>
           www_schema.User.findOne {email: "one@mockmyid.com"}, (err, doc) =>
@@ -217,7 +216,7 @@ describe "www methods", ->
         # Authenticate two@mockmyid.com and three@mockmyid.com sessions.
         authenticate = (props, done) =>
           [email, session] = props
-          common.stubBrowserID(@browser, {email})
+          common.stubBrowserID({email})
           api_methods.authenticate session, "assertion", (err) =>
             expect(err).to.be(null)
             expect(session.auth.user_id).to.not.be(undefined)
