@@ -36,7 +36,7 @@ membershipTableTemplate = _.template("""
       
 
 membershipRowTemplate = _.template("""
-  <tr class='member<%- removed ? " removed" : "" %> <%- new_invitee ? " newinvite" : "" %>'>
+  <tr class='member<%- removed ? " removed" : "" %><%- new_invitee ? " newinvite" : "" %>'>
     <td>
       <% if (user && user.icon) { %>
         <img src='<%- user.icon.small %>' /> <%- user.name %>
@@ -80,6 +80,9 @@ class MembershipTable extends Backbone.View
     @user = intertwinkles.user
     @destination_selector = options.destination_selector
     if options.group_id?
+      # Zombie wasn't re-parsing initial data (reparsing intertwinkles js)
+      # other browsers too?
+      #@group = intertwinkles.groups[options.group_id] or INITIAL_DATA.groups[options.group_id]
       @group = intertwinkles.groups[options.group_id]
     else
       @group = {
