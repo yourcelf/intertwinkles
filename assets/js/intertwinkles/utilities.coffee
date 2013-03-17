@@ -49,8 +49,10 @@ intertwinkles.inline_user = (user_id, name) ->
   else
     return "<span style='width: 32px;'><i class='icon icon-user'></i></span> #{name}"
 
-intertwinkles.markup = (response) ->
-  return urlize(response, 50, true, _.escape)
+intertwinkles.markup = (text) ->
+  if text
+    return urlize(text, 50, true, _.escape)
+  return ""
 
 html_colors = [
   [0x80, 0x00, 0x00, "maroon"],

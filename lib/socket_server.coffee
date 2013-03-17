@@ -126,6 +126,15 @@ class RoomManager extends events.EventEmitter
         continue
       @socketEmit(socket, route, msg)
 
+  roomSocketsMap: (room, callback) =>
+    _.map @roomToSockets[room], callback
+
+  roomSocketSessionMap: (room, callback) =>
+    _.map @roomToSockets[room], (socket) =>
+      @_getSessionForSocket socket, (err, session) =>
+        callback(err, socket, session)
+
+
   handleError: (socket, err) =>
     logger.error(err)
     if socket?

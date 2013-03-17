@@ -12,22 +12,28 @@ class ClockModel extends Backbone.Model
     intertwinkles.socket.on "clock:time", @_setTime
 
   _load: (data) =>
+    console.log "load", data
     @set data.model
-    @_setSkiew(data)
+    @_setSkew(data)
 
   _setTime: (data) =>
-    @_setSkiew(data)
-    categories = @model.get("categories")
-    category = categories?[data.category]
+    console.log "set time", data
+    @_setSkew(data)
+    categories = @get("categories")
+    category = _.find categories, (c) -> c.name == data.category
     return @fetch() if not category
     if category.times[data.index]
-      category.times[data.index] = data.time
+      for key in ["start", "stop"]
+        if new Date(category.times[data.index][key]) != new Date(data.time[key])
+          category.times[data.index] = data.time
+          @trigger "change:categories:#{category.name}", this
+          return
     else if category.times.length == data.index
       category.times.push(data.time)
+      @trigger "change:categories:#{category.name}", this
+      return
     else
       return @fetch()
-    @set("categories", categories)
-    @trigger "change:categories:#{category_name}", this
 
   _setSkew: (data) ->
     if data.now?
@@ -36,59 +42,106 @@ class ClockModel extends Backbone.Model
   _now: -> new Date(new Date().getTime() + BROWSER_CLOCK_SKEW)
 
   fetch: (cb) =>
+    console.log "fetch", @id
     return unless @id
     fetch = {_id: @id}
     # If we get a callback, specify a callback parameter for the query. If not,
     # leave it blank, and the result will be sent to "clock" and handled by
     # @_load directly.
     if cb?
-      intertwinkles.socket.once "clock_cb", (data) ->
+      intertwinkles.socket.once "clock_cb", (data) =>
         @_load(data)
         cb(null, this)
       fetch.callback = 'clock_cb'
-    intertwinkles.socket.emit "clock/fetch_clock", fetch
+    intertwinkles.socket.send "clock/fetch_clock", fetch
 
   save: (update, options) =>
     @set(update) if update?
-    intertwinkles.socket.emit "clock/save_clock", {model: this.toJSON()}
+    update = {model: {
+      _id: @id
+      name: @get("name")
+      about: @get("about")
+      categories: @get("categories")
+      present: @get("present")
+      sharing: @get("sharing")
+    }}
+    if options.success? or options.error?
+      update.callback = "save_cb"
+      intertwinkles.socket.once update.callback, (data) ->
+        options.error(data.error) if data.error?
+        options.success(data.model) if data.model?
+    intertwinkles.socket.send "clock/save_clock", update
 
   start: (category_name) =>
-    categories = @model.get("categories")
-    category = categories[category_name]
+    categories = @get("categories")
+    category = _.find(categories, (c) -> c.name == category_name)
     # Skip out if we're already counting.
-    return if not category.times[category.times.length - 1].stop
+    return if (category.times.length > 0 and
+      not category.times[category.times.length - 1].stop)
     new_time = {start: @_now()}
     category.times.push({start: new Date()})
-    intertwinkles.socket.emit "clock/set_time", {
-      _id: @model.id
+    intertwinkles.socket.send "clock/set_time", {
+      _id: @id
       category: category_name
       time: new_time
       index: category.times.length - 1
       now: new Date()
     }
-    @set "categories", categories
     @trigger "change:categories:#{category_name}", this
 
   stop: (category_name) =>
-    categories = @model.get("categories")
-    category = categories[category_name]
+    categories = @get("categories")
+    category = _.find(categories, (c) -> c.name == category_name)
     # Skip out if we aren't counting.
-    return if category.times[category.time.length - 1].stop?
-    time = category.times[category.time.length - 1]
+    return if (category.times.length == 0 or
+      category.times[category.times.length - 1].stop?)
+    time = category.times[category.times.length - 1]
     time.stop = @_now()
-    intertwinkles.socket.emit "clock/set_time", {
-      _id: @model.id
+    intertwinkles.socket.send "clock/set_time", {
+      _id: @id
       category: category_name
       time: time
       index: category.times.length - 1
       now: new Date()
     }
-    @set "categories", categories
     @trigger "change:categories:#{category_name}", this
 
-fetch_clock_list: (cb) =>
-  intertwinkles.socket.once "clock_list", cb
-  intertwinkles.socket.emit "clock/fetch_clock_list"
+  getStartDate: =>
+    min = Number.MAX_VALUE
+    for cat in @get("categories") or []
+      if cat.times.length > 0
+        min = Math.min(min, new Date(cat.times[0].start).getTime())
+    if min == Number.MAX_VALUE
+      return null
+    return new Date(min)
+
+  getEndDate: =>
+    max = Number.MIN_VALUE
+    for cat in @get("categories") or []
+      if cat.times.length > 0
+        end = cat.times[cat.times.length - 1].end or new Date()
+        max = Math.max(max, new Date(end).getTime())
+    if max == Number.MIN_VALUE
+      return null
+    return new Date(max)
+
+  getElapsed: (category_name) =>
+    category = _.find @get("categories"), (c) -> c.name == category_name
+    elapsed = 0
+    for time in category.times
+      start = new Date(time.start)
+      if time.stop
+        stop = new Date(time.stop)
+      else
+        stop = correct_date(new Date())
+      elapsed += stop.getTime() - start.getTime()
+    return elapsed
+
+fetch_clock_list = (cb) =>
+  intertwinkles.socket.once "clock_list", (data) ->
+    console.log("got clock list", data)
+    cb(data)
+  intertwinkles.socket.send "clock/fetch_clock_list"
 
 ###########################################################
 # Views
@@ -105,6 +158,43 @@ class ClockBaseView extends intertwinkles.BaseView
 
 class SplashView extends ClockBaseView
   template: _.template $("#splashTemplate").html()
+  itemTemplate: _.template $("#splashItemTemplate").html()
+  initialize: (options) ->
+    @set_clock_list(options.clock_list, false)
+    intertwinkles.user.on "change", @fetch_clock_list, this
+
+  remove: =>
+    super()
+    intertwinkles.user.off "change", @fetch_clock_list, this
+
+  fetch_clock_list: =>
+    console.log "fetch_clock_listy"
+    fetch_clock_list (list) =>
+      @set_clock_list(list)
+
+  set_clock_list: (data, render=true) =>
+    console.log "set_clock_listy", data
+    @clock_list = {
+      group: (new ClockModel(c) for c in data.group)
+      public: (new ClockModel(c) for c in data.public)
+    }
+    if render
+      @render()
+
+  render: =>
+    console.log "rendery"
+    @$el.html(@template())
+    if @clock_list.group
+      @$(".group-clocks").html("<ul></ul>")
+      for clock in @clock_list.group
+        @_add_item(".group-clocks ul", clock)
+    if @clock_list.public
+      @$(".public-clocks").html("<ul></ul>")
+      for clock in @clock_list.public
+        @_add_item(".public-clocks ul", clock)
+
+  _add_item: (selector, clock) =>
+    @$(selector).append(@itemTemplate(clock: clock))
 
 class AboutView extends ClockBaseView
   template: _.template $("#aboutTemplate").html()
@@ -117,7 +207,7 @@ class EditView extends ClockBaseView
   template: _.template $("#editTemplate").html()
   events:
     'click .softnav': 'softNav'
-    'submit form':    'addClock'
+    'submit form':    'saveClock'
     'keyup input':    'validate'
 
   initialize: (options) ->
@@ -143,16 +233,21 @@ class EditView extends ClockBaseView
     })
     @addView("#sharing_controls", @sharing_control)
 
-    items = (c.name for c in @model.get("names") or [])
+    items = (c.name for c in @model.get("categories") or [])
     if items.length == 0
       items = ["Male", "Female", "Person of Color", "White"]
     @items_control = new ItemsListView({items: items})
     @addView("#category_controls", @items_control)
 
-  addClock: (event) =>
+    if @model.id
+      @addView(".clock-footer", new ClockFooterView({
+        current: "edit", model: @model
+      }))
+
+  saveClock: (event) =>
+    event.preventDefault()
     cleaned_data = @validate()
     if cleaned_data
-      console.log cleaned_data
       old_cats = @model.get('categories') or []
       new_cats = []
       for name,i in cleaned_data.categories
@@ -163,13 +258,12 @@ class EditView extends ClockBaseView
 
       @model.save({
         name: cleaned_data.name
+        about: cleaned_data.about
         sharing: @sharing_control.sharing
         categories: new_cats
       }, {
         success: (model) =>
-          intertwinkles.app.navigate("/clock/c/#{model.id}/", {
-            trigger: true
-          })
+          intertwinkles.app.navigate("/clock/c/#{model.id}/", {trigger: true})
       })
 
   validate: =>
@@ -183,6 +277,7 @@ class EditView extends ClockBaseView
     return @validateFields "form", [
       ["#id_name", ((val) -> $.trim(val) or null), "This field is required."]
       ["#category_controls [name=item-0]", cleanCategories, "At least one category is required.", "categories"]
+      ["#id_about", ((val) -> val), ""]
     ]
 
 class ItemsListView extends ClockBaseView
@@ -246,7 +341,7 @@ class PresentControlsView extends ClockBaseView
 #
 
 class ClockView extends ClockBaseView
-  template: _.template $("#timeKeeperTemplate").html()
+  template: _.template $("#clockTemplate").html()
   events:
     'click .softnav': 'softNav'
     'click .settings': 'settings'
@@ -261,6 +356,9 @@ class ClockView extends ClockBaseView
   remove: =>
     @model.off null, null, this
     super()
+    for view in @catviews or []
+      view?.remove()
+    @current_time?.remove()
 
   settings: (event) =>
     event.preventDefault()
@@ -280,107 +378,142 @@ class ClockView extends ClockBaseView
     for view in @catviews or []
       view.remove()
     @catviews = []
-    for cat,i in @model.get("categories")
-      if cat.name
-        catview = new CategoryTimerView(model, i)
-        @$(".category-list").append(catview.el)
-        catview.render()
-        @catviews.push(catview)
     
-    min = Number.MAX_VALUE
-    for cat in @model.get("categories")
-      if cat.times.length > 0
-        min = Math.min(min, cat.times[0].start)
-    if min < Number.MAX_VALUE
-      @$(".meeting-start").html("Start: #{correct_date(min).toLocaleString()}")
+    # Category views
+    for cat,i in @model.get("categories") or []
+      catview = new CategoryTimerView({model: @model, category: cat})
+      @$(".category-list").append(catview.el)
+      catview.render()
+      @catviews.push(catview)
+    
+    # Starting time
+    start_date = @model.getStartDate()
+    if start_date
+      @$(".meeting-start").html("Start: #{correct_date(start_date).toLocaleString()}")
     else
       @$(".meeting-start").html("&nbsp;")
 
+    # Current time
+    @current_time = new CurrentTimeView()
+    @$(".current-time").html(@current_time.el)
+    @current_time.render()
+
+    # Footer
+    @footer = new ClockFooterView({current: "clock", model: @model})
+    @$(".clock-footer").html(@footer.el)
+    @footer.render()
+
 # View for the button with built-in category timer.
 class CategoryTimerView extends ClockBaseView
+  tagName: 'a'
   template: _.template $("#categoryTimerTemplate").html()
   events:
-    'click .softnav': 'softNav'
-    'mousedown a.activate': 'mouseToggleActive'
-    'touchstart a.activate': 'touchToggleActive'
+    'mousedown': 'mouseToggleActive'
+    'touchstart': 'touchToggleActive'
 
   initialize: (options) ->
     super()
     @model = options.model
     @category = options.category
-    @active = false
+    @model.on "change:categories:#{@category.name}", @render, this
 
   remove: =>
     @model.off null, null, this
     super()
 
+  isActive: =>
+    return @category.times?.length > 0 and (
+      not @category.times[@category.times.length - 1].stop?
+    )
+
   mouseToggleActive: (event) =>
+    return unless intertwinkles.can_edit(@model)
     event.preventDefault()
-    unless @touchIsEnabled
-      @toggleActive()
+    event.stopPropagation()
+    @toggleActive() unless @touchIsEnabled
 
   touchToggleActive: (event) =>
     event.preventDefault()
+    event.stopPropagation()
     @touchIsEnabled = true
     @toggleActive()
 
   toggleActive: (event) =>
-    if @active
-      @active.stop = new Date()
-      @active = false
+    if @isActive()
+      @model.stop(@category.name)
       @render()
-      @model.send_stop()
     else
-      @active = {
-        start: new Date()
-        stop: null
-      }
-      @model.get("categories")[@category].push(@active)
-      @model.send_start()
+      @model.start(@category.name)
       @render()
 
-  get_elapsed_and_set_active: =>
-    elapsed = 0
-    for time in @model.get("categories")[@category]
-      if time.category == @category
-        start = new Date(time.start)
-        if time.stop
-          stop = new Date(time.stop)
-          @active = null
-        else
-          stop = correct_date(new Date())
-          @active = time
-        elapsed += stop.getTime() - start.getTime()
+  get_elapsed: =>
+    elapsed = @model.getElapsed(@category.name)
     seconds = Math.round(elapsed / 1000) % 60
     seconds = if seconds < 10 then "0" + seconds else seconds
     minutes = Math.floor(elapsed / 1000 / 60)
     return "#{minutes}:#{seconds}"
 
   render: =>
-    @$el.addClass("buttonrow")
-    elapsed = @get_elapsed_and_set_active()
-    @$el.html @template {
-      category: @model.get('categories')[@category] or "Undefined"
-      elapsed: elapsed
-      active: @active
-    }
+    active = @isActive()
+    @$(".active").removeClass("active")
+    @$el.attr({
+      href: "#"
+      class: "btn timer-button #{if active then "active btn-warning" else "btn-success"}"
+    }).html(
+      @template({name: @category.name or "Undefined"})
+    )
+    
+    # Show elapsed time.
+    go = => @$(".elapsed").html(@get_elapsed())
+    go()
+    # Remove any previous interval for incrementing the time.
+    if @goer? then clearInterval(@goer)
+    # Set up a new interval to increment the time if we're active.
+    if active then @goer = setInterval(go, 100)
 
 # View for a simple clock displaying the current time.
 class CurrentTimeView extends ClockBaseView
-  template: _.template $("#currentTimeTemplate").html()
   render: =>
+    @$el.addClass("current-time")
     go = =>
       @$el.html(
         # Remove seconds
-        new Date().toLocaleTimeString().replace(/\d+:\d+(:\d+)/, "")
+        new Date().toLocaleTimeString().replace(/0?(\d+:\d+)(:\d+)(.*)/, "$1$3")
       )
+    go()
     clearInterval(@goer) if @goer?
-    @goer = setInterval go, 1000
+    @goer = setInterval(go, 1000)
     this
+
   remove: =>
     clearInterval @goer if @goer?
     super()
-    
+
+#
+# Clock footer view
+#
+class ClockFooterView extends ClockBaseView
+  template: _.template $("#clockFooterTemplate").html()
+  initialize: (options) ->
+    @current = options.current
+    @model = options.model
+    intertwinkles.user.on("change", @render, this)
+
+  remove: =>
+    super()
+    intertwinkles.user.off("change", @render, this)
+
+  render: =>
+    links = []
+    # key, display_name, url
+    links.push(["clock", "Clock", "/clock/c/#{@model.id}/"])
+    if intertwinkles.can_edit(@model)
+      links.push(["edit", "Edit", "/clock/c/#{@model.id}/edit/"])
+    links.push(["graph", "Graph", "/clock/c/#{@model.id}/graph/"])
+    links.push(["export", "Export", "/clock/c/#{@model.id}/export/"])
+    @$el.html(@template({links: links, current: @current}))
+
+
 #
 # Reviewing
 #
@@ -389,11 +522,106 @@ class GraphView extends ClockBaseView
   template: _.template $("#graphTemplate").html()
   events:
     'click .softnav': 'softNav'
+  initialize: (options) ->
+    super()
+    @model = options.model
+
+  render: =>
+    startDate = @model.getStartDate()
+    endDate   = @model.getEndDate()
+    @$el.html(@template({
+      startDate: startDate
+      endDate: endDate
+      categories: @model.get("categories")
+    }))
+    @addView(".clock-footer", new ClockFooterView({
+      model: @model
+      current: "graph"
+    }))
+
+    return unless startDate and endDate
+
+    startTime = startDate.getTime()
+    endTime = endDate.getTime()
+    totalTime = endTime - startTime
+
+    @$(".time-block").each (i, el) ->
+      $el = $(el)
+      start = parseInt($el.attr("data-start"))
+      end = parseInt($el.attr("data-stop"))
+      leftPercent = 100 * (start - startTime) / totalTime
+      widthPercent = 100 * (end - start) / totalTime
+      $(el).css({
+        left: leftPercent + "%"
+        width: widthPercent + "%"
+      })
+    @$(".time-block").tooltip()
+
+
 
 class ExportView extends ClockBaseView
   template: _.template $("#exportTemplate").html()
   events:
     'click .softnav': 'softNav'
+    'click .json': 'showJSON'
+    'click .csv': 'showCSV'
+  initialize: (options) ->
+    super()
+    @model = options.model
+    @active = "json"
+
+  render: =>
+    @$el.html(@template({
+      model: @model
+      startDate: @model.getStartDate()
+      active: @active
+      data: if @active == "json" then @getJSON() else @getCSV()
+    }))
+    @addView(".clock-footer", new ClockFooterView({current: "export", model: @model}))
+
+  showJSON: => @active = "json" ; @render()
+  showCSV:  => @active = "csv"  ; @render()
+
+  getJSON: =>
+    data = {
+      name: @model.get("name")
+      startDate: @model.getStartDate()
+      categories: []
+    }
+    for cat in @model.get("categories")
+      catData = {
+        name: cat.name
+        times: []
+      }
+      for time in cat.times
+        catData.times.push({start: time.start, stop: time.stop})
+      catData.elapsed = @model.getElapsed(cat.name)
+      data.categories.push(catData)
+    return JSON.stringify(data, null, "  ")
+
+  getCSV: =>
+    csvEscape = (str) ->
+      str = $.trim(str).replace(/"/, '""')
+      if str.indexOf(",") != -1
+        str = '"' + str + '"'
+      return str
+
+    rows = []
+    for cat in @model.get("categories")
+      for time in cat.times
+        rows.push([
+          csvEscape(cat.name),
+          csvEscape(time.start),
+          csvEscape(time.stop)
+        ])
+    rows = _.sortBy(rows, (r) -> r[1])
+    rows.unshift(["Category","Start","Stop"])
+    return (row.join(",") for row in rows).join("\n")
+
+
+
+
+
 
 ###########################################################
 # Router
@@ -412,6 +640,7 @@ class Router extends Backbone.Router
   initialize: (options) ->
     @model = new ClockModel(options.socket)
     @model.set(INITIAL_DATA.clock or {})
+    @clock_list = INITIAL_DATA.clock_list
     @_join_room(@model) if @model.id?
     super()
 
@@ -422,24 +651,24 @@ class Router extends Backbone.Router
   about: =>           @_open(new AboutView())
   addClock: =>        @_open(new EditView())
   index: =>
-    view = new SplashView()
+    view = new SplashView(clock_list: @clock_list)
     if @view?
       # Re-fetch list if this isn't a first load.
-      fetch_clock_list (data) => view.set_clock_list(data)
+      fetch_clock_list (data) =>
+        view.set_clock_list(data)
     @_open(view, null)
 
   onReconnect: =>
     # refresh data after a disconnection.
 
   _open: (view, id) =>
-    console.log view
     if @model.id? and @model.id != id
       @_leave_room()
-      if id?
-        @model.set({_id: id})
-        return @model.fetch =>
-          @_join_room(@model)
-          @_show_view(view)
+    if id?
+      @model.set({_id: id})
+      return @model.fetch =>
+        @_join_room(@model)
+        @_show_view(view)
     @_show_view(view)
     
   _show_view: (view) =>
@@ -455,17 +684,18 @@ class Router extends Backbone.Router
   _join_room: (model) =>
     @_leave_room()
 
-    @room_view = new intertwinkles.RoomUsersMenu(room: @model.id)
+    @room_view = new intertwinkles.RoomUsersMenu(room: "clock/#{@model.id}")
     $(".sharing-online-group .room-users").replaceWith(@room_view.el)
-    room_view.render()
+    @room_view.render()
 
     @sharing_view = new intertwinkles.SharingSettingsButton(model: @model)
     $(".sharing-online-group .sharing").html(@sharing_view.el)
     @sharing_view.render()
     @sharing_view.on "save", (sharing_settings) =>
       @model.set { sharing: sharing_settings }
-      @model.send_update()
-      @sharing_view.close()
+      @model.save({}, {
+        success: => @sharing_view.close()
+      })
 
 ###########################################################
 # Utils
@@ -473,7 +703,7 @@ class Router extends Backbone.Router
 
 correct_date = (date) ->
   time = if date.getTime? then date.getTime() else date
-  time += browser_server_time_offset
+  time += BROWSER_CLOCK_SKEW
   return new Date(time)
 
 ###########################################################

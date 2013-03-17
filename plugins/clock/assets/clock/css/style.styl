@@ -1,0 +1,73 @@
+
+h3
+  text-align: center
+
+.graph
+  .category
+    border: 1px solid #eee
+    .name
+      text-align: right
+      border-right: 1px dotted #eee
+    .times
+      background-color: white
+      position: relative
+      .time-block
+        border-radius: 5px 5px 0px 0px
+        height: 100%
+        position: absolute
+        color: green
+        background-color: rgba(100, 200, 100, 0.8)
+        border: 1px solid rgba(0, 200, 0, 0.5)
+
+@media (max-width: 767px)
+  .graph .category .name
+    text-align: center
+
+.clock
+  .current-time
+    font-size: 24px
+    text-align: center
+  .about
+    background-color: #eee
+    padding: 1em
+    border: #ddd
+    border-radius: 5px
+  .meeting-start
+    font-family: sans-serif
+    text-transform: uppercase
+    color: #aaa
+    font-size: 12px
+    text-align: center
+  .category-list
+    text-align: center
+    .timer-button
+      width: 40%
+      display: inline-block
+      .category-name, .elapsed
+        white-space: nowrap
+        display: block
+      height: 48px
+
+@media (max-width: 320px)
+  .clock .category-list .timer-button
+    width: 100%
+    
+      
+textarea.clock-export
+  width: 100%
+  height: 300px
+
+.clock-footer
+  margin-top: 1em
+  text-align: center
+  .clock-nav
+    display: inline-block
+    margin-left: auto
+    margin-right: auto
+
+ul.sharing-online-group
+  padding: inherit
+  margin: inherit
+  margin-bottom: 10px
+  margin-left: 10px
+

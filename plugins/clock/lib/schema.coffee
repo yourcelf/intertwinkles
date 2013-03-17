@@ -4,6 +4,7 @@ Schema   = mongoose.Schema
 load = (config) ->
   ClockSchema = new Schema
     name: String
+    about: String
     created: Date
     sharing: {
       group_id: String

@@ -7,7 +7,7 @@ block postscripts
   script(type='text/javascript', src=asset("clock/js/frontend.coffee"))
 
 block preapp
-  div.pull-right
+  div.pull-right(style='position: absolute; right: 1em; top: 60px;')
     ul.sharing-online-group.pull-right
       li.room-users
       li.sharing
@@ -19,11 +19,40 @@ block postapp
   //
   script(type='text/template', id='splashTemplate')
     h1 Progressive Clock
-    p.
-      Keep track of speaker time in meetings by identity category. Learn more
-      about <a class='softnav about' href='/clock/about/'>what this is good for and
-      what it isn't</a>.
-    a.btn.btn-large.btn-primary.softnav.add-new-clock(href='/clock/add/') New clock
+    div.row-fluid
+      div.span6.offset3
+        p.
+          Keep track of speaker time in meetings by identity category. Learn
+          more about <a class='softnav about' href='/clock/about/'>what this is
+          good for and what it isn't</a>.
+        div(style='text-align: center;')
+          a.btn.btn-large.btn-primary.softnav.add-new-clock(href='/clock/add/').
+            New clock
+    div.row-fluid
+      div.span6
+        h3(style='text-align: left;') Public clocks
+        div.public-clocks Nothing here yet.
+      div.span6
+        h3(style='text-align: left;') From your groups
+        div.group-clocks Nothing here yet.
+
+  script(type='text/template', id='splashItemTemplate')
+    li.
+      <a class='softnav' href='/clock/c/<%- clock.id %>/'>
+        <%- clock.get("name") %>
+      </a>
+      <span class='group-name label' data-group-id='<%- clock.get("sharing").group_id %>'></span>
+
+      <div class='category-list'>
+        <% var categories = clock.get("categories"); %>
+        <% for (var i = 0; i < categories.length; i++) { %>
+          <%- categories[i].name %><%= i == categories.length - 1 ? "" : ", " %>
+        <% } %>
+      </div>
+      <div>
+        <%- clock.getStartDate().toLocaleString() %>
+      </div>
+
 
   script(type='text/template', id='aboutTemplate')
     h1 About the Progressive Clock
@@ -32,14 +61,18 @@ block postapp
   // Adding / editing
   //
   script(type='text/template', id='editTemplate')
-    h1 <%= title %>
+    h1 <%- title %>
     div.row-fluid
       div.span6.offset3
         form.form-horizontal
           div.control-group
             label.control-label(for="id_name") *Event or meeting name
             div.controls
-              input#id_name(type='text', name='name', style='display: block;')
+              <input id='id_name' type='text' name='name' style='display: block' value='<%- model.name || "" %>' />
+          div.control-group
+            label.control-label(for="id_about") About
+            div.controls
+              <textarea id='id_about' name='about'><%- model.about || "" %></textarea>
           div.control-group
             label.control-label(for="id_categories") *Categories
             div.controls#category_controls
@@ -52,7 +85,8 @@ block postapp
           div.control-group
             div.controls.
               <input class='btn btn-primary btn-large' type='submit'
-                     value='<%= action %>' />
+                     value='<%- action %>' />
+    div.clock-footer
 
   script(type='text/template', id='itemsListTemplate')
     div.items
@@ -61,11 +95,11 @@ block postapp
       
   script(type='text/template', id='itemsListItemTemplate')
     div.
-      <input type='text' name='<%= name %>' value='<%= value %>'
-             class='item' data-index='<%= index %>' tabindex=0 />
+      <input type='text' name='<%- name %>' value='<%- value %>'
+             class='item' data-index='<%- index %>' tabindex=0 />
       <% if (!last) { %>
         <input type='button' class='btn remove-item' value='-'
-               data-index='<%= index %>' tabindex=1 />
+               data-index='<%- index %>' tabindex=1 />
       <% } %>
 
   script(type='text/template', id='presentControlsTemplate')
@@ -73,14 +107,83 @@ block postapp
   // 
   // Detail
   //
-  script(type='text/template', id='timeKeeperTemplate')
+  script(type='text/template', id='clockTemplate')
+    div.clock.row-fluid
+      div.span6.offset3
+        h3.name.
+          <%- model.name %>
+        div.about.
+          <%= intertwinkles.markup(model.about) %>
+        div.meeting-start
+        div.current-time
+        div.category-list
+        div.clock-footer
+
   script(type='text/template', id='categoryTimerTemplate')
-  script(type='text/template', id='currentTimeTemplate')
+    <span class='category-name'><%- name %></span>
+    <span class='elapsed'></span> 
+
+  script(type='text/template', id='clockFooterTemplate')
+    div.clock-nav.btn-group.
+      <% _.each(links, function(link) { %>
+        <a href='<%- link[2] %>' class='btn softnav <%- current == link[0] ? " active" : "" %>'>
+          <%- link[1] %>
+        </a>
+      <% }); %>
 
   // 
   // Reviewing
   //
   script(type='text/template', id='graphTemplate')
+    h3 Graph of speaking times
+    <% if (startDate) { %>
+    div.graph.
+      <% _.each(categories, function(category) { %>
+        <div class='category row-fluid'>
+          <div class='name span2'><%- category.name %></div>
+          <div class='times span10' style='position: relative'>
+            <% _.each(category.times, function(time) { %>
+              <% var start = new Date(time.start).getTime(); %>
+              <% var stop = new Date(time.stop).getTime(); %>
+              <% var elapsed = stop - start; %>
+              <div class='time-block'
+                data-start='<%- start %>'
+                data-stop='<%- stop %>'
+                data-toggle="tooltip"
+                data-title="<%- parseInt(elapsed / 1000 / 60) + ':' + parseInt((elapsed / 1000) % 60) %>"
+                data-placement="bottom"
+                ></div>
+            <% }); %>
+          </div>
+        </div>
+      <% }); %>
+    <% } else { %>
+    p.
+      No data yet.
+    <% } %>
+
+
+    div.clock-footer
+
   script(type='text/template', id='exportTemplate')
+    div.row-fluid
+      div.span6.offset3
+        div.export-data
+          h3 Export data
+          <% if (startDate) { %>
+          p.
+            Export data for "<%- model.get('name') %>",
+            from <%- new Date(startDate).toLocaleString() %>.  Copy and paste this to use it for further analysis in other tools.
+          div.btn-group
+            <a href='#' class='btn json<%- active == "json" ? " active" : "" %>'>JSON</a>
+            <a href='#' class='btn csv<%- active == "csv" ? " active" : "" %>'>CSV</a>
+          div
+            textarea.clock-export.
+              <%= data %>
+          <% } else { %>
+          p.
+            No data yet.
+          <% } %>
+        div.clock-footer
 
 
