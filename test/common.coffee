@@ -40,7 +40,7 @@ catch e
 c.await = (fn, timeout=100) ->
   if fn() == true
     return true
-  setTimeout((-> await(fn, timeout)), timeout)
+  setTimeout((-> c.await(fn, timeout)), timeout)
 
 c.fetchBrowser = () ->
   browser = new Browser()
@@ -142,9 +142,9 @@ c.stubAuthenticate = (browser, email, callback) ->
   # authenticate the session.
 
   authenticate = () ->
-    stubBrowserID({email: email})
+    c.stubBrowserID({email: email})
     browser.evaluate("intertwinkles.onlogin('mock assertion')")
-    await ->
+    c.await ->
       user_done = """intertwinkles.user && intertwinkles.user.get('email') == '#{email}'"""
       if browser.evaluate(user_done)
         callback(null)
