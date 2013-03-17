@@ -26,9 +26,9 @@ describe "Socket server", ->
     @server = http.createServer(app)
     @sockserver.installHandlers(@server, {prefix: "/sockjs"})
     @server.listen(config.port)
-    @client = common.build_sockjs_client =>
-      @client2 = common.build_sockjs_client =>
-        @client3 = common.build_sockjs_client =>
+    @client = common.buildSockjsClient =>
+      @client2 = common.buildSockjsClient =>
+        @client3 = common.buildSockjsClient =>
           done()
 
   after (done) ->

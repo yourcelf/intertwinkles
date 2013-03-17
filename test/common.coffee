@@ -13,12 +13,13 @@ sockjs_client = require 'sockjs-client'
 Schema       = mongoose.Schema
 config       = require './test_config'
 www_schema   = require('../lib/schema').load(config)
-ds_schema    = require('../plugins/dotstorm/lib/schema').load(config)
 server       = require '../lib/server'
 fixture      = require './fixture'
 email_server = require "../lib/email_server"
 email        = require "emailjs"
 mongoose     = require "mongoose"
+
+module.exports = c = {}
 
 TestModelSchema = new Schema
   name: String
@@ -31,38 +32,38 @@ TestModelSchema = new Schema
     advertise: Boolean
   }
 try
-  TestModel = mongoose.model("TestModel")
+  c.TestModel = mongoose.model("TestModel")
 catch e
-  TestModel = mongoose.model("TestModel", TestModelSchema)
+  c.TestModel = mongoose.model("TestModel", TestModelSchema)
 
-await = (fn, timeout=100) ->
+
+c.await = (fn, timeout=100) ->
   if fn() == true
     return true
   setTimeout((-> await(fn, timeout)), timeout)
 
-fetchBrowser = () ->
+c.fetchBrowser = () ->
   browser = new Browser()
   browser.maxWait = '120s'
   browser.evaluate("console.log = function() {};")
   return browser
 
-startUp = (done) ->
+c.startUp = (done) ->
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
   srv = server.start(config)
   # Re-Squelch logging to preserve mocha's reporter
   logger.setLevel(log4js.levels.FATAL)
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
-  browser = fetchBrowser()
   async.series [
     (done) ->
-      clearDb(done)
+      c.clearDb(done)
     (done) ->
-      loadFixture(done)
+      c.loadFixture(done)
   ], (err, res) ->
     expect(err).to.be(null)
     done(srv)
 
-startMailServer = (callback) ->
+c.startMailServer = (callback) ->
   mail = {
     server: null
     client: null
@@ -78,15 +79,15 @@ startMailServer = (callback) ->
       callback(mail)
   )
 
-shutDown = (srv, done) ->
+c.shutDown = (srv, done) ->
   async.series([
     (done) -> email_server.stop(done)
     (done) -> srv.server.close() ; done()
-    (done) -> clearDb(done)
+    (done) -> c.clearDb(done)
     (done) -> srv.db.disconnect(done)
   ], done)
 
-deleteIcons = (cb) ->
+c.deleteIcons = (cb) ->
   www_schema.User.find {}, (err, docs) ->
     deletions = []
     _.each docs, (doc) ->
@@ -95,7 +96,7 @@ deleteIcons = (cb) ->
           fs.unlink(__dirname + '/../uploads/' + doc.icon.sizes[size], done)
     async.parallel(deletions, cb)
 
-clearDb = (cb) ->
+c.clearDb = (cb) ->
   conn = mongoose.createConnection(
     "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
   )
@@ -104,7 +105,7 @@ clearDb = (cb) ->
     conn.close()
     cb()
 
-loadFixture = (callback) ->
+c.loadFixture = (callback) ->
   users_by_name = {}
 
   userAdders = []
@@ -136,7 +137,7 @@ loadFixture = (callback) ->
     (done) -> async.parallel(groupAdders, done),
   ], callback)
 
-stubAuthenticate = (browser, email, callback) ->
+c.stubAuthenticate = (browser, email, callback) ->
   # Establish a session (if none exists) between browser and server. Then,
   # authenticate the session.
 
@@ -159,7 +160,7 @@ stubAuthenticate = (browser, email, callback) ->
     browser.visit "http://localhost:#{config.port}/", (e, browser) ->
       authenticate()
 
-stubBrowserID = (browserid_response) ->
+c.stubBrowserID = (browserid_response) ->
   persona = require("../lib/persona_consumer")
   persona.verify = (assertion, audience, callback, options) ->
     callback(null, _.extend {
@@ -170,23 +171,8 @@ stubBrowserID = (browserid_response) ->
       issuer: "mock-stub"
     }, browserid_response)
 
-session_stub = (user, done) ->
-  if user.indexOf("@") != -1
-    query = {email: user}
-  else
-    query = {_id: user}
-  www_schema.User.objects.findOne query, (err, doc) ->
-    expect(err).to.be(null)
-    expect(doc).to.not.be(null)
- 
-    session = {
 
-    }
-
-
-    done(session)
-
-build_sockjs_client = (callback) ->
+c.buildSockjsClient = (callback) ->
   client = sockjs_client.create("http://localhost:#{config.port}/sockjs")
   client.writeJSON = (data) =>
     client.write JSON.stringify(data)
@@ -195,7 +181,18 @@ build_sockjs_client = (callback) ->
   client.on "connection", callback
   return client
 
+c.getAllUsersAndGroups = (callback) ->
+  out = {
+    users: {}
+    groups: {}
+  }
+  www_schema.User.find {}, (err, users) ->
+    return callback(err) if err?
+    for user in users
+      out.users[user.email] = user
+    www_schema.Group.find {}, (err, groups) ->
+      return callback(err) if err?
+      for group in groups
+        out.groups[group.slug] = group
+      callback(null, out)
 
-module.exports = {stubBrowserID, stubAuthenticate, loadFixture,
-                  startUp, startMailServer, shutDown, TestModel, await,
-                  build_sockjs_client, fetchBrowser}

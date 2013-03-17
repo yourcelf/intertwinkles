@@ -1,64 +1,313 @@
-intertwinkles.connect_socket()
-intertwinkles.build_toolbar($("header"), {applabel: "clock"})
-intertwinkles.build_footer($("footer"))
+###########################################################
+# Model
+###########################################################
 
 BROWSER_CLOCK_SKEW = 0
 
-class ProgTime extends Backbone.Model
+class ClockModel extends Backbone.Model
   idAttribute: "_id"
-  initialize: (socket) ->
-    super()
-    @socket = socket
-    @socket.on "progtime", @_load
+  initialize: (options) ->
+    super(options)
+    intertwinkles.socket.on "clock", @_load
+    intertwinkles.socket.on "clock:time", @_setTime
 
   _load: (data) =>
-    if data.error?
-      flash "error", "Server error"
-      console.log data.error
-      return false
+    @set data.model
+    @_setSkiew(data)
+
+  _setTime: (data) =>
+    @_setSkiew(data)
+    categories = @model.get("categories")
+    category = categories?[data.category]
+    return @fetch() if not category
+    if category.times[data.index]
+      category.times[data.index] = data.time
+    else if category.times.length == data.index
+      category.times.push(data.time)
     else
-      @set data.model
-      if data.now?
-        BROWSER_CLOCK_SKEW = new Date(data.now).getTime() - new Date().getTime()
-      return true
+      return @fetch()
+    @set("categories", categories)
+    @trigger "change:categories:#{category_name}", this
+
+  _setSkew: (data) ->
+    if data.now?
+      BROWSER_CLOCK_SKEW = new Date(data.now).getTime() - new Date().getTime()
+
+  _now: -> new Date(new Date().getTime() + BROWSER_CLOCK_SKEW)
 
   fetch: (cb) =>
     return unless @id
-    @socket.once "fetch_progtime", (data) ->
-      if @_load(data)
+    fetch = {_id: @id}
+    # If we get a callback, specify a callback parameter for the query. If not,
+    # leave it blank, and the result will be sent to "clock" and handled by
+    # @_load directly.
+    if cb?
+      intertwinkles.socket.once "clock_cb", (data) ->
+        @_load(data)
         cb(null, this)
-    @socket.emit "fetch_progtime", {_id: @id}
+      fetch.callback = 'clock_cb'
+    intertwinkles.socket.emit "clock/fetch_clock", fetch
 
-  send_stop: =>
-  send_start: =>
-  send_update: =>
-  receive_update: (data) =>
+  save: (update, options) =>
+    @set(update) if update?
+    intertwinkles.socket.emit "clock/save_clock", {model: this.toJSON()}
 
-# View for a simple clock displaying the current time.
-class ClockView extends Backbone.View
+  start: (category_name) =>
+    categories = @model.get("categories")
+    category = categories[category_name]
+    # Skip out if we're already counting.
+    return if not category.times[category.times.length - 1].stop
+    new_time = {start: @_now()}
+    category.times.push({start: new Date()})
+    intertwinkles.socket.emit "clock/set_time", {
+      _id: @model.id
+      category: category_name
+      time: new_time
+      index: category.times.length - 1
+      now: new Date()
+    }
+    @set "categories", categories
+    @trigger "change:categories:#{category_name}", this
+
+  stop: (category_name) =>
+    categories = @model.get("categories")
+    category = categories[category_name]
+    # Skip out if we aren't counting.
+    return if category.times[category.time.length - 1].stop?
+    time = category.times[category.time.length - 1]
+    time.stop = @_now()
+    intertwinkles.socket.emit "clock/set_time", {
+      _id: @model.id
+      category: category_name
+      time: time
+      index: category.times.length - 1
+      now: new Date()
+    }
+    @set "categories", categories
+    @trigger "change:categories:#{category_name}", this
+
+fetch_clock_list: (cb) =>
+  intertwinkles.socket.once "clock_list", cb
+  intertwinkles.socket.emit "clock/fetch_clock_list"
+
+###########################################################
+# Views
+###########################################################
+
+class ClockBaseView extends intertwinkles.BaseView
+  events: 'click .softnav': 'softNav'
   render: =>
-    go = =>
-      @$el.html(
-        # Remove seconds
-        new Date().toLocaleTimeString().replace(/\d+:\d+(:\d+)/, "")
-      )
-    clearInterval(@goer) if @goer?
-    @goer = setInterval go, 1000
-    this
-  remove: =>
-    clearInterval @goer if @goer?
-    super()
-    
-# View for the button with built-in category timer.
-class CategoryView extends Backbone.View
-  template: _.template $("#showCategory").html()
+    @$el.html(@template())
+
+#
+# Front matter
+#
+
+class SplashView extends ClockBaseView
+  template: _.template $("#splashTemplate").html()
+
+class AboutView extends ClockBaseView
+  template: _.template $("#aboutTemplate").html()
+
+#
+# Adding / editing
+#
+
+class EditView extends ClockBaseView
+  template: _.template $("#editTemplate").html()
   events:
+    'click .softnav': 'softNav'
+    'submit form':    'addClock'
+    'keyup input':    'validate'
+
+  initialize: (options) ->
+    super()
+    if options?.model
+      @model = options.model
+      @title = "Edit Clock Settings"
+      @action = "Save settings"
+    else
+      @model = new ClockModel()
+      @title = "Add new Clock"
+      @action = "Add clock"
+
+  render: =>
+    @$el.html(@template({
+      model: @model.toJSON()
+      title: @title
+      action: @action
+    }))
+    @sharing_contorl?.remove()
+    @sharing_control = new intertwinkles.SharingFormControl({
+      sharing: @model.get("sharing")
+    })
+    @addView("#sharing_controls", @sharing_control)
+
+    items = (c.name for c in @model.get("names") or [])
+    if items.length == 0
+      items = ["Male", "Female", "Person of Color", "White"]
+    @items_control = new ItemsListView({items: items})
+    @addView("#category_controls", @items_control)
+
+  addClock: (event) =>
+    cleaned_data = @validate()
+    if cleaned_data
+      console.log cleaned_data
+      old_cats = @model.get('categories') or []
+      new_cats = []
+      for name,i in cleaned_data.categories
+        if name and old_cats[i]
+          new_cats.push({ name: name, times: old_cats[i].times })
+        else if name
+          new_cats.push({ name: name, times: [] })
+
+      @model.save({
+        name: cleaned_data.name
+        sharing: @sharing_control.sharing
+        categories: new_cats
+      }, {
+        success: (model) =>
+          intertwinkles.app.navigate("/clock/c/#{model.id}/", {
+            trigger: true
+          })
+      })
+
+  validate: =>
+    cleanCategories = =>
+      items = ($.trim(a) for a in @items_control.readItems())
+      non_blank = (a for a in items when a)
+      if non_blank.length > 0
+        return items
+      else
+        return null
+    return @validateFields "form", [
+      ["#id_name", ((val) -> $.trim(val) or null), "This field is required."]
+      ["#category_controls [name=item-0]", cleanCategories, "At least one category is required.", "categories"]
+    ]
+
+class ItemsListView extends ClockBaseView
+  template: _.template $("#itemsListTemplate").html()
+  itemTemplate: _.template $("#itemsListItemTemplate").html()
+  events:
+    'click .sftnav': 'softNav'
+    'click .add': 'addItem'
+    'click .remove-item': 'removeItem'
+    'keydown .item': 'enterItem'
+
+  initialize: (options) ->
+    super()
+    @items = options?.items or []
+
+  render: =>
+    @$el.html(@template())
+    @renderItems()
+
+  readItems: => _.map @$("input.item"), (el) -> $(el).val()
+
+  enterItem: (event) =>
+    if event.keyCode == 13
+      @addItem()
+    if event.keyCode == 8 && $(event.currentTarget).val() == ""
+      @removeItem(event)
+      @$(".item:last").focus()
+
+  addItem: =>
+    @items = @readItems()
+    @items.push("")
+    @renderItems()
+    @$(".item:last").select()
+
+  removeItem: (event) =>
+    @items = @readItems()
+    index = $(event.currentTarget).attr("data-index")
+    @items.splice(index, 1)
+    @renderItems()
+
+  renderItems: =>
+    @$(".items").html("")
+    if @items.length == 0
+      @items.push("")
+    for item,i in @items
+      @$(".items").append(@itemTemplate({
+        value: item
+        name: "item-#{i}"
+        index: i
+        last: @items.length == 1
+      }))
+
+# Form widget for marking who is present.
+class PresentControlsView extends ClockBaseView
+  template: _.template $("#presentControlsTemplate").html()
+  events:
+    'click .softnav': 'softNav'
+
+#
+# Detail view
+#
+
+class ClockView extends ClockBaseView
+  template: _.template $("#timeKeeperTemplate").html()
+  events:
+    'click .softnav': 'softNav'
+    'click .settings': 'settings'
+    'click .graph': 'graph'
+    'click .reset': 'reset'
+
+  initialize: (options) ->
+    super()
+    @model = options.model
+    @model.on "change", @render, this
+
+  remove: =>
+    @model.off null, null, this
+    super()
+
+  settings: (event) =>
+    event.preventDefault()
+    app.navigate("settings", {trigger: true})
+
+  graph: (event) =>
+    event.preventDefault()
+    app.navigate("graph", {trigger: true})
+
+  reset: (event) =>
+    event.preventDefault()
+
+  render: =>
+    @$el.html @template {
+      model: @model.toJSON()
+    }
+    for view in @catviews or []
+      view.remove()
+    @catviews = []
+    for cat,i in @model.get("categories")
+      if cat.name
+        catview = new CategoryTimerView(model, i)
+        @$(".category-list").append(catview.el)
+        catview.render()
+        @catviews.push(catview)
+    
+    min = Number.MAX_VALUE
+    for cat in @model.get("categories")
+      if cat.times.length > 0
+        min = Math.min(min, cat.times[0].start)
+    if min < Number.MAX_VALUE
+      @$(".meeting-start").html("Start: #{correct_date(min).toLocaleString()}")
+    else
+      @$(".meeting-start").html("&nbsp;")
+
+# View for the button with built-in category timer.
+class CategoryTimerView extends ClockBaseView
+  template: _.template $("#categoryTimerTemplate").html()
+  events:
+    'click .softnav': 'softNav'
     'mousedown a.activate': 'mouseToggleActive'
     'touchstart a.activate': 'touchToggleActive'
 
-  initialize: (model, category) ->
-    @model = model
-    @category = category
+  initialize: (options) ->
+    super()
+    @model = options.model
+    @category = options.category
     @active = false
 
   remove: =>
@@ -116,124 +365,80 @@ class CategoryView extends Backbone.View
       active: @active
     }
 
-class SettingsView extends Backbone.View
-  template: _.template $("#settings").html()
-  max_num_categories: 8
-  events:
-    'submit form': 'save'
-    'click .cancel': 'cancel'
-
-  initialize: (model) ->
-    @model = model
-
+# View for a simple clock displaying the current time.
+class CurrentTimeView extends ClockBaseView
+  template: _.template $("#currentTimeTemplate").html()
   render: =>
-    @$el.html @template {
-      model: @model.toJSON()
-      max_num_categories: max_num_categories
-    }
-
-  save: =>
-    names = (@$("input.cat-#{i}").val() for i in [0...max_num_categories])
-    cats = @model.get("categories")
-    for name,i in names
-      if i >= cats.length and name
-        # Add new names if they are non-empty
-        cats.push {name: name}
-      else if i < cats.length
-        # Tolerate non-empty names for existing categories to trigger deletion
-        cats[i].name = name
-
-    @model.set({ name: @$("input.name") })
-    @model.send_update()
-    @trigger "done"
-
-  cancel: =>
-    @trigger "done"
-
-class TimeKeeperView extends Backbone.View
-  template: _.template $("#timekeeper").html()
-  events:
-    'click .settings': 'settings'
-    'click .graph': 'graph'
-    'click .reset': 'reset'
-
-  initialize: (model) ->
-    @model = model
-    @model.on "change", @render, this
-
+    go = =>
+      @$el.html(
+        # Remove seconds
+        new Date().toLocaleTimeString().replace(/\d+:\d+(:\d+)/, "")
+      )
+    clearInterval(@goer) if @goer?
+    @goer = setInterval go, 1000
+    this
   remove: =>
-    @model.off null, null, this
+    clearInterval @goer if @goer?
     super()
-
-  settings: (event) =>
-    event.preventDefault()
-    app.navigate("settings", {trigger: true})
-
-  graph: (event) =>
-    event.preventDefault()
-    app.navigate("graph", {trigger: true})
-
-  reset: (event) =>
-    event.preventDefault()
-
-  render: =>
-    @$el.html @template {
-      model: @model.toJSON()
-    }
-    for view in @catviews or []
-      view.remove()
-    @catviews = []
-    for cat,i in @model.get("categories")
-      if cat.name
-        catview = new CategoryView(model, i)
-        @$(".category-list").append(catview.el)
-        catview.render()
-        @catviews.push(catview)
     
-    min = Number.MAX_VALUE
-    for cat in @model.get("categories")
-      if cat.times.length > 0
-        min = Math.min(min, cat.times[0].start)
-    if min < Number.MAX_VALUE
-      @$(".meeting-start").html("Start: #{correct_date(min).toLocaleString()}")
-    else
-      @$(".meeting-start").html("&nbsp;")
+#
+# Reviewing
+#
 
-class SplashView extends Backbone.View
+class GraphView extends ClockBaseView
+  template: _.template $("#graphTemplate").html()
+  events:
+    'click .softnav': 'softNav'
+
+class ExportView extends ClockBaseView
+  template: _.template $("#exportTemplate").html()
+  events:
+    'click .softnav': 'softNav'
+
+###########################################################
+# Router
+###########################################################
 
 class Router extends Backbone.Router
   routes:
-    "c/:id/settings": "settings"
-    "c/:id/graph":    "graph"
-    "c/:id/about":    "about"
-    "c/:id/":         "timekeeper"
-    "":               "index"
+    "clock/c/:id/edit/":    "edit"
+    "clock/c/:id/graph/":   "graph"
+    "clock/c/:id/export/":  "export"
+    "clock/c/:id/":         "showClock"
+    "clock/about/":         "about"
+    "clock/add/":           "addClock"
+    "clock/":               "index"
 
-  initialize: (socket) ->
-    @model = new ProgTime(socket)
-    @model.set(INITIAL_DATA.progtime or {})
+  initialize: (options) ->
+    @model = new ClockModel(options.socket)
+    @model.set(INITIAL_DATA.clock or {})
     @_join_room(@model) if @model.id?
     super()
 
-  timekeeper: (id) => @_open(new TimeKeeperView(@model), id)
-  settings: (id) =>   @_open(new SettingsView(@model), id)
-  graph: (id) =>      @_open(new GraphView(@model), id)
-  about: (id) =>      @_open(new AboutView(@model), id)
+  edit: (id) =>       @_open(new EditView(model: @model), id)
+  graph: (id) =>      @_open(new GraphView(model: @model), id)
+  export: (id) =>     @_open(new ExportView(model: @model), id)
+  showClock: (id) =>  @_open(new ClockView(model: @model), id)
+  about: =>           @_open(new AboutView())
+  addClock: =>        @_open(new EditView())
   index: =>
     view = new SplashView()
     if @view?
       # Re-fetch list if this isn't a first load.
-      @model.fetch_progtime_list (data) =>
-        view.set_progtime_list(data.progtimes)
+      fetch_clock_list (data) => view.set_clock_list(data)
     @_open(view, null)
 
+  onReconnect: =>
+    # refresh data after a disconnection.
+
   _open: (view, id) =>
-    if model.id != id
+    console.log view
+    if @model.id? and @model.id != id
       @_leave_room()
       if id?
-        model.set({_id: id})
-        return model.fetch =>
-          @_join_room(model)
+        @model.set({_id: id})
+        return @model.fetch =>
+          @_join_room(@model)
           @_show_view(view)
     @_show_view(view)
     
@@ -262,20 +467,27 @@ class Router extends Backbone.Router
       @model.send_update()
       @sharing_view.close()
 
+###########################################################
+# Utils
+###########################################################
+
 correct_date = (date) ->
   time = if date.getTime? then date.getTime() else date
   time += browser_server_time_offset
   return new Date(time)
-  
+
+###########################################################
+# Main
+###########################################################
+
 app = null
-socket.on "error", (data) ->
-  flash "error", "Socket server error, sorrry!"
-  console.log(data)
-socket.on "connect", ->
+intertwinkles.connect_socket ->
+  intertwinkles.build_toolbar($("header"), {applabel: "clock"})
+  intertwinkles.build_footer($("footer"))
+
   unless app?
-    app = intertwinkles.app = new Router(socket)
-    Backbone.history.start({ pushState: true, root: "/clock/"})
-  
-socket = io.connect("/io-clock")
-
-
+    app = intertwinkles.app = new Router(socket: intertwinkles.socket)
+    Backbone.history.start(pushState: true)
+    intertwinkles.socket.on "reconnected", ->
+      intertwinkles.socket.once "identified", ->
+        app.onReconnect()

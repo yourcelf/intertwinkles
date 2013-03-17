@@ -1,27 +1,26 @@
 _             = require 'underscore'
 async         = require 'async'
 express       = require 'express'
-RoomManager   = require('iorooms').RoomManager
 utils         = require '../../../lib/utils'
 
-start = (config, app, io, sessionStore) ->
+start = (config, app, sockrooms) ->
   schema = require('./schema').load(config)
-  iorooms = new RoomManager("/io-clock", io, sessionStore, {
-    authorizeJoinRoom: (seession, name, callback) ->
-      schema.ProgTime.findOne {'_id', name}, 'sharing', (err, doc) ->
-        return callback(err) if err?
-        if utils.can_view(session, doc)
-          callback(null)
-        else
-          callback("Permission denied")
-  })
+  www_methods = require("../../../lib/www_methods")(config)
+  clock = require('./clock')(config)
+
+  sockrooms.addChannelAuth "clock", (session, room, callback) ->
+    name = room.split("/")[1]
+    schema.Clock.findOne {_id: name}, 'sharing', (err, doc) ->
+      return callback(err) if err?
+      return callback("Clock #{name} not found") unless doc?
+      return callback(null, utils.can_view(session, doc))
   
   #
   # Routes
   #
 
   index_res = (req, res, initial_data) ->
-    utils.list_accessible_documents schema.ProgTime, req.session, (err, docs) ->
+    utils.list_accessible_documents schema.Clock, req.session, (err, docs) ->
       return res.status(500).send("server error") if err?
       for doc in docs
         doc.sharing = utils.clean_sharing(req.session, doc)
@@ -36,135 +35,96 @@ start = (config, app, io, sessionStore) ->
         flash: req.flash()
       }
 
-  app.get /\/clock$/, (req, res) -> res.redirect "/clock/" # add slash
-  app.get '/clock/', (req, res) -> index_res(req, res)
+  utils.append_slash(app, "/clock")
+  app.get '/clock/', (req, res) ->
+    index_res(req, res)
 
-  app.get /\/clock\/c\/([^/]+)$/, (req, res) -> res.redirect "/clock/c/#{req.params[0]}/"
+  utils.append_slash(app, "/clock/add")
+  app.get '/clock/add/', (req, res) -> index_res(req, res)
+  utils.append_slash(app, "/clock/about")
+  app.get '/clock/about/', (req, res) -> index_res(req, res)
+
+  utils.append_slash(app, "/clock/c/.*[^/]$")
   app.get '/clock/c/:id/', (req, res) ->
-    schema.ProgTime.findOne {_id: req.params.id}, (err, doc) ->
-      return res.status(500).send("Server Error") if err?
-      return res.status(404).send("Not found") unless doc?
-      return res.status(403).send("Permission denied") unless intetwinkles.can_view(req.session, doc)
-      api_methods.post_event {
-        type: "visit"
-        application: "clock"
-        entity: doc.id
-        entity_url: "/c/#{doc.id}"
-        user: req.session.auth?.email
-        anon_id: req.session.anon_id
-        group: doc.sharing.group_id
-        data: { name: doc.name }
-      }, 1000 * 60 * 5, (->)
+    schema.Clock.findOne {_id: req.params.id}, (err, doc) ->
+      return www_methods.handle_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless doc?
+      unless utils.can_view(req.session, doc)
+        if utils.is_authenticated(req.session)
+          return www_methods.permission_denied(req, res)
+        else
+          return www_methods.redirect_to_login(req, res)
 
-      doc.sharing = utils.clean_sharing(req.session, doc)
-      index_res(req, res, {
-        progtime: doc.toJSON()
-      })
+      clock.post_event req.ession, doc, "visit", ->
+        doc.sharing = utils.clean_sharing(req.session, doc)
+        index_res(req, res, { clock: doc.toJSON() })
 
   #
-  # Create new prog time
+  # Socket routes
   #
 
-  iorooms.onChannel "create_progtime", (socket, data) ->
-    respond = (err, doc) ->
-      return socket.emit "error", {error: err} if err?
-      doc.sharing = utils.clean_sharing(socket.session, doc)
-      socket.emit "progtime", {progtime: doc, now: new Date()}
+  sockrooms.on "clock/fetch_clock_list", (socket, session, data) ->
+    utils.list_accessible_documents schema.Clock, session, (err, docs) ->
+      for doc in docs.group
+        doc.sharing = utils.clean_sharing(doc)
+      for doc in docs.public
+        doc.sharing = utils.clean_sharing(doc)
+      socket.emit "clock_list", docs
 
-    return respond("Missing model attributes") unless data.model?.name?
-    return respond("Permission denied") unless utils.can_edit(data.model) and utils.can_change_sharing(data.model)
+  sockrooms.on "clock/fetch_clock", (socket, session, data) ->
+    schema.Clock.findOne {_id: data._id}, (err, doc) ->
+      unless utils.can_view(session, doc)
+        return socket.sendJSON "error", {error: "Permission denied"}
+      unless doc?
+        return socket.sendJSON "error", {error: "Clock #{data._id} not found."}
+      doc.sharing = utils.clean_sharing(doc)
+      socket.sendJSON data.callback or "clock", { model: doc }
 
-    doc = new schema.ProgTime()
-    for key in ["name", "created", "sharing"]
-      if data.model[key]?
-        doc[key] = data.model[key]
-    if data.model?.categories
-      doc.categories = []
-      for cat in data.model.categories
-        doc.categories.push({name: cat.name, times: []})
-    doc.save(respond)
-  
-  #
-  # Edit a progtime
-  #
+  sockrooms.on "clock/save_clock", (socket, session, data) ->
+    unless data?.model
+      return socket.sendJSON "error", {error: "Missing model param"}
+    schema.Clock.findOne {_id: data.model?._id}, (err, doc) ->
+      unless utils.can_edit(session, doc)
+        return socket.sendJSON "error", {error: "Permission denied"}
+      unless doc
+        doc = new schema.Clock()
+      unless utils.can_change_sharing(session, doc)
+        delete data.model?.sharing
+      for key in ["name", "sharing", "present", "categories"]
+        if data.model[key]?
+          doc[key] = data.model[key]
+      doc.save (err, doc) ->
+        return socket.sendJSON "error", {error: err} if err?
+        doc.sharing = utils.clean_sharing(doc)
+        socket.sendJSON data.callback or "clock", {model: doc}
+        sockrooms.broadcast("clock/#{doc.id}", "clock", {model: doc}, socket.sid)
 
-  iorooms.onChannel "edit_progtime", (socket, data) ->
-    respond = (err, doc) ->
-      return socket.emit "error", {error: err} if err?
-      doc.sharing = utils.clean_sharing(socket.session, doc)
-      socket.broadcast.to(doc.id).emit "progtime", {progtime: doc, now: new Date()}
-      socket.emit "progtime", {progtime: doc, now: new Date()}
-
-    unless data.model?._id
-      return respond("Missing progtime id")
-
-    updates = {}
-    changes = false
-    for key in ["name", "sharing", "categories"]
-      if data.model[key]?
-        updates[key] = data.model[key]
-        changes = true
-
-    if not changes then return socket.emit "error", {error: "No edits specified."}
-
-    schema.ProgTime.findOne {_id: data.model._id}, (err, doc) ->
-      return respond("Server error") if err?
-      return respond("Not found") unless doc?
-      return respond("Permission denied") unless utils.can_edit(req.session, doc)
-      if updates.sharing and not utils.can_change_sharing(req.session, doc)
-        return respond("Permission denied")
-
-      doc.name = updates.name if updates.name
-      doc.sharing = updates.sharing if updates.sharing
-      if updates.categories
-        for cat,i in updates.categories
-          if i < doc.categories.length
-            doc.categories[i].name = cat.name
-          else
-            doc.categories.push({name: cat.name, times: []})
-        doc.categories = _.filter(doc.categories, (c) -> !!c.name)
-
-      # Make sure we can still change sharing after changes have been applied.
-      # (e.g. protect the new sharing values)
-      unless utils.can_change_sharing(req.session, doc)
-        return respond("Permission denied")
-      doc.save(respond)
-  
-  #
-  # Start and stop timers
-  #
-
-  iorooms.onChannel "update_time", (socket, data) ->
-    respond = (err, doc, dont_rebroadcast) ->
-      return socket.emit "error", {error: err} if err?
-      doc.sharing = utils.clean_sharing(socket.session, doc)
-      emission = {
-        _id: doc.id
-        category: doc.categories[data.category]
-        now: new Date()
-      }
-      unless dont_rebroadcast
-        socket.broadcast.to(doc.id).emit "progtime", emission
-      socket.emit "category", emission
-
-    schema.ProgTime.findOne {_id: data._id}, (err, doc) ->
-      return respond("Server error") if err?
-      return respond("Not found") unless doc?
-      return respond("Permission denied") unless utils.can_edit(req.session, doc)
-      return respond("Category not found") unless doc.categories[data.category]?
-
-      now = new Date()
-      cat = doc.categories[data.category]
-      # Ignore the request to start if there is an open entry.
-      if data.start and (cat.times.length == 0 or cat.times[cat.times.length - 1].stop)
-        cat.times.push({start: now, stop: null})
-      # Ignore the request to stop if there is no open entry.
-      else if data.stop and cat.times.length > 0 and not cat.times[cat.times.length - 1].stop
-        cat.times[cat.times.length - 1].stop = now
+  sockrooms.on "clock/set_time", (socket, session, data) ->
+    for key in ["_id", "category", "time", "index", "now"]
+      unless data[key]?
+        return socket.sendJSON "error", {error: "Missing param #{key}"}
+    schema.Clock.findOne {_id: data._id}, (err, doc) ->
+      return socket.sendJSON "error", {error: err} if err?
+      return socket.sendJSON "error", {error: "Not found"} unless doc?
+      unless utils.can_edit(session, doc)
+        return socket.sendJSON "error", {error: "Permission denied"}
+      category = doc.categories[data.category]
+      unless category? and (
+          (data.index == category.times.length and not data.time.stop) or
+          (data.index == category.times.length - 1 and data.time.stop))
+        # Just send the clock instead; they're out of sync.
+        doc.sharing = utils.clean_sharing(doc)
+        return socket.sendJSON "clock", {model: doc}
+      #XXX: How to manage client clock skew? Do we trust them to do so?
+      if data.index == category.times.length
+        category.times.push(data.time)
       else
-        # No action to perform.
-        return respond(null, doc, true)
-      # Action taken, save and respond.
-      return doc.save(respond)
+        category.times[data.index] = data.time
+      sockrooms.broadcast("clock/#{doc.id}", "clock:time", {
+        category: data.category
+        time: data.time
+        index: data.index
+        now: new Date()
+      })
 
 module.exports = { start }

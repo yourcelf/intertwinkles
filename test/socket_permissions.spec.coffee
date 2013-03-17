@@ -49,12 +49,12 @@ describe "Socket permissions", ->
         #
         (done) =>
           # anon: No session, no authentication.
-          @anony = common.build_sockjs_client(done)
+          @anony = common.buildSockjsClient(done)
         (done) =>
           # sessiony: Has session, but not authenticated.
           session = {cookie: { maxAge: 2000 }, session_id: "sessiony"}
           @server.sockrooms.saveSession session, (err, ok) =>
-            @sessiony = common.build_sockjs_client =>
+            @sessiony = common.buildSockjsClient =>
               @sessiony.writeJSON {route: "identify", body: {session_id: "sessiony"}}
               @sessiony.onceJSON (data) ->
                 expect(data).to.eql({route: "identify", body: {session_id: "sessiony"}})
@@ -68,7 +68,7 @@ describe "Socket permissions", ->
           }
           api_methods.authenticate session, "bogus assertion", (err, session, message) =>
             @server.sockrooms.saveSession session, (err, ok) =>
-              @authenty = common.build_sockjs_client =>
+              @authenty = common.buildSockjsClient =>
                 @authenty.writeJSON {route: "identify", body: {session_id: "authenty"}}
                 @authenty.onceJSON (data) ->
                   expect(data).to.eql({route: "identify", body: {session_id: "authenty"}})
@@ -82,7 +82,7 @@ describe "Socket permissions", ->
           }
           api_methods.authenticate session, "bogus assertion", (err, session, message) =>
             @server.sockrooms.saveSession session, (err, ok) =>
-              @authory = common.build_sockjs_client =>
+              @authory = common.buildSockjsClient =>
                 @authory.writeJSON {route: "identify", body: {session_id: "authory"}}
                 @authory.onceJSON (data) ->
                   expect(data).to.eql({route: "identify", body: {session_id: "authory"}})

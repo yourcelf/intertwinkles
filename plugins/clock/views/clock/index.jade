@@ -14,77 +14,73 @@ block preapp
   div(style='height: 2em;')
 
 block postapp
-  script(type='text/template', id='settings')
-    form.form-horizontal
-      div.control-group
-        label.control-label(for="id_name") Name
-        div.controls.
-          <input type="text" id="id_name" value="<%- model.name %>" />
-      div.control-group
-        label.control-label Categories
-        div.controls.
-          <% for (var i = 0; i < max_num_categories; i++) { %>
-            <input type="text" class="cat-<%- i %>"
-              value="<%- i < model.categories.length > model.categories[i].name : '' %>"
-              />
-            <br />
-          <% } %>
-      div.control-group
-        a.cancel(href="#") Cancel
-        input.btn.btn-primary(type="submit", value="Save")
-
-  script(type='text/template', id='timekeeper')
-    div.clock
-    div.meeting-start
-    div.categorylist
-    div.bottom-nav
-      a.settings.btn(href='#') settings
-      a.graph.btn(href='#') graph
-      a.about.btn(href='#') about
-      a.reset.btn(href='#') reset times
-
-  script(type='text/template', id='graph')
-    div.graphview
-      div.graph
-        div.labels
-        div.lines
-    div.bottom-nav
-      a.back.btn(href='#') Back
-      a.export.btn(href='#') export data
-
-  script(type='text/template', id='export')
+  // 
+  // Front mater
+  //
+  script(type='text/template', id='splashTemplate')
+    h1 Progressive Clock
     p.
-      The progressive timekeeper stores data locally in your browser &ndash;
-      it is never sent to any server.  If you'd like to use the data in
-      another context, you can copy and paste the JSON format data below.
-    p.
-      Elapsed times are in milliseconds, and time series are unix
-      timestamps.
-    textarea.export(readonly=true) <%= exportJSON %>
-    div.bottom-nav
-      a.back.btn(href='#') Back
+      Keep track of speaker time in meetings by identity category. Learn more
+      about <a class='softnav about' href='/clock/about/'>what this is good for and
+      what it isn't</a>.
+    a.btn.btn-large.btn-primary.softnav.add-new-clock(href='/clock/add/') New clock
 
-  script(type='text/template', id='about')
-    div.about
-      h1 Progressive Clock
-      p.
-        This is a simple application for "progressive timekeeping"
-        &ndash; keeping track of speaking time by categories of identity
-        (e.g. sex, gender, racial identity, power position, etc).  It can be
-        used to help people think about whether speaking time in their
-        organization's meetings is really equitable.
-      p.
-        To use, set up the categories you'd like to track in the <a
-        href='#settings'>settings</a>.  Then, press the button when someone
-        identifying with that category speaks, and press it again when they
-        finish.  Multiple categories can be activated at once.  This app can
-        run on a phone or laptop, and could be part of the role of a
-        timekeeper, alongside facilitators or stack keepers.
-      p.
-        Inspired by this <a href='http://numeroteca.org/2012/01/11/interventions-occupyboston-ga-jan-10th-2012/'>visualization by numeroteca</a>.
-      p.
-        Please send feedback, suggestions, or ideas to 
-        <a href='mailto:cfd@media.mit.edu'>cfd@media.mit.edu</a> 
-        or <a href='http://twitter.com/cdetar'>@cdetar</a>.
-    div.bottom-nav
-      a.back.btn(href='#') Back
+  script(type='text/template', id='aboutTemplate')
+    h1 About the Progressive Clock
+
+  // 
+  // Adding / editing
+  //
+  script(type='text/template', id='editTemplate')
+    h1 <%= title %>
+    div.row-fluid
+      div.span6.offset3
+        form.form-horizontal
+          div.control-group
+            label.control-label(for="id_name") *Event or meeting name
+            div.controls
+              input#id_name(type='text', name='name', style='display: block;')
+          div.control-group
+            label.control-label(for="id_categories") *Categories
+            div.controls#category_controls
+          //div.control-group
+          //  label.control-label(for="id_present") Who's Present
+          //  div.controls#present_controls
+          div.control-group
+            label.control-label(for="id_group") Group and sharing
+            div.controls#sharing_controls
+          div.control-group
+            div.controls.
+              <input class='btn btn-primary btn-large' type='submit'
+                     value='<%= action %>' />
+
+  script(type='text/template', id='itemsListTemplate')
+    div.items
+    div
+      input.btn.add(type='button', value='+ add more')
+      
+  script(type='text/template', id='itemsListItemTemplate')
+    div.
+      <input type='text' name='<%= name %>' value='<%= value %>'
+             class='item' data-index='<%= index %>' tabindex=0 />
+      <% if (!last) { %>
+        <input type='button' class='btn remove-item' value='-'
+               data-index='<%= index %>' tabindex=1 />
+      <% } %>
+
+  script(type='text/template', id='presentControlsTemplate')
+
+  // 
+  // Detail
+  //
+  script(type='text/template', id='timeKeeperTemplate')
+  script(type='text/template', id='categoryTimerTemplate')
+  script(type='text/template', id='currentTimeTemplate')
+
+  // 
+  // Reviewing
+  //
+  script(type='text/template', id='graphTemplate')
+  script(type='text/template', id='exportTemplate')
+
+
