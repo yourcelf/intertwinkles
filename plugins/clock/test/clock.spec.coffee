@@ -84,7 +84,7 @@ describe "clock", ->
     browser.visit "#{config.apps.clock.url}/", (e, browser, status) ->
       browser.clickLink(".add-new-clock")
       expect(browser.location.pathname).to.be("/clock/add/")
-      expect(browser.text("h1")).to.be("Add new clock")
+      expect(browser.text("h1")).to.be("Add new Clock")
       done()
 
   it "live connects to detail page", (done) ->

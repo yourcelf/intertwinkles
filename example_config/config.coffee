@@ -81,12 +81,12 @@ config = {
       }
     }
 #    tenpoints: { url: "#{base_url}/tenpoints" }
-#    clock: {
-#      name: "Progressive Clock"
-#      about: "Keep time in meetings by identity category"
-#      url: "#{base_url}/clock"
-#      image: "#{base_url}/static/clock/img/clock.png"
-#    }
+    clock: {
+      name: "Progressive Clock"
+      about: "Keep time in meetings by identity category"
+      url: "#{base_url}/clock"
+      image: "#{base_url}/static/clock/img/clock.png"
+    }
   }
 }
 module.exports = config
