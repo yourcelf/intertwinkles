@@ -112,32 +112,6 @@ route = (config, app, sockrooms) ->
       title: "Related Work"
     })
 
-  #
-  # Testing
-  #
-  utils.append_slash(app, "/test")
-  app.get '/test/', (req, res) ->
-    res.render 'test', context(req, {title: "Test"})
-  app.get '/test/sockets/', (req, res) ->
-    res.render 'test_sockets', context(req, {title: "Test"})
-
-  utils.append_slash(app, "/500")
-  app.get '/500/', (req, res) -> throw new Error("Test error, ignore")
-
-  utils.append_slash(app, "/403")
-  app.get '/403/', (req, res) -> www_methods.permission_denied(req, res)
-
-  app.get '/test/notices/invitation/', (req, res) ->
-    render_notifications "../emails/invitation", {
-      group: {name: "The Awesomest Group"}
-      sender: {name: "John Dough"}
-      recipient: {name: "Super Happypants"}
-      url: config.api_url + "/groups/join/the-awesomest-group"
-      application: "www"
-    }, (err, rendered) ->
-      return ww_methods.handle_error(req, res, err) if err?
-      res.render('test_notice', rendered)
-
 
   #
   # Search
@@ -399,6 +373,57 @@ route = (config, app, sockrooms) ->
       unless doc? and config.apps[doc.application]?
         return www_methods.not_found(req, res)
       res.redirect(doc.absolute_long_url)
+
+  #
+  # Testing
+  #
+  if process.env.NODE_ENV != "production"
+    utils.append_slash(app, "/test")
+    app.get '/test/', (req, res) ->
+      res.render 'test', context(req, {title: "Test"})
+    app.get '/test/sockets/', (req, res) ->
+      res.render 'test_sockets', context(req, {title: "Test"})
+
+    utils.append_slash(app, "/500")
+    app.get '/500/', (req, res) -> throw new Error("Test error, ignore")
+
+    utils.append_slash(app, "/403")
+    app.get '/403/', (req, res) -> www_methods.permission_denied(req, res)
+
+    app.get '/test/notices/invitation/', (req, res) ->
+      render_notifications require("../emails/invitation"), {
+        group: {name: "The Awesomest Group"}
+        sender: {name: "John Dough"}
+        recipient: {name: "Super Happypants"}
+        url: config.api_url + "/groups/join/the-awesomest-group"
+        application: "www"
+      }, (err, rendered) ->
+        return www_methods.handle_error(req, res, err) if err?
+        res.render('test_notice', rendered)
+
+    app.get '/test/notices/new_proposal/', (req, res) ->
+      render_notifications require("../plugins/resolve/emails/new_proposal"), {
+        group: {name: "The Awesomest Group"}
+        sender: {name: "John Dough"}
+        recipient: {name: "Super Happypants"}
+        url: config.api_url + "/resolve/p/123"
+        application: "resolve"
+        proposal: {revisions: [{text: "Be it resolved, that this testy thing shows us exactly what we need to see to know that this thing is working the way we know that we see we think it should."}]}
+      }, (err, rendered) ->
+        return www_methods.handle_error(req, res, err) if err?
+        res.render("test_notice", rendered)
+
+    app.get '/test/notices/proposal_changed/', (req, res) ->
+      render_notifications require("../plugins/resolve/emails/proposal_changed"), {
+        group: {name: "The Awesomest Group"}
+        sender: {name: "John Dough"}
+        recipient: {name: "Super Happypants"}
+        url: config.api_url + "/resolve/p/123"
+        application: "resolve"
+        proposal: {revisions: [{text: "Be it resolved, that this testy thing shows us exactly what we need to see to know that this thing is working the way we know that we see we think it should."}]}
+      }, (err, rendered) ->
+        return www_methods.handle_error(req, res, err) if err?
+        res.render("test_notice", rendered)
 
   return {app}
 

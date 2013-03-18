@@ -2,10 +2,13 @@ utils         = require '../../../lib/utils'
 _             = require 'underscore'
 async         = require 'async'
 logger        = require('log4js').getLogger()
+new_proposal_email_view     = require("../emails/new_proposal")
+proposal_changed_email_view = require("../emails/proposal_changed")
 
 module.exports = (config) ->
   schema = require('./schema').load(config)
   api_methods = require("../../../lib/api_methods")(config)
+  {render_notifications} = require("../../../lib/email_notices").load(config)
 
   r = {} # Return object
   #
@@ -114,26 +117,28 @@ module.exports = (config) ->
     # doc, as well as a wider removal. Could do better by more intelligently
     # figuring out who needs their notification changed.
 
-    # This will contain both 'clear' updates and new notices.
-    notices_to_broadcast = []
+    # This will contain both 'clear' updates and new notices.  The clear
+    # updates are broadcast over the socket so that any connected clients'
+    # notice menu gets cleared.
     notice_type = "needs_my_response"
     
-    # 1. remove all notifications associated with this entity.
-    api_methods.clear_notifications {
-      application: "resolve",
-      type: notice_type
-      entity: proposal.id
-    }, (err, notifications) ->
-      if err?
-        callback?(err)
-        return logger.error(err)
+    async.series [
+      # 1. remove all notifications associated with this entity.
+      (done) ->
+          api_methods.clear_notifications {
+            application: "resolve",
+            type: notice_type
+            entity: proposal.id
+          }, (err, notifications) ->
+            return done(err) if err?
+            done(null, notifications or [])
 
-      # Append the 'cleared' notices to our broadcast.
-      if notifications?
-        notices_to_broadcast = notices_to_broadcast.concat(notifications)
+      # 2. Now render new notifications for all people that still need them.
+      (done) ->
+        if (not proposal.sharing.group_id) or proposal.resolved?
+          return done(null, [])
 
-      # 2. Now post new notifications for all people that still need them.
-      if proposal.sharing.group_id and not proposal.resolved?
+        # Identify who needs notices, of what type -- either "stale", or "new".
         group = session.groups[proposal.sharing.group_id]
         member_ids = (m.user.toString() for m in group.members)
         current_voters = []
@@ -146,33 +151,42 @@ module.exports = (config) ->
             else
               stale_voters.push(opinion.user_id.toString())
         needed = _.difference(member_ids, current_voters)
-        notices = []
-        for user_id in needed
-          #XXX Put these in templates.
-          if _.contains stale_voters, user_id
-            web = """
-              A proposal from #{group.name} has changed since you voted.
-              Please confirm your vote.
-            """
+
+        # Function to map a user_id to a notification.
+        render_proposal_notice =  (user_id, cb) ->
+          if _.contains(stale_voters, user_id)
+            view = proposal_changed_email_view
           else
-            web = """#{group.name} needs your response to a proposal! """
-          notices.push({
+            view = new_proposal_email_view
+          render_notifications view, {
+            group: group
+            sender: session.users[session.auth.user_id]
+            recipient: session.users[user_id]
+            url: proposal.absolute_url
             application: "resolve"
-            type: notice_type
-            entity: proposal._id.toString()
-            recipient: user_id
-            url: proposal.url
-            sender: proposal.revisions[0].user_id
-            formats: { web }
-          })
-        if notices.length > 0
-          return api_methods.post_notifications notices, (err, notifications) ->
-            if err?
-              logger.error err
-              return callback(err)
-            notices_to_broadcast = notices_to_broadcast.concat(notifications)
-            return callback(null, notices_to_broadcast)
-      return callback(null, notices_to_broadcast)
+            proposal: proposal
+          }, (err, rendered) ->
+            return cb(err) if err?
+            cb(null, {
+              application: "resolve"
+              type: notice_type
+              entity: proposal.id
+              recipient: user_id
+              url: proposal.url
+              sender: session.auth.user_id
+              formats: rendered
+            })
+        # Render the notices for each needed recipient.
+        async.map(needed, render_proposal_notice, done)
+
+      ], (err, results) ->
+        return callback(err) if err?
+        [ clear_notices, new_notices ] = results
+        return callback(null, clear_notices) if new_notices.length == 0
+        # Save new notices.
+        api_methods.post_notifications new_notices, (err, notifications) ->
+          return callback(err) if err?
+          return callback(null, clear_notices.concat(notifications))
 
   #
   # Remove the twinkle specified by given:

@@ -7,6 +7,7 @@ models   = require('../lib/schema').load(config)
 common   = require '../../../test/common'
 
 describe "Dotstorm Mongoose connector", ->
+  this.timeout(10000)
   before (done) ->
     common.startUp (server) =>
       @server = server

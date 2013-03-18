@@ -3,7 +3,7 @@ base = require "./base"
 
 sms = _.template("InterTwinkles! Invitation to join <%= group.name %>: <%= short_url %>")
 
-subject = _.template("Invitation to <%- group.name %> on InterTwinkles")
+subject = _.template("Invitation to <%= group.name %> on InterTwinkles")
 
 text = _.template("""
 <%= recipient.name %>,

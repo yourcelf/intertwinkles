@@ -3,6 +3,7 @@ _             = require 'underscore'
 utils         = require('./utils')
 thumbnails    = require './thumbnails'
 logger        = require('log4js').getLogger("www")
+email_invitation_view = require("../emails/invitation")
 
 module.exports = (config) ->
   schema = require('./schema').load(config)
@@ -408,7 +409,7 @@ module.exports = (config) ->
               async.map notice_ids.invitation, (recipient_id, done) ->
                 get_user recipient_id, (err, recipient) ->
                   return done(err) if err?
-                  render_notifications "../emails/invitation", {
+                  render_notifications email_invitation_view, {
                     group: group
                     sender: sender
                     recipient: recipient
