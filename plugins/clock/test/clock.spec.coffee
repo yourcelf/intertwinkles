@@ -93,17 +93,30 @@ describe "clock", ->
       done()
 
   it "saves changes to a clock [lib]", (done) ->
+    return done() if process.env.SKIP_SOLR_TESTS
     changes = {name: "Duh Best", _id: @clock.id}
-    clock.save_clock @session, {model: changes}, (err, doc) ->
+    clock.save_clock @session, {model: changes}, (err, doc, event, si) =>
+      expect(err).to.be(null)
+      expect(doc.id).to.be(@clock.id)
       expect(doc.name).to.be("Duh Best")
+      expect(event).to.not.be(null)
+      expect(event.type).to.be("update")
+      expect(event.entity).to.eql(doc.id)
+      expect(event.entity_url).to.be(doc.url)
+      expect(si).to.not.be(null)
+      expect(si.url).to.be(doc.url)
       done()
 
   it "saves sharing change to a clock [lib]", (done) ->
+    return done() if process.env.SKIP_SOLR_TESTS
     group_id = @all_groups["two-members"].id
     changes = {sharing: {group_id: group_id}, _id: @clock.id}
-    clock.save_clock @session, {model: changes}, (err, doc) =>
+    clock.save_clock @session, {model: changes}, (err, doc, event, si) =>
       expect(err).to.be(null)
       expect(doc.sharing.group_id).to.eql(group_id)
+      expect(event).to.not.be(null)
+      expect(si).to.not.be(null)
+      expect(si.sharing.group_id).to.eql(group_id)
       clock_schema.Clock.findOne {_id: @clock.id}, (err, doc) =>
         expect(err).to.be(null)
         expect(doc).to.not.be(null)
@@ -138,6 +151,7 @@ describe "clock", ->
       done()
   
   it "adds a clock [live]", (done) ->
+    return done() if process.env.SKIP_SOLR_TESTS
     this.timeout(20000)
     browser = common.fetchBrowser()
     browser.visit "#{config.apps.clock.url}/", (e, browser, status) ->
