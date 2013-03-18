@@ -1,4 +1,5 @@
-_ = require 'underscore'
+_     = require 'underscore'
+async = require 'async'
 utils = require "../../../lib/utils"
 
 module.exports = (config) ->
@@ -23,6 +24,22 @@ module.exports = (config) ->
       }
     }, opts.overrides or {}
     api_methods.post_event(event, opts.timeout or 0, opts.callback or (->))
+
+  c.post_search_index = (clock, callback=(->)) ->
+    search_data = {
+      application: "clock"
+      entity: clock.id
+      type: "clock"
+      url: clock.url
+      title: clock.name
+      summary: clock.about or(
+        cat.name for cat in clock.categories).join(", ")
+      sharing: clock.sharing
+      text: [clock.name, clock.about or ""].concat(
+        cat.name for cat in (clock.categories or [])
+      ).join("\n")
+    }
+    api_methods.add_search_index(search_data, callback)
 
   c.fetch_clock_list = (session, callback) ->
     utils.list_accessible_documents schema.Clock, session, (err, docs) ->
@@ -55,11 +72,15 @@ module.exports = (config) ->
       doc.save (err, doc) ->
         return callback(err) if err?
         return callback("null doc") unless doc?
-        c.post_event session, doc, type, {
-          callback: ->
-            return callback(err) if err?
-            return callback(null, doc)
-        }
+        async.parallel [
+          (done) ->
+            c.post_event session, doc, type, {callback: done}
+          (done) ->
+            c.post_search_index doc, done
+        ], (err, results) ->
+          return callback(err) if err?
+          [event, si] = results
+          return callback(null, doc, event, si)
 
   c.set_time = (session, data, callback) ->
     for key in ["_id", "category", "time", "index", "now"]
