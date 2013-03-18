@@ -1,3 +1,17 @@
+###
+Defines the set of base routes for websocket messages:
+ - verify (authenticating)
+ - logout (unauthenticating)
+ - get_notifications (request for a list of current notifications)
+ - get_short_url (request for a short URL for a particular app)
+ - join (request to join a broadcast room; see lib/socket_server)
+ - leave (request to leave a broadcast room; see lib/socket_server)
+ - edit_profile (request to change profile details)
+
+This module is the counterpart to `lib/www_routes` which handles HTTP routing
+for these basic functions. All data/state modification should take place in
+`lib/www_methods` or `lib/api_methods`.
+###
 _             = require 'underscore'
 utils         = require './utils'
 uuid          = require 'node-uuid'

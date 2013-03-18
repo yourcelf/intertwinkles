@@ -16,8 +16,14 @@ RedisStore shared with express).
 3. Render a page for the client, including a session_id corresponding to the
 @sessionStore in some manner that is accessible to the client socket that is
 connecting.
-4. When the client sends a message to an authorized room, the RoomManager will
-emit a "channel/name" event with the message body, socket, and session.
+4. When the client wants to join the room, it identifies the room as
+"channel/roomname", and the server verifies that the connecting client
+passes the channel auth test for that channel defined in step 2.
+
+5. The server can then broadcast to a particular room.  Client's can't
+broadcast to rooms directly -- any message they send on the socket is simply
+emitted, and it's up to a listener to process that message and potentially
+broadcast it back.
 
 For the client:
 
@@ -30,16 +36,17 @@ message to "identify" with the received session_id.
 2. After identifying, the client can join rooms by sending the message:
   { route: "join", room: "channel/name" }
 The 'channel' part of the name should correspond to one of the channel auth
-methods registered by the server.  The name is whatever the application needs
-to route messages within the channel. Server acknowledges join with a message
-to "join" with the joined room channel/name.
+methods registered by the server. Once it has joined, the client receives
+broadcasts to that room.
 
-3. To send messages to a room, the client issues:
-  { route: "channel/name", body: {...message body...} }
-
-4. To leave a room, the client issues:
+3. To leave a room, the client issues:
   { route: "leave", room: "channel/name" }
 Server acknowledges with message to "leave" with the left room channel/name.
+
+4. Clients can send a message to the server, and other than "join", "leave",
+and "identify", the messages are just emitted, for some server listener to
+process.
+
 
 ###
 events  = require 'events'
@@ -87,7 +94,7 @@ class RoomManager extends events.EventEmitter
     if message.route == "identify"
       return @identify(socket, message?.body?.session_id)
     else if message.route == "join"
-      return @join(socket, message?.body?.room)
+      return @handleJoinRequest(socket, message?.body?.room)
     else if message.route == "leave"
       return @leave(socket, message.body?.room or {})
     else
@@ -177,6 +184,7 @@ class RoomManager extends events.EventEmitter
       else
         respond()
 
+  # Write the given session to the session store.
   saveSession: (session, callback) =>
     if not session.session_id?
       return callback("session_id not found")
@@ -184,7 +192,8 @@ class RoomManager extends events.EventEmitter
       return callback(err) if err?
       return callback(null, session)
 
-  join: (socket, room, verify=true) =>
+  # Handle a socket's request to join a room.
+  handleJoinRequest: (socket, room, verify=true) =>
     # Ignore any message that doesn't have a matching auth channel.
     return @handleError(socket, "Room not specified") unless room?
     channel = room.split("/")[0]
@@ -199,6 +208,9 @@ class RoomManager extends events.EventEmitter
           @handleError(socket, "Permission to join #{room} denied.")
       )
 
+  # Join the given socket to the room, without checking for authorization
+  # first, and emit the joined state to the socket. Useful when the socket
+  # has already been authorized, or if the room has no authorization.
   joinWithoutAuth: (socket, session, room, options) =>
     @roomToSockets[room] ?= []
     @socketIdToRooms[socket.sid] ?= []

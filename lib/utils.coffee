@@ -1,3 +1,39 @@
+###
+This module defines a set of basic utilities for InterTwinkles' logic that
+transcends multiple apps.
+
+Permissions checks:
+ - is_authenticated(session) - check if a session is authenticated
+ - can_view(session, model) - check if the given session is authorized
+   to view the model that has a standard InterTwinkles "sharing" property
+ - can_edit(session, model) - check if the given session is authorized
+   to edit the model that has a standard InterTwinkles "sharing" property
+ - can_change_sharing(session, model) - check if the given session is
+   authorized to change the sharing for the given model
+
+Data prep for clients:
+ - clean_sharing(session, model): return a modified version of the `sharing`
+   properties for the given model which removes any email addresses the given
+   session is not allowed to see.
+ - list_public_documents(schema, session, callback): Return an array of 
+   documents within the given mongoose schema which are "public".
+ - list_group_documents(schema, session, callback): Return an array of
+   documents within the given mongoose schema that belong to the session's
+   groups.
+ - list_accessible_documents(schema, session, callback): Return both
+   public and group documents.
+ - get_initial_data(session, config): Get the set of sanitized initial data
+   for the client, including client-viewable configuration, groups, users,
+   etc.
+
+Other utils:
+ - get_json(url, query, callback): Fetch json from the provided URL.
+ - post_data(url, data, callback): Post json to the provided URL.
+ - append_slash(express_app, route, methods=["get"]): Add a route
+   to express which redirects to the same URL with an appended
+   slash.  (e.g. redirect "/about" to "/about/").
+
+###
 _           = require 'underscore'
 url         = require 'url'
 http        = require 'http'
