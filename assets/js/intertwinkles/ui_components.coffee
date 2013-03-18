@@ -219,7 +219,7 @@ class intertwinkles.Toolbar extends Backbone.View
     for label, app of INTERTWINKLES_APPS
       if label == @applabel
         apps.unshift(app)
-      else
+      else if label != "clock" #XXX fat hack to not get progressive clock in menu.
         apps.push(app)
 
     @$el.html @template({apps: apps})

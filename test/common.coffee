@@ -63,7 +63,10 @@ c.startUp = (done) ->
     expect(err).to.be(null)
     done(srv)
 
+_mail_server_started = false
+
 c.startMailServer = (callback) ->
+  _mail_server_started = true
   mail = {
     server: null
     client: null
@@ -81,7 +84,12 @@ c.startMailServer = (callback) ->
 
 c.shutDown = (srv, done) ->
   async.series([
-    (done) -> email_server.stop(done)
+    (done) ->
+      if _mail_server_started
+        _mail_server_started = false
+        email_server.stop(done)
+      else
+        done()
     (done) -> srv.server.close() ; done()
     (done) -> c.clearDb(done)
     (done) -> srv.db.disconnect(done)

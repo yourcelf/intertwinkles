@@ -134,7 +134,7 @@ describe "clock", ->
       browser.clickLink(".about")
       # Check the about link.
       expect(browser.location.pathname).to.be("/clock/about/")
-      expect(browser.text("h1")).to.be("About the Progressive Clock")
+      expect(browser.text("h3")).to.be("About the Progressive Clock")
       done()
   
   it "adds a clock [live]", (done) ->
@@ -150,7 +150,7 @@ describe "clock", ->
       ).to.be("Male")
       browser.query("input[type=submit]").click()
       common.await =>
-        if browser.location.pathname.substring(0, "/clock/c/") == "/clock/c/"
+        if browser.location.pathname.substring(0, "/clock/c/".length) == "/clock/c/"
           done()
           return true
 

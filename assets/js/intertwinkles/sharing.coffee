@@ -189,6 +189,7 @@ class intertwinkles.SharingFormControl extends Backbone.View
       @$(".group-options").show()
       @$(".public-options").show()
       @$(".extra-options").show() if @sharing.group_id?
+      @trigger "resize", this
 
     @$(".toggle-specific-people").on "click", (event) =>
       event.preventDefault()
@@ -202,6 +203,7 @@ class intertwinkles.SharingFormControl extends Backbone.View
       else
         $(event.currentTarget).html("Remove these")
         extra.show()
+      @trigger "resize", this
       next()
 
     @$("#id_group").on "change", =>
@@ -228,6 +230,7 @@ class intertwinkles.SharingFormControl extends Backbone.View
         @$(".extra-options textarea").val("")
         @$(".extra-options").hide()
         @$(".all-options").hide()
+      @trigger "resize", this
       next()
 
     @$("select[name=public_until], select[name=public_edit_or_view]").on "change", =>
@@ -251,6 +254,7 @@ class intertwinkles.SharingFormControl extends Backbone.View
           @sharing.advertise = false
           @$("input[name=advertise]").val(false)
           @$(".public-until, .advertise").hide()
+      @trigger "resize", this
       next()
 
     @$("input[name=advertise]").on "change", (event) =>
@@ -469,6 +473,7 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
     $(".sharing-controls", @modal).html(@sharing.el)
     @sharing.render()
     $("form", @modal).on "submit", @save
+    @sharing.on "resize", -> $(window).resize()
 
   close: =>
     @modal.modal('hide')

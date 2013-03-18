@@ -47,11 +47,14 @@ module.exports = (config) ->
         type = "update"
       return callback("Permission denied") unless utils.can_edit(session, doc)
       delete data.model.sharing unless utils.can_change_sharing(session, doc)
-      for key in ["name", "about", "sharing", "present", "categories"]
+      for key in ["name", "about", "present", "categories"]
         if data.model[key]?
           doc[key] = data.model[key]
+      if data.model.sharing?
+        _.extend(doc.sharing, data.model.sharing)
       doc.save (err, doc) ->
-        console.log "save", doc.sharing
+        return callback(err) if err?
+        return callback("null doc") unless doc?
         c.post_event session, doc, type, {
           callback: ->
             return callback(err) if err?

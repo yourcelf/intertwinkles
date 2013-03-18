@@ -57,9 +57,7 @@ start = (config, app, sockrooms) ->
           return www_methods.redirect_to_login(req, res)
 
       clock.post_event req.session, doc, "visit", callback: ->
-        console.log "pre", doc.sharing
         doc.sharing = utils.clean_sharing(req.session, doc)
-        console.log "post", doc.sharing
         index_res(req, res, { clock: doc.toJSON() })
 
   #
@@ -72,7 +70,6 @@ start = (config, app, sockrooms) ->
         doc.sharing = utils.clean_sharing(session, doc)
       for doc in data.public or []
         doc.sharing = utils.clean_sharing(session, doc)
-      console.log err, docs
       return socket.sendJSON "error", {error: err} if err?
       return socket.sendJSON "clock_list", docs
 
@@ -94,7 +91,7 @@ start = (config, app, sockrooms) ->
       # Next, send to anyone who is in the room.
       sockrooms.roomSocketSessionMap "clock/#{doc.id}", (err, socket, sess) ->
         return logger.error(err) if err?
-        if sess.sid != session.sid
+        if sess.session_id != session.session_id
           doc.sharing = utils.clean_sharing(sess, {sharing: orig_sharing})
           socket.sendJSON "clock", {model: doc}
 

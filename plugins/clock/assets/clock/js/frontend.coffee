@@ -8,6 +8,8 @@ class ClockModel extends Backbone.Model
   idAttribute: "_id"
   initialize: (options) ->
     super(options)
+
+  setHandlers: =>
     intertwinkles.socket.on "clock", @_load
     intertwinkles.socket.on "clock:time", @_setTime
 
@@ -127,6 +129,7 @@ class ClockModel extends Backbone.Model
 
   getElapsed: (category_name) =>
     category = _.find @get("categories"), (c) -> c.name == category_name
+    return null unless category?
     elapsed = 0
     for time in category.times
       start = new Date(time.start)
@@ -139,7 +142,6 @@ class ClockModel extends Backbone.Model
 
 fetch_clock_list = (cb) =>
   intertwinkles.socket.once "clock_list", (data) ->
-    console.log("got clock list", data)
     cb(data)
   intertwinkles.socket.send "clock/fetch_clock_list"
 
@@ -168,12 +170,10 @@ class SplashView extends ClockBaseView
     intertwinkles.user.off "change", @fetch_clock_list, this
 
   fetch_clock_list: =>
-    console.log "fetch_clock_listy"
     fetch_clock_list (list) =>
       @set_clock_list(list)
 
   set_clock_list: (data, render=true) =>
-    console.log "set_clock_listy", data
     @clock_list = {
       group: (new ClockModel(c) for c in data.group)
       public: (new ClockModel(c) for c in data.public)
@@ -182,16 +182,16 @@ class SplashView extends ClockBaseView
       @render()
 
   render: =>
-    console.log "rendery"
     @$el.html(@template())
-    if @clock_list.group
+    if @clock_list.group?.length > 0
       @$(".group-clocks").html("<ul></ul>")
       for clock in @clock_list.group
         @_add_item(".group-clocks ul", clock)
-    if @clock_list.public
+    if @clock_list.public?.length > 0
       @$(".public-clocks").html("<ul></ul>")
       for clock in @clock_list.public
         @_add_item(".public-clocks ul", clock)
+    intertwinkles.sub_vars(@el)
 
   _add_item: (selector, clock) =>
     @$(selector).append(@itemTemplate(clock: clock))
@@ -408,17 +408,20 @@ class CategoryTimerView extends ClockBaseView
   tagName: 'a'
   template: _.template $("#categoryTimerTemplate").html()
   events:
-    'mousedown': 'mouseToggleActive'
+    'mousedown':  'mouseToggleActive'
     'touchstart': 'touchToggleActive'
+    'click':      'none'
 
   initialize: (options) ->
     super()
     @model = options.model
     @category = options.category
+    @model.on "change", @render, this
     @model.on "change:categories:#{@category.name}", @render, this
 
   remove: =>
     @model.off null, null, this
+    clearInterval(@goer) if @goer?
     super()
 
   isActive: =>
@@ -426,17 +429,24 @@ class CategoryTimerView extends ClockBaseView
       not @category.times[@category.times.length - 1].stop?
     )
 
-  mouseToggleActive: (event) =>
-    return unless intertwinkles.can_edit(@model)
-    event.preventDefault()
+  none: (event) =>
     event.stopPropagation()
+    event.preventDefault()
+
+  mouseToggleActive: (event) =>
+    event.stopPropagation()
+    event.preventDefault()
+    return false unless intertwinkles.can_edit(@model)
     @toggleActive() unless @touchIsEnabled
+    return false
 
   touchToggleActive: (event) =>
-    event.preventDefault()
     event.stopPropagation()
+    event.preventDefault()
+    return false unless intertwinkles.can_edit(@model)
     @touchIsEnabled = true
     @toggleActive()
+    return false
 
   toggleActive: (event) =>
     if @isActive()
@@ -448,6 +458,8 @@ class CategoryTimerView extends ClockBaseView
 
   get_elapsed: =>
     elapsed = @model.getElapsed(@category.name)
+    if elapsed == null and @goer?
+      clearInterval(@goer)
     seconds = Math.round(elapsed / 1000) % 60
     seconds = if seconds < 10 then "0" + seconds else seconds
     minutes = Math.floor(elapsed / 1000 / 60)
@@ -497,11 +509,13 @@ class ClockFooterView extends ClockBaseView
   initialize: (options) ->
     @current = options.current
     @model = options.model
+    @model.on "change", @render, this
     intertwinkles.user.on("change", @render, this)
 
   remove: =>
     super()
     intertwinkles.user.off("change", @render, this)
+    @model.off "change", @render, this
 
   render: =>
     links = []
@@ -639,6 +653,7 @@ class Router extends Backbone.Router
 
   initialize: (options) ->
     @model = new ClockModel(options.socket)
+    @model.setHandlers()
     @model.set(INITIAL_DATA.clock or {})
     @clock_list = INITIAL_DATA.clock_list
     @_join_room(@model) if @model.id?
@@ -676,13 +691,17 @@ class Router extends Backbone.Router
     $("#app").html(view.el)
     view.render()
     @view = view
+    window.scrollTo(0, 0)
 
   _leave_room: =>
+    console.log "leave!", @model.get("name")
+    @room_view?.$el.before("<li class='room-users'></li>")
     @room_view?.remove()
     @sharing_view?.remove()
 
   _join_room: (model) =>
     @_leave_room()
+    console.log "join!", model.get("name")
 
     @room_view = new intertwinkles.RoomUsersMenu(room: "clock/#{@model.id}")
     $(".sharing-online-group .room-users").replaceWith(@room_view.el)
@@ -692,9 +711,9 @@ class Router extends Backbone.Router
     $(".sharing-online-group .sharing").html(@sharing_view.el)
     @sharing_view.render()
     @sharing_view.on "save", (sharing_settings) =>
-      @model.set { sharing: sharing_settings }
-      @model.save({}, {
-        success: => @sharing_view.close()
+      @model.save({sharing: sharing_settings}, {
+        success: =>
+          @sharing_view.close()
       })
 
 ###########################################################
