@@ -4,15 +4,18 @@ class intertwinkles.User extends Backbone.Model
 #
 # User authentication state
 #
-intertwinkles.user = new intertwinkles.User()
-intertwinkles.users = null  # map of intertwinkles user_id to user data
-intertwinkles.groups = null # list of groups
-if INITIAL_DATA.groups?
-  intertwinkles.groups = INITIAL_DATA.groups
-if INITIAL_DATA.users?
-  intertwinkles.users = INITIAL_DATA.users
-  user = _.find intertwinkles.users, (e) -> e.email == INITIAL_DATA.email
-  if user? then intertwinkles.user.set(user)
+intertwinkles.load_initial_data = ->
+  console.log "load initial data"
+  intertwinkles.user = new intertwinkles.User()
+  intertwinkles.users = null  # map of intertwinkles user_id to user data
+  intertwinkles.groups = null # list of groups
+  if INITIAL_DATA.groups?
+    intertwinkles.groups = INITIAL_DATA.groups
+  if INITIAL_DATA.users?
+    intertwinkles.users = INITIAL_DATA.users
+    user = _.find intertwinkles.users, (e) -> e.email == INITIAL_DATA.email
+    if user? then intertwinkles.user.set(user)
+intertwinkles.load_initial_data()
 
 #
 # Persona handlers

@@ -266,7 +266,7 @@ route = (config, app, sockrooms) ->
       remove_logo: req.body.remove_logo
       member_changeset: JSON.parse(req.body.member_changeset or "{}")
     }
-    if req.files.logo.size > 0 and req.files.logo.type.substring(0, 'image/'.length) == 'image/'
+    if req.files.logo?.size > 0 and req.files.logo.type.substring(0, 'image/'.length) == 'image/'
       group_update.logo_file = req.files.logo
     return group_update
 

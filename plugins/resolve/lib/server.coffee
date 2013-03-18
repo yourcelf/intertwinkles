@@ -13,10 +13,7 @@ start = (config, app, sockrooms) ->
     schema.Proposal.findOne {_id: name}, 'sharing', (err, doc) ->
       return callback(err) if err?
       return callback("Proposal #{name} not found") unless doc?
-      if utils.can_view(session, doc)
-        callback(null, true)
-      else
-        callback(null, false)
+      return callback(null, utils.can_view(session, doc))
   
   #
   # Routes

@@ -1,13 +1,10 @@
 mongoose = require 'mongoose'
 Schema   = mongoose.Schema
 
-schema = null
-
 load = (config) ->
-  return schema if schema?
-  schema = {}
-  ProgTimeSchema = new Schema
+  ClockSchema = new Schema
     name: String
+    about: String
     created: Date
     sharing: {
       group_id: String
@@ -18,7 +15,7 @@ load = (config) ->
       advertise: Boolean
     }
     present: [{
-      user_id: String
+      user_id: {type: Schema.ObjectId, ref: 'User'}
       name: String
     }]
     categories: [{
@@ -28,7 +25,11 @@ load = (config) ->
         stop: Date
       }]
     }]
-  ProgTimeSchema.pre 'save', (next) ->
+  ClockSchema.virtual('url').get ->
+    return "/c/#{@_id}/"
+  ClockSchema.virtual('absolute_url').get ->
+    return "#{config.apps.clock.url}#{@url}"
+  ClockSchema.pre 'save', (next) ->
     @set('created', new Date()) unless @created
     unless @categories?.length > 0
       @categories = [
@@ -38,9 +39,11 @@ load = (config) ->
         {name: "Person of Color", times: []}
       ]
     next()
+  ClockSchema.set('toObject', {virtuals: true})
+  ClockSchema.set('toJSON', {virtuals: true})
 
   schemas = {}
-  for name, schema of {ProgTime: ProgTimeSchema}
+  for name, schema of {Clock: ClockSchema}
     try
       schemas[name] = mongoose.model(name)
     catch e

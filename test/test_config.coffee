@@ -15,6 +15,7 @@ config.apps.firestarter.url = "#{config.api_url}/firestarter"
 config.apps.resolve.url = "#{config.api_url}/resolve"
 config.apps.dotstorm.url = "#{config.api_url}/dotstorm"
 config.apps.twinklepad.url = "#{config.api_url}/twinklepad"
+config.apps.clock.url = "#{config.api_url}/clock"
 config.email = {port: 2526, host: "localhost"}
 
 module.exports = config

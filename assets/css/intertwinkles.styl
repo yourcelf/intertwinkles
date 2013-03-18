@@ -354,6 +354,10 @@ ul.sharing-online-group
   right: 2em
   padding: 2em
   background-color: rgba(255, 255, 255, 0.8)
+  &.error
+    background-color: rgba(255, 200, 200, 0.9)
+  &.fail
+    background-color: rgba(255, 220, 100, 0.9)
 
   
 /*
@@ -372,6 +376,11 @@ html,body { height: 100% }
 @media (max-width: 767px)
   #page
     margin: 0 auto (0px - footer-height-narrow)
+
+@media (max-width: 480px)
+  body, .navbar .navbar-inner
+    padding-left: 0px
+    padding-right: 0px
 
 footer, #push
   height: footer-height

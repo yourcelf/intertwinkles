@@ -49,8 +49,10 @@ intertwinkles.inline_user = (user_id, name) ->
   else
     return "<span style='width: 32px;'><i class='icon icon-user'></i></span> #{name}"
 
-intertwinkles.markup = (response) ->
-  return urlize(response, 50, true, _.escape)
+intertwinkles.markup = (text) ->
+  if text
+    return urlize(text, 50, true, _.escape)
+  return ""
 
 html_colors = [
   [0x80, 0x00, 0x00, "maroon"],
@@ -241,3 +243,38 @@ intertwinkles.instasearch = (form_selector, results_selector, callback) ->
         }
         $(this).ajaxSubmit()
       , 500
+
+intertwinkles.sub_vars = (scope=document) ->
+  $(".varsub", scope).each ->
+    $el = $(this)
+
+    #
+    # Dashboard fill-ins
+    #
+    if $el.attr("data-date")
+      date = new intertwinkles.AutoUpdatingDate(date: $el.attr("data-date"))
+      $el.html(date.el)
+      date.render()
+
+    else if $el.attr("data-group-id")
+      group = intertwinkles.groups?[$el.attr("data-group-id")]
+      if not group?
+        $el.hide()
+      else
+        $el.show().html(group.name)
+
+    else if $el.attr("data-user-id")
+      user = intertwinkles.users?[$el.attr("data-user-id")]
+      if user?
+        $el.html "<img src='#{user.icon.tiny}' /> #{user.name}"
+      else
+        $el.html "<i class='icon-user'></i> (protected)"
+
+  $(".markmeup", scope).each ->
+    $(this).html(intertwinkles.markup($(this).html()))
+
+  $(".tile-link").on "click", (event) ->
+    href = $("a", event.currentTarget).attr("href")
+    if href
+      window.location.href = href
+
