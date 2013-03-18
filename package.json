@@ -1,6 +1,6 @@
 {
   "name": "InterTwinkles",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Web application for group collaboration and decision making",
   "scripts": {
       "start": "bin/run.js",
