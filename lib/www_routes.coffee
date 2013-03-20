@@ -375,6 +375,13 @@ route = (config, app, sockrooms) ->
       res.redirect(doc.absolute_long_url)
 
   #
+  # Static and well-known
+  #
+  app.get "/robots.txt", (req, res) ->
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.send("User-agent: *\nDisallow:")
+
+  #
   # Testing
   #
   if process.env.NODE_ENV != "production"
