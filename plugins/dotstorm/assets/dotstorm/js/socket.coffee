@@ -25,7 +25,7 @@ intertwinkles.connect_socket (socket) ->
         ds.room_view.connect()
 
   ds.app = new ds.Router
-  Backbone.history.start pushState: true
+  Backbone.history.start pushState: true, hashChange: false
 
   intertwinkles.twunklify("#app")
   intertwinkles.modalvidify("#app")

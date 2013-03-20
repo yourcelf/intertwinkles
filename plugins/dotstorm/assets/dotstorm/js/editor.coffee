@@ -161,7 +161,7 @@ class ds.EditIdea extends Backbone.View
     # Canvas size voodoo
     #
     $(window).on "resize", @resize
-    @resize()
+    setTimeout(@resize, 1) # Timeout avoids crash in iOS safari 4.3.3
     this
 
   resize: =>
