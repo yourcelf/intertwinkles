@@ -1,3 +1,11 @@
+###
+This module defines a helper for communicating with solr -- a wrapper for
+"solr-client" (https://github.com/lbdremy/solr-node-client ).
+
+We store our search data in mongodb, with the searchindexes collection (defined
+in lib/www_schema).  These docs are then synced with solr for efficient full-text
+search.
+###
 async       = require 'async'
 solr        = require 'solr-client'
 logger      = require('log4js').getLogger()

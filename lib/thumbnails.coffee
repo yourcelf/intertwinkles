@@ -1,3 +1,6 @@
+###
+Methods to add and remove uploaded images, and to create thumbnails for them.
+###
 fs    = require 'fs'
 path  = require 'path'
 im    = require 'imagemagick'

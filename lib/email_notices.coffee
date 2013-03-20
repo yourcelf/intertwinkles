@@ -71,17 +71,16 @@ load = (config) ->
         ], (err) ->
           callback(err, docs)
 
-  render_notifications = (template_path, context, callback) ->
+  render_notifications = (view, context, callback) ->
     formats = {}
     respond = (err) ->
       callback(err, formats)
     context = _.extend({
-      subscription_settings_link: config.api_url + "/profile/edit/"
+      subscription_settings_link: config.api_url + "/profiles/edit/"
       static_url: config.api_url + "/static/"
       home_url: config.apps.www.url
     }, context)
 
-    view = require(template_path)
     formats.web = view.web(context) if view.web
     if view.email.subject
       formats.email = {}

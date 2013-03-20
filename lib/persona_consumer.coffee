@@ -1,3 +1,8 @@
+###
+Simple module to verify mozilla persona assertions.
+
+See https://developer.mozilla.org/en-US/docs/Persona/Remote_Verification_API
+###
 _ = require 'underscore'
 
 default_options =
