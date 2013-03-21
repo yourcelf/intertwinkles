@@ -153,8 +153,10 @@ block postapp
       div.span6.offset3
         h3.name.
           <%- model.name %>
+        <% if (model.about) { %>
         div.about.
           <%= intertwinkles.markup(model.about) %>
+        <% } %>
         div.meeting-start
         div.current-time
         div.category-list
@@ -184,8 +186,8 @@ block postapp
           <div class='name span2'><%- category.name %></div>
           <div class='times span10' style='position: relative'>
             <% _.each(category.times, function(time) { %>
-              <% var start = new Date(time.start).getTime(); %>
-              <% var stop = new Date(time.stop).getTime(); %>
+              <% var start = intertwinkles.parse_date(time.start).getTime(); %>
+              <% var stop = intertwinkles.parse_date(time.stop).getTime(); %>
               <% var elapsed = stop - start; %>
               <div class='time-block'
                 data-start='<%- start %>'
@@ -214,7 +216,7 @@ block postapp
           <% if (startDate) { %>
           p.
             Export data for "<%- model.get('name') %>",
-            from <%- new Date(startDate).toLocaleString() %>.  Copy and paste this to use it for further analysis in other tools.
+            from <%- intertwinkles.parse_date(startDate).toLocaleString() %>.  Copy and paste this to use it for further analysis in other tools.
           div.btn-group
             <a href='#' class='btn json<%- active == "json" ? " active" : "" %>'>JSON</a>
             <a href='#' class='btn csv<%- active == "csv" ? " active" : "" %>'>CSV</a>

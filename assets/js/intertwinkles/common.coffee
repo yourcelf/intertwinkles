@@ -88,3 +88,17 @@ class intertwinkles.BaseModalFormView extends intertwinkles.BaseView
 intertwinkles.BaseEvents = {
   'click .softnav': 'softNav'
 }
+
+intertwinkles.parse_date = (date) ->
+  return new Date() unless date?
+  return new Date(date.getTime()) if _.isDate(date)
+  return new Date(date) if _.isNumber(date)
+  if _.isString(date) and date.indexOf('Z') != -1
+    d = (parseInt(i, 10) for i in date.split(/[^0-9]+/) when i)
+    return new Date(Date.UTC(d[0], d[1] - 1, d[2], d[3], d[4], d[5], d[6] or 0))
+
+  date = new Date(date)
+  if isNaN(date)
+    throw new Error("Unrecognized date format: #{date}")
+  return date
+

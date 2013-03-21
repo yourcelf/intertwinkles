@@ -8,7 +8,7 @@ _get_sharing = (model) ->
 intertwinkles.can_view = (model) ->
   return true if intertwinkles.can_edit(model)
   sharing = _get_sharing(model)
-  return true if new Date(sharing.public_view_until) > new Date()
+  return true if intertwinkles.parse_date(sharing.public_view_until) > new Date()
   return true if _.find(sharing.extra_viewers or [], (e) ->
     e == intertwinkles.user.get("email"))
 
@@ -17,7 +17,7 @@ intertwinkles.can_edit = (model) ->
   # No group? Everyone can edit.
   return true if not sharing.group_id?
   # Even with a group, it might be marked public.
-  return true if new Date(sharing.public_edit_until) > new Date()
+  return true if intertwinkles.parse_date(sharing.public_edit_until) > new Date()
   # Otherwise, must be logged in.
   return false if not intertwinkles.is_authenticated()
   # All good if we're in the owning group.
@@ -126,8 +126,8 @@ class intertwinkles.SharingFormControl extends Backbone.View
     sharing = options.sharing or {}
     @sharing = {
       group_id: sharing.group_id
-      public_edit_until: if sharing.public_edit_until then new Date(sharing.public_edit_until) else undefined
-      public_view_until: if sharing.public_view_until then new Date(sharing.public_view_until) else undefined
+      public_edit_until: if sharing.public_edit_until then intertwinkles.parse_date(sharing.public_edit_until) else undefined
+      public_view_until: if sharing.public_view_until then intertwinkles.parse_date(sharing.public_view_until) else undefined
       extra_editors: if sharing.extra_editors then (a for a in sharing.extra_editors) else undefined
       extra_viewers: if sharing.extra_viewers then (a for a in sharing.extra_viewers) else undefined
       advertise: sharing.advertise
@@ -379,12 +379,12 @@ intertwinkles.normalize_sharing = (sharing) ->
   now = new Date()
   if sharing.public_edit_until?
     # Remove stale public edit until
-    sharing.public_edit_until = new Date(sharing.public_edit_until)
+    sharing.public_edit_until = intertwinkles.parse_date(sharing.public_edit_until)
     if sharing.public_edit_until < now
       delete sharing.public_edit_until
   if sharing.public_view_until?
     # Remove stale public view until
-    sharing.public_view_until = new Date(sharing.public_view_until)
+    sharing.public_view_until = intertwinkles.parse_date(sharing.public_view_until)
     if sharing.public_view_until < now
       delete sharing.public_view_until
   if sharing.extra_editors?.length == 0

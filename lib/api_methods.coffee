@@ -38,7 +38,7 @@ module.exports = (config) ->
         # Email recognized. Return the user object.
         if not doc.joined?
           # This is the first time they've logged in; but they've been previously invited.
-          logger.log "First time login", doc
+          logger.debug "First time login", doc
           doc.set("joined", new Date())
           doc.save (err, doc) ->
             return callback(err, {user: doc, message: "NEW_ACCOUNT"})
@@ -53,7 +53,7 @@ module.exports = (config) ->
           return callback(null, {user: doc})
       else
         # Unknown user. Create a new account for them with random icon.
-        logger.warn "Unknown user, creating"
+        logger.debug "Unknown user, creating"
         doc = new schema.User({email: email, name: "", joined: new Date()})
         doc.save (err, doc) ->
           return callback(err, {user: doc, message: "NEW_ACCOUNT"})

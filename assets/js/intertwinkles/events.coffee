@@ -9,7 +9,7 @@ intertwinkles.build_timeline = (selector, collection, formatter) ->
 class intertwinkles.Event extends Backbone.Model
 class intertwinkles.EventCollection extends Backbone.Collection
   model: Event
-  comparator: (r) -> return new Date(r.get("date")).getTime()
+  comparator: (r) -> return intertwinkles.parse_date(r.get("date")).getTime()
 
 ruled_timeline_template = "
   <div class='container timeline'>

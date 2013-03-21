@@ -50,7 +50,7 @@ stop = (callback) ->
   return callback(null)
 
 consoleHandler = (parsed_message) ->
-  logger.log(parsed_message.headers)
-  logger.log(parsed_Message.text)
+  logger.debug(parsed_message.headers)
+  logger.debug(parsed_message.text)
 
 module.exports = {start, stop, consoleHandler, outbox}

@@ -234,7 +234,6 @@ start = (config, app, sockrooms) ->
         }, (err, data) ->
           return www_methods.handle_error(req, res, err) if err?
           req.session.etherpad_session_id = data.sessionID
-          logger.log config.apps.twinklepad.etherpad.cookie_domain
           cookie_params = {
             path: "/"
             maxAge: maxAge
