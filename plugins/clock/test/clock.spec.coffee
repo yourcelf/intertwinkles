@@ -158,7 +158,7 @@ describe "clock", ->
 
   it "allows cojent end times", (done) ->
     stop = new Date()
-    _set_time_with @start, stop, (err, doc) ->
+    _set_time_with @start, stop, (err, doc) =>
       expect(err).to.be(null)
       cat = _.find(doc.categories, (c) -> c.name == "Male")
       expect(cat.times[0].start).to.eql(@start)
