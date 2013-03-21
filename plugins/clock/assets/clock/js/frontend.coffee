@@ -44,8 +44,8 @@ class ClockModel extends Backbone.Model
   _now: -> new Date(new Date().getTime() + BROWSER_CLOCK_SKEW)
 
   fetch: (cb) =>
-    console.log "fetch", @id
     return unless @id
+    console.log "fetch", @id
     fetch = {_id: @id}
     # If we get a callback, specify a callback parameter for the query. If not,
     # leave it blank, and the result will be sent to "clock" and handled by
@@ -121,7 +121,7 @@ class ClockModel extends Backbone.Model
     max = Number.MIN_VALUE
     for cat in @get("categories") or []
       if cat.times.length > 0
-        end = cat.times[cat.times.length - 1].end or new Date()
+        end = cat.times[cat.times.length - 1].stop or new Date()
         max = Math.max(max, intertwinkles.parse_date(end).getTime())
     if max == Number.MIN_VALUE
       return null
@@ -536,27 +536,65 @@ class GraphView extends ClockBaseView
   template: _.template $("#graphTemplate").html()
   events:
     'click .softnav': 'softNav'
+    'change .ignore-gaps': 'setIgnoreGaps'
+
   initialize: (options) ->
     super()
     @model = options.model
+    @ignoreGaps = false
+
+  setIgnoreGaps: (event) =>
+    @ignoreGaps = $(event.currentTarget).is(":checked")
+    @render()
 
   render: =>
-    startDate = @model.getStartDate()
-    endDate   = @model.getEndDate()
+    sorted_times = []
+    cat_times = []
+    for category in @model.get("categories")
+      name_and_times = {
+        name: category.name,
+        times: []
+      }
+      cat_times.push(name_and_times)
+      for time in category.times
+        start_stop = {
+          start: intertwinkles.parse_date(time.start).getTime()
+          stop: intertwinkles.parse_date(time.stop or @model._now()).getTime()
+        }
+        start_stop.elapsed = start_stop.stop - start_stop.start
+        name_and_times.times.push(start_stop)
+        sorted_times.push(start_stop)
+
+
+    if @ignoreGaps
+      sorted_times = _.sortBy(sorted_times, (t) -> t.start)
+      accumulated_gap = 0
+      max_stop = 0
+      for time,i in sorted_times
+        next = sorted_times[Math.min(i + 1, sorted_times.length - 1)]
+        max_stop = Math.max(max_stop, time.stop)
+        time.start -= accumulated_gap
+        time.stop  -= accumulated_gap
+        gap_contribution = Math.max(0, next.start - max_stop)
+        accumulated_gap += gap_contribution
+
     @$el.html(@template({
-      startDate: startDate
-      endDate: endDate
-      categories: @model.get("categories")
+      hasData: sorted_times.length > 0
+      categories: cat_times
+      ignoreGaps: @ignoreGaps
     }))
     @addView(".clock-footer", new ClockFooterView({
       model: @model
       current: "graph"
     }))
 
-    return unless startDate and endDate
+    return unless sorted_times.length > 0
 
-    startTime = startDate.getTime()
-    endTime = endDate.getTime()
+    startTime = sorted_times[0].start
+    if @ignoreGaps
+      endTime = max_stop - accumulated_gap
+    else
+      endTime = @model.getEndDate().getTime()
     totalTime = endTime - startTime
 
     @$(".time-block").each (i, el) ->
@@ -675,7 +713,7 @@ class Router extends Backbone.Router
   _open: (view, id) =>
     if @model.id? and @model.id != id
       @_leave_room()
-    if id?
+    if id? and not @model.id?
       @model.set({_id: id})
       return @model.fetch =>
         @_join_room(@model)

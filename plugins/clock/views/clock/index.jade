@@ -183,27 +183,28 @@ block postapp
   //
   script(type='text/template', id='graphTemplate')
     h3 Graph of speaking times
-    <% if (startDate) { %>
+    <% if (hasData) { %>
     div.graph.
       <% _.each(categories, function(category) { %>
         <div class='category row-fluid'>
           <div class='name span2'><%- category.name %></div>
           <div class='times span10' style='position: relative'>
             <% _.each(category.times, function(time) { %>
-              <% var start = intertwinkles.parse_date(time.start).getTime(); %>
-              <% var stop = intertwinkles.parse_date(time.stop).getTime(); %>
-              <% var elapsed = stop - start; %>
               <div class='time-block'
-                data-start='<%- start %>'
-                data-stop='<%- stop %>'
+                data-start='<%- time.start %>'
+                data-stop='<%- time.stop %>'
                 data-toggle="tooltip"
-                data-title="<%- parseInt(elapsed / 1000 / 60) + ':' + parseInt((elapsed / 1000) % 60) %>"
+                data-title="<%- parseInt(time.elapsed / 1000 / 60) + ':' + parseInt((time.elapsed / 1000) % 60) %>"
                 data-placement="bottom"
                 ></div>
             <% }); %>
           </div>
         </div>
       <% }); %>
+    div(style='text-align: center;')
+      label
+        <input type='checkbox' class='ignore-gaps' <%= ignoreGaps ? "checked" : "" %> />
+        | Ignore gaps
     <% } else { %>
     p(style='text-align: center;').
       No data yet.
