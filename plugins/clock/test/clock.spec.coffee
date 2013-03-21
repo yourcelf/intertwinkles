@@ -123,20 +123,46 @@ describe "clock", ->
         expect(doc.sharing.group_id).to.eql(group_id)
         done()
 
+  _set_time_with = null
+
   it "sets time [lib]", (done) ->
-    start = new Date()
-    clock.set_time @session, {
-      _id: @clock.id
-      category: "Male"
-      time: {start: start}
-      index: 0
-      now: new Date()
-    }, (err, doc) ->
+    _set_time_with = (start_date, stop_date, cb) =>
+      clock.set_time @session, {
+        _id: @clock.id
+        category: "Male"
+        index: 0
+        time: {start: start_date, stop: stop_date}
+        now: new Date()
+      }, cb
+
+    @start = new Date()
+
+    _set_time_with @start, null, (err, doc) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       cat = _.find(doc.categories, (c) -> c.name == "Male")
       expect(cat.times.length).to.be(1)
-      expect(cat.times[0].start).to.eql(start)
+      expect(cat.times[0].start).to.eql(@start)
+      expect(cat.times[0].stop).to.be(null)
+      done()
+
+  it "refuses future end times [lib]", (done) ->
+    _set_time_with @start, new Date(new Date().getTime() + 1000), (err, doc) ->
+      expect(err).to.be("Bad time")
+      done()
+
+  it "refuses end times before prior times [lib]", (done) ->
+    _set_time_with @start, new Date(@start.getTime() - 1000), (err, doc) ->
+      expect(err).to.be("Bad time")
+      done()
+
+  it "allows cojent end times", (done) ->
+    stop = new Date()
+    _set_time_with @start, stop, (err, doc) =>
+      expect(err).to.be(null)
+      cat = _.find(doc.categories, (c) -> c.name == "Male")
+      expect(cat.times[0].start).to.eql(@start)
+      expect(cat.times[0].stop).to.eql(stop)
       done()
 
   it "about link [live]", (done) ->

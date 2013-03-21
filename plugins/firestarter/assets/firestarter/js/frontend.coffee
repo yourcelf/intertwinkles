@@ -546,7 +546,7 @@ intertwinkles.connect_socket ->
 
   unless fire.started == true
     fire.app = new Router()
-    Backbone.history.start(pushState: true, silent: false)
+    Backbone.history.start({pushState: true, hashChange: false})
     fire.started = true
     fire.socket.on "reconnected", ->
       fire.socket.once "identified", ->

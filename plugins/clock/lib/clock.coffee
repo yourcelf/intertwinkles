@@ -90,21 +90,52 @@ module.exports = (config) ->
       return callback("Not found") unless doc?
       return callback("Permission denied") unless utils.can_edit(session, doc)
       category = _.find(doc.categories, (c) -> c.name == data.category)
-      # Check that we're not out of sync -- time should be for the last param,
-      # or be a new start.
-      unless category? and (
-          (data.index == category.times.length and not data.time.stop) or
-          (data.index == category.times.length - 1 and data.time.stop))
-        return callback("Out of sync", doc)
-      #XXX: How to manage client clock skew? Do we trust them to do so?
-      if data.index == category.times.length
-        category.times.push(data.time)
-      else
-        category.times[data.index].start = data.time.start
-        category.times[data.index].stop  = data.time.stop
+      return callback("Missing category") unless category?
 
-      doc.save (err, doc) ->
-        return callback(err) if err?
-        callback(null, doc)
+      now_t = new Date().getTime()
+      cutoff_t = new Date().getTime() - 60000
+      start_t = new Date(data.time.start).getTime()
+      stop_t = if data.time.stop then new Date(data.time.stop).getTime() else null
+
+      save_and_return = -> doc.save(callback)
+
+      if stop_t and not isNaN(stop_t)
+        # Stopping a running timer.
+        if data.index == category.times.length - 1
+          if not category.times[data.index].stop?
+            # Check for future, far past, or incoherent times.
+            if (stop_t <= now_t and stop_t >= cutoff_t and
+                stop_t > category.times[data.index].start.getTime())
+              category.times[data.index].stop = new Date(stop_t)
+              return save_and_return()
+            else
+              # Future, far past or incoherent time
+              return callback("Bad time", doc)
+          else
+            # No change -- this timer has already been stopped.
+            return callback(null, doc)
+        else
+          # We're an index ahead or behind. Resync.
+          return callback("Out of sync", doc)
+      else if start_t and not isNaN(start_t)
+        # Starting a new timer.
+        if data.index == category.times.length
+          # Check for future, far past, or incoherent times.
+          prev = category.times[category.times.length - 1]
+          if (start_t <= now_t and start_t >= cutoff_t and
+              (not prev or prev.stop.getTime() < start_t))
+            category.times.push {start: new Date(start_t), stop: null}
+            return save_and_return()
+          else
+            # Future, far past or incoherent time
+            return callback("Bad time", doc)
+        else if data.index == category.times.length - 1
+          # No change -- this timer has already been started.
+          return callback(null, doc)
+        else
+          # We're more than 1 index behind. resync.
+          return callback("Out of sync", doc)
+      else
+        return callback("Bad time", doc)
 
   return c

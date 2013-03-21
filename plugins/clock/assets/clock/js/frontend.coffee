@@ -26,7 +26,7 @@ class ClockModel extends Backbone.Model
     return @fetch() if not category
     if category.times[data.index]
       for key in ["start", "stop"]
-        if new Date(category.times[data.index][key]) != new Date(data.time[key])
+        if intertwinkles.parse_date(category.times[data.index][key]) != intertwinkles.parse_date(data.time[key])
           category.times[data.index] = data.time
           @trigger "change:categories:#{category.name}", this
           return
@@ -37,9 +37,9 @@ class ClockModel extends Backbone.Model
     else
       return @fetch()
 
-  _setSkew: (data) ->
+  _setSkew: (data) =>
     if data.now?
-      BROWSER_CLOCK_SKEW = new Date(data.now).getTime() - new Date().getTime()
+      BROWSER_CLOCK_SKEW = intertwinkles.parse_date(data.now).getTime() - new Date().getTime()
 
   _now: -> new Date(new Date().getTime() + BROWSER_CLOCK_SKEW)
 
@@ -81,7 +81,7 @@ class ClockModel extends Backbone.Model
     return if (category.times.length > 0 and
       not category.times[category.times.length - 1].stop)
     new_time = {start: @_now()}
-    category.times.push({start: new Date()})
+    category.times.push(new_time)
     intertwinkles.socket.send "clock/set_time", {
       _id: @id
       category: category_name
@@ -112,7 +112,7 @@ class ClockModel extends Backbone.Model
     min = Number.MAX_VALUE
     for cat in @get("categories") or []
       if cat.times.length > 0
-        min = Math.min(min, new Date(cat.times[0].start).getTime())
+        min = Math.min(min, intertwinkles.parse_date(cat.times[0].start).getTime())
     if min == Number.MAX_VALUE
       return null
     return new Date(min)
@@ -122,7 +122,7 @@ class ClockModel extends Backbone.Model
     for cat in @get("categories") or []
       if cat.times.length > 0
         end = cat.times[cat.times.length - 1].end or new Date()
-        max = Math.max(max, new Date(end).getTime())
+        max = Math.max(max, intertwinkles.parse_date(end).getTime())
     if max == Number.MIN_VALUE
       return null
     return new Date(max)
@@ -132,9 +132,9 @@ class ClockModel extends Backbone.Model
     return null unless category?
     elapsed = 0
     for time in category.times
-      start = new Date(time.start)
+      start = intertwinkles.parse_date(time.start)
       if time.stop
-        stop = new Date(time.stop)
+        stop = intertwinkles.parse_date(time.stop)
       else
         stop = correct_date(new Date())
       elapsed += stop.getTime() - start.getTime()
@@ -632,11 +632,6 @@ class ExportView extends ClockBaseView
     rows.unshift(["Category","Start","Stop"])
     return (row.join(",") for row in rows).join("\n")
 
-
-
-
-
-
 ###########################################################
 # Router
 ###########################################################
@@ -674,7 +669,8 @@ class Router extends Backbone.Router
     @_open(view, null)
 
   onReconnect: =>
-    # refresh data after a disconnection.
+    @model.fetch()
+    @_join_room(@model)
 
   _open: (view, id) =>
     if @model.id? and @model.id != id
@@ -725,6 +721,7 @@ correct_date = (date) ->
   time += BROWSER_CLOCK_SKEW
   return new Date(time)
 
+
 ###########################################################
 # Main
 ###########################################################
@@ -736,7 +733,7 @@ intertwinkles.connect_socket ->
 
   unless app?
     app = intertwinkles.app = new Router(socket: intertwinkles.socket)
-    Backbone.history.start(pushState: true)
+    Backbone.history.start({pushState: true, hashChange: false})
     intertwinkles.socket.on "reconnected", ->
       intertwinkles.socket.once "identified", ->
         app.onReconnect()

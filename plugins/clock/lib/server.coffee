@@ -76,7 +76,10 @@ start = (config, app, sockrooms) ->
   sockrooms.on "clock/fetch_clock", (socket, session, data) ->
     clock.fetch_clock data?._id, session, (err, doc) ->
       return socket.sendJSON("error", {error: err}) if err?
-      return socket.sendJSON(data.callback or "clock", { model: doc })
+      return socket.sendJSON(data.callback or "clock", {
+        model: doc
+        now: new Date()
+      })
 
   sockrooms.on "clock/save_clock", (socket, session, data) ->
     clock.save_clock session, data, (err, doc, type) ->

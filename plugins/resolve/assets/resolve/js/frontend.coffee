@@ -679,7 +679,7 @@ intertwinkles.connect_socket ->
   resolve.socket = intertwinkles.socket
   unless resolve.started == true
     resolve.app = intertwinkles.app = new Router()
-    Backbone.history.start(pushState: true)
+    Backbone.history.start({pushState: true, hashChange: false})
     resolve.started = true
     intertwinkles.socket.on "reconnected", ->
       intertwinkles.socket.once "identified", ->
