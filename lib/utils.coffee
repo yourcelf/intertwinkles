@@ -80,7 +80,6 @@ utils.append_slash = (app, route, methods=["get"]) ->
       (req, res) -> res.redirect(req.path + "/")
     )
 
-
 # Post the given data to the given URL as form encoded data; interpret the
 # response as JSON.
 utils.post_data = (post_url, data, callback, method='POST') ->
@@ -123,6 +122,16 @@ utils.clean_conf = (config) ->
     api_url: config.api_url
     apps: config.apps
   }
+
+utils.csv_escape = (str) ->
+  str = str?.toString() or ""
+  str = str.trim().replace(/"/g, '""')
+  if (str.indexOf(",") != -1) or (str.indexOf("\n") != -1)
+    str = '"' + str + '"'
+  return str
+
+utils.array_to_csv = (rows) ->
+  return ((utils.csv_escape(r) for r in row).join(",") for row in rows).join("\n")
 
 ###############################################
 # Session utilities
