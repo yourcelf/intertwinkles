@@ -17,7 +17,7 @@ module.exports = (config) ->
   # Basic utilities
   #
   www.handle_error = (req, res, err, msg) ->
-    logger.error(err, msg)
+    logger.error("WWW error", err, msg, req.method, req.url)
     res.statusCode = 500
 #    res.send "Server Errror" # Simple view.
     res.render("500", {

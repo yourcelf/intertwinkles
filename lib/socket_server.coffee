@@ -79,7 +79,7 @@ class RoomManager extends events.EventEmitter
         try
           data = JSON.parse(message)
         catch e
-          return @handleError(socket, "Invalid JSON")
+          return @handleError(socket, "Invalid JSON", message)
         @route socket, data
       socket.on "close", =>
         @disconnect(socket)
@@ -92,15 +92,15 @@ class RoomManager extends events.EventEmitter
   route: (socket, message) =>
     return unless message.route?
     if message.route == "identify"
-      return @identify(socket, message?.body?.session_id)
+      return @identify(socket, message?.body?.session_id, message)
     else if message.route == "join"
-      return @handleJoinRequest(socket, message?.body?.room)
+      return @handleJoinRequest(socket, message?.body?.room, message)
     else if message.route == "leave"
-      return @leave(socket, message.body?.room or {})
+      return @leave(socket, message.body?.room or {}, message)
     else
       @_getSessionForSocket socket, (err, session) =>
-        return @handleError(socket, err) if err?
-        return @handleError(socket, "Missing session") if not session?
+        return @handleError(socket, err, message) if err?
+        return @handleError(socket, "Missing session", message) if not session?
         @emit message.route, socket, session, message.body or {}
 
   getSessionsInRoom: (room, callback) =>
@@ -142,8 +142,8 @@ class RoomManager extends events.EventEmitter
         callback(err, socket, session)
 
 
-  handleError: (socket, err) =>
-    logger.error(err)
+  handleError: (socket, err, message) =>
+    logger.error("Socket message error:", err, message or "")
     if socket?
       @socketEmit socket, "error", {error: err}
 
@@ -151,8 +151,8 @@ class RoomManager extends events.EventEmitter
   # Workflow
   #
 
-  identify: (socket, raw_session_id) =>
-    return @handleError(socket, "Missing session id") unless raw_session_id?
+  identify: (socket, raw_session_id, message) =>
+    return @handleError(socket, "Missing session id", message) unless raw_session_id?
     session_id = connect.utils.parseSignedCookie(raw_session_id, @secret)
     
     # remove existing socket/session association if needed.
@@ -165,8 +165,8 @@ class RoomManager extends events.EventEmitter
 
     # Verify session exists by retrieving it from the store.
     @sessionStore.get session_id, (err, session) =>
-      return @handleError(socket, err) if err?
-      return @handleError(socket, "Invalid session id") unless session?
+      return @handleError(socket, err, message) if err?
+      return @handleError(socket, "Invalid session id", message) unless session?
 
       # Associate socket / session
       @socketIdToSessionId[socket.sid] = session_id
@@ -179,7 +179,7 @@ class RoomManager extends events.EventEmitter
           session.anon_id = uuid.v4()
         session.session_id = session_id
         @sessionStore.set session_id, session, (err, ok) =>
-          return @handleError(socket, err) if err?
+          return @handleError(socket, err, message) if err?
           respond()
       else
         respond()
@@ -193,19 +193,19 @@ class RoomManager extends events.EventEmitter
       return callback(null, session)
 
   # Handle a socket's request to join a room.
-  handleJoinRequest: (socket, room, verify=true) =>
+  handleJoinRequest: (socket, room, msg) =>
     # Ignore any message that doesn't have a matching auth channel.
-    return @handleError(socket, "Room not specified") unless room?
+    return @handleError(socket, "Room not specified", msg) unless room?
     channel = room.split("/")[0]
-    return @handleError(socket, "Unknown channel") unless @channelAuth[channel]?
+    return @handleError(socket, "Unknown channel", msg) unless @channelAuth[channel]?
     @_getSessionForSocket socket, (err, session) =>
-      return @handleError(socket, err) if err?
+      return @handleError(socket, err, msg) if err?
       @channelAuth[channel](session, room, (err, authorized) =>
-        return @handleError(socket, err) if err?
+        return @handleError(socket, err, msg) if err?
         if authorized
           @joinWithoutAuth(socket, session, room)
         else
-          @handleError(socket, "Permission to join #{room} denied.")
+          @handleError(socket, "Permission to join #{room} denied.", msg)
       )
 
   # Join the given socket to the room, without checking for authorization
@@ -238,8 +238,8 @@ class RoomManager extends events.EventEmitter
       socket_emission = {room, first}
       @socketEmit socket, "join", socket_emission
 
-  leave: (socket, room) =>
-    return @handleError(socket, "Room not specified") unless room?
+  leave: (socket, room, msg) =>
+    return @handleError(socket, "Room not specified", msg) unless room?
     # First, clean up the room/socket mappings so that we can be sure we're
     # clean for broadcast purposes.
     @roomToSockets[room] = _.reject(@roomToSockets[room], (sock) -> sock.sid == socket.sid)
@@ -253,7 +253,7 @@ class RoomManager extends events.EventEmitter
     # the socket has left.
     session_id = @socketIdToSessionId[socket.sid]
     @sessionStore.get session_id, (err, session) =>
-      return @handleError(socket, err) if err?
+      return @handleError(socket, err, msg) if err?
 
       # 'Last' refers to whether this was the last socket owned by this session
       # that was in this room.
@@ -273,7 +273,7 @@ class RoomManager extends events.EventEmitter
     for room in @socketIdToRooms[socket.sid] or []
       # Note: could make this more efficient by getting the session on the
       # outside of the loop, and refactoring @leave to use it.
-      @leave(socket, room)
+      @leave(socket, room, "[disconnected]")
 
     # Remove the socket/session mapping for this socket.
     session_id = @socketIdToSessionId[socket.sid]
