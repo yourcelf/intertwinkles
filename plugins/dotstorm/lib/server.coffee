@@ -34,42 +34,52 @@ start = (config, app, sockrooms) ->
       flash: req.flash()
     }, obj)
 
-  app.get /\/dotstorm$/, (req, res) -> res.redirect "/dotstorm/"
+  utils.append_slash(app, "/dotstorm")
   app.get '/dotstorm/', (req, res) ->
     res.render 'dotstorm/dotstorm', context(req, {
       title: "DotStorm", slug: ""
     })
 
-  # /d/:slug without trainling slash: redirect to slash.
-  app.get /^\/dotstorm\/d\/([^/]+)$/, (req, res) -> res.redirect "/dotstorm/d/#{req.params[0]}/"
-
   # /d/:slug/:action (action optional)
-  app.get /\/dotstorm\/d\/([^/]+)(\/.*)?/, (req, res) ->
-    error_check = (err, doc) ->
+  utils.append_slash(app, "/dotstorm/d/([^/]+)(/[^/]+)?")
+  app.get "/dotstorm/d/:slug/:action?/", (req, res) ->
+    passes_checks = (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
       return www_methods.not_found(req, res) unless doc?
       unless utils.can_view(req.session, doc)
         return www_methods.permission_denied(req, res)
       return true
 
-    if req.params[1] == "/json/"
-      schema.Dotstorm.withLightIdeas {slug: req.params[0]}, (err, doc) ->
-        if error_check(err, doc) == true
-          doc.sharing = utils.clean_sharing(req.session, doc)
-          res.send(dotstorm: doc)
+    if req.params.action == "json"
+      schema.Dotstorm.findOne({slug: req.params.slug}).populate(
+        'groups.ideas'
+      ).exec (err, doc) ->
+        return unless passes_checks(err, doc)
+        res.setHeader("Content-Type", "application/json; charset=utf-8")
+        return res.send(doc.exportJSON())
+    else if req.params.action == "csv"
+      rows = []
+      schema.Dotstorm.findOne({slug: req.params.slug}).populate(
+        'groups.ideas'
+      ).exec (err, doc) ->
+        return unless passes_checks(err, doc)
+        res.setHeader("Content-Type", "text/csv; charset=utf-8")
+        return res.send(utils.array_to_csv(doc.exportRows()))
     else
-      schema.Dotstorm.findOne {slug: req.params[0]}, (err, doc) ->
-        if error_check(err, doc) == true
-          ideas = schema.Idea.findLight {dotstorm_id: doc._id}, (err, ideas) ->
-            return www_methods.handle_error(req, res, err) if err?
-            res.render 'dotstorm/dotstorm', context(req, {
-              title: "DotStorm", slug: req.params[0]
-            }, {
-              dotstorm: doc
-              ideas: (idea.serialize() for idea in ideas)
-            })
-            events.post_event(req.session, doc, "visit", {timeout: 60 * 1000 * 5})
+      schema.Dotstorm.findOne {slug: req.params.slug}, (err, doc) ->
+        return unless passes_checks(err, doc)
+        ideas = schema.Idea.findLight {dotstorm_id: doc._id}, (err, ideas) ->
+          return www_methods.handle_error(req, res, err) if err?
+          res.render 'dotstorm/dotstorm', context(req, {
+            title: "DotStorm", slug: req.params.slug
+          }, {
+            dotstorm: doc
+            ideas: (idea.serialize() for idea in ideas)
+          })
+          events.post_event(req.session, doc, "visit", {timeout: 60 * 1000 * 5})
+          return
 
+  utils.append_slash(app, "/dotstorm/i/[^/]+/json")
   app.get '/dotstorm/i/:idea/json/', (req, res) ->
     schema.Idea.findOne {_id: req.params.idea}, (err, idea) ->
       return res.status(500).send("Server error") if err?
@@ -82,7 +92,8 @@ start = (config, app, sockrooms) ->
         res.send(idea: idea)
 
   # Embed read-only dostorm using embed slug.
-  app.get '/dotstorm/e/:embed_slug', (req, res) ->
+  utils.append_slash(app, "/dotstorm/e/[^/]+")
+  app.get '/dotstorm/e/:embed_slug/', (req, res) ->
     constraint = embed_slug: req.params.embed_slug
     schema.Dotstorm.withLightIdeas constraint, (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
@@ -97,7 +108,8 @@ start = (config, app, sockrooms) ->
       })
 
   # Embed group using group id.
-  app.get '/dotstorm/g/:group_id', (req, res) ->
+  utils.append_slash(app, "/dotstorm/g/[^/]+")
+  app.get '/dotstorm/g/:group_id/', (req, res) ->
     constraint = "groups._id": req.params.group_id
     schema.Dotstorm.withLightIdeas constraint, (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?

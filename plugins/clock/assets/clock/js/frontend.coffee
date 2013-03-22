@@ -653,8 +653,8 @@ class ExportView extends ClockBaseView
 
   getCSV: =>
     csvEscape = (str) ->
-      str = $.trim(str).replace(/"/, '""')
-      if str.indexOf(",") != -1
+      str = $.trim(str).replace(/"/g, '""')
+      if (str.indexOf(",") != -1) or (str.indexOf("\n") != -1)
         str = '"' + str + '"'
       return str
 

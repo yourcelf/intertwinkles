@@ -160,7 +160,61 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
+  DotstormSchema.virtual('url').get = ->
+    return "/d/#{@slug}"
+  DotstormSchema.virtual('absolute_url').get = ->
+    return "#{config.apps.dotstorm.url}#{@url}"
   DotstormSchema.methods.serialize = -> return @toJSON()
+  DotstormSchema.methods.exportJSON = ->
+    out = {
+      slug: @slug
+      embed_slug: @embed_slug
+      name: @name
+      topic: @topic
+      url: @absolute_url
+      groups: []
+    }
+    for group in @groups
+      out.groups.push({
+        label: group.label or ""
+        ideas: ({
+          description: idea.description
+          hasDrawing: idea.drawing?.length > 0
+          hasPhoto: idea.photoVersion > 0
+          urls: {
+            small: config.api_url + idea.drawingURLs.small
+            medium: config.api_url + idea.drawingURLs.medium
+            large: config.api_url + idea.drawingURLs.large
+          }
+          tags: (t for t in idea.tags or [])
+          background: idea.background
+          votes: idea.votes
+        } for idea in group.ideas)
+      })
+    return out
+  DotstormSchema.methods.exportRows = ->
+    out = [[
+        "description"
+        "votes",
+        "group label",
+        "tags",
+        "url",
+        "has photo?",
+        "has drawing?",
+    ]]
+    for group in @groups
+      for idea in group.ideas
+        out.push([
+          idea.description or ""
+          idea.votes or 0,
+          group.label or "",
+          idea.tags?.join(", ") or "",
+          config.api_url + idea.drawingURLs.large,
+          if idea.photoVersion > 0 then "yes" else "no",
+          if idea.drawing?.length > 0 then "yes" else "no",
+        ])
+    return out
+
   DotstormSchema.statics.withLightIdeas = (constraint, cb) ->
     return schemas.Dotstorm.findOne(constraint).populate(
       'groups.ideas', { 'drawing': 0 }
