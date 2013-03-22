@@ -16,8 +16,13 @@ module.exports = (config) ->
   #
   # Basic utilities
   #
+  www.log_error = (type, req, res, err, msg) ->
+    logger.error({
+      type: type, error: err, message: msg, method: req.method, url: req.url
+      headers: req.headers
+    })
   www.handle_error = (req, res, err, msg) ->
-    logger.error("WWW error", err, msg, req.method, req.url)
+    www.log_error("www", req, res, err, msg)
     res.statusCode = 500
 #    res.send "Server Errror" # Simple view.
     res.render("500", {
@@ -28,7 +33,7 @@ module.exports = (config) ->
     })
 
   www.ajax_handle_error = (req, res, err, msg) ->
-    logger.error(err, msg)
+    www.log_error("ajax", req, res, err, msg)
     res.statusCode = 500
     res.send({error: msg or "Server error", status: 500})
 

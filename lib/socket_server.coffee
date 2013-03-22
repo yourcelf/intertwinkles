@@ -143,7 +143,11 @@ class RoomManager extends events.EventEmitter
 
 
   handleError: (socket, err, message) =>
-    logger.error("Socket message error:", err, message or "")
+    logger.error({
+      type: "socket message error", error: err, message: message or "",
+      remoteAddress: socket.remoteAddress, headers: socket.headers,
+      protocol: socket.protocol
+    })
     if socket?
       @socketEmit socket, "error", {error: err}
 
