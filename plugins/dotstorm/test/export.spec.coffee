@@ -6,19 +6,6 @@ async  = require("async")
 _ = require("underscore")
 require "better-stack-traces"
 
-difference = (expected, actual) ->
-  ret = {}
-  for name in expected
-    if name in actual
-      if _.isObject(actual[name]) and not _.isArray(actual[name])
-        diff = difference(expected[name], actual[name])
-        if not _.isEmpty(diff)
-          ret[name] = diff
-        else if not _.isEqual expected[name], actual[name]
-          ret[name] = actual[name]
-  return ret
-
-
 describe "exports", ->
   before (done) ->
     common.startUp (server) =>
