@@ -80,7 +80,11 @@ config = {
         cookie_domain: domains.etherpad_cookie_domain
       }
     }
-#    tenpoints: { url: "#{base_url}/tenpoints" }
+    tenpoints: {
+      name: "Ten Points"
+      about: "Develop a set of principles or values with your group"
+      url: "#{base_url}/tenpoints"
+    }
     clock: {
       name: "Progressive Clock"
       about: "Keep time in meetings by identity category"

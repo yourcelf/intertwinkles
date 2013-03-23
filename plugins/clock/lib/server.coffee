@@ -1,6 +1,4 @@
 _             = require 'underscore'
-async         = require 'async'
-express       = require 'express'
 utils         = require '../../../lib/utils'
 
 start = (config, app, sockrooms) ->

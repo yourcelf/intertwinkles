@@ -47,22 +47,22 @@ clear_test_docs_from_solr = (done) ->
 
 describe "SOLR search", ->
   before (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     common.startUp (server) =>
       @server = server
-      clear_test_docs_from_solr(done)
+      if process.env.SKIP_SOLR_TESTS
+        return done()
+      else
+        return clear_test_docs_from_solr(done)
 
   after (done) ->
     if process.env.SKIP_SOLR_TESTS
-      return done()
-    clear_test_docs_from_solr (err) =>
       common.shutDown(@server, done)
+    else
+      clear_test_docs_from_solr (err) =>
+        common.shutDown(@server, done)
 
   it "Posts and retrieves documents via api", (done) ->
     api_methods = require("../lib/api_methods")(config)
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     api_methods.add_search_index {
       application: "test"
       entity: "test1"
@@ -82,6 +82,7 @@ describe "SOLR search", ->
     }, (err, result) ->
       expect(err).to.be(null)
       expect(result.entity).to.be("test1")
+      return done() if process.env.SKIP_SOLR_TESTS
 
       solr_client.commit {}, (err, obj) ->
         expect(err).to.be(null)
@@ -106,8 +107,6 @@ describe "SOLR search", ->
           done()
 
   it "Constrains based on sharing", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     api_methods = require("../lib/api_methods")(config)
     schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
       expect(err).to.be(null)
@@ -148,6 +147,8 @@ describe "SOLR search", ->
         async.map defs, (def, done) ->
           api_methods.add_search_index(def, done)
         , (err, results) ->
+          expect(err).to.be(null)
+          return done() if process.env.SKIP_SOLR_TESTS
           solr_client.commit (err, obj) ->
             expect(err).to.be(null)
             docs = {}

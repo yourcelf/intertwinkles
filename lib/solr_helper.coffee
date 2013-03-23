@@ -140,5 +140,10 @@ module.exports = (config) ->
       logger.debug(err, results, "Done.")
       callback?(err, results)
 
+  if config.solr?.fake_solr == true
+    post_search_index = (a, cb) -> cb(null, {})
+    delete_search_index = (a, cb) -> cb(null)
+    execute_search = (a, cb) -> cb(null, {})
+
   return { client, post_search_index, execute_search, delete_search_index,
     destroy_and_rebuild_solr_index }

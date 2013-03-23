@@ -93,7 +93,6 @@ describe "clock", ->
       done()
 
   it "saves changes to a clock [lib]", (done) ->
-    return done() if process.env.SKIP_SOLR_TESTS
     changes = {name: "Duh Best", _id: @clock.id}
     clock.save_clock @session, {model: changes}, (err, doc, event, si) =>
       expect(err).to.be(null)
@@ -108,7 +107,6 @@ describe "clock", ->
       done()
 
   it "saves sharing change to a clock [lib]", (done) ->
-    return done() if process.env.SKIP_SOLR_TESTS
     group_id = @all_groups["two-members"].id
     changes = {sharing: {group_id: group_id}, _id: @clock.id}
     clock.save_clock @session, {model: changes}, (err, doc, event, si) =>
@@ -177,7 +175,6 @@ describe "clock", ->
       done()
   
   it "adds a clock [live]", (done) ->
-    return done() if process.env.SKIP_SOLR_TESTS
     this.timeout(20000)
     browser = common.fetchBrowser()
     browser.visit "#{config.apps.clock.url}/", (e, browser, status) ->

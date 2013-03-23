@@ -54,6 +54,8 @@ c.startUp = (done) ->
   # Re-Squelch logging to preserve mocha's reporter
   logger.setLevel(log4js.levels.FATAL)
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
+
+
   async.series [
     (done) ->
       c.clearDb(done)
