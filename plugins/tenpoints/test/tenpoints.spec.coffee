@@ -25,11 +25,17 @@ describe "tenpoints", ->
           # Establish a session.
           @session = {}
           common.stubBrowserID({email: "one@mockmyid.com"})
-          api_methods.authenticate(@session, "mock assertion", done)
+          api_methods.authenticate @session, "mock assertion", =>
+            @session.anon_id = "anon_id_1"
+            @client = common.buildSockjsClient =>
+              done()
         (done) =>
           @session2 = {}
           common.stubBrowserID({email: "two@mockmyid.com"})
-          api_methods.authenticate(@session2, "mock assertion", done)
+          api_methods.authenticate @session2, "mock assertion", =>
+            @session2.anon_id = "anon_id_2"
+            @client2 = common.buildSockjsClient =>
+              done()
 
       ], done
 
@@ -62,7 +68,6 @@ describe "tenpoints", ->
       expect(event.type).to.be("create")
       expect(event.user.toString()).to.be(@all_users['one@mockmyid.com'].id)
       expect(event.via_user.toString()).to.be(event.user.toString())
-      expect(event.anon_id).to.be(@session.anon_id)
       expect(event.group.toString()).to.eql(@all_groups['two-members'].id)
       expect(event.data).to.eql({name: "My Ten Point", slug: "my-ten-point"})
 
@@ -118,7 +123,7 @@ describe "tenpoints", ->
     tenpoints.revise_point @session, {
       _id: @tenpoint.id,
       text: "Be excellent to each other."
-    }, (err, doc, event) =>
+    }, (err, doc, point, event, si) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
@@ -137,7 +142,7 @@ describe "tenpoints", ->
       _id: @tenpoint.id
       point_id: @tenpoint.points[0]._id.toString()
       text: "Party on, dude."
-    }, (err, doc, event) =>
+    }, (err, doc, point, event, si) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
@@ -158,7 +163,7 @@ describe "tenpoints", ->
       point_id: @tenpoint.points[0]._id.toString()
       user_id: @session.auth.user_id
       vote: true
-    }, (err, doc, event) =>
+    }, (err, doc, point, event) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
@@ -189,10 +194,11 @@ describe "tenpoints", ->
       user_id: @session2.auth.user_id
       point_id: @tenpoint.points[0]._id.toString()
       vote: false
-    }, (err, doc, event) =>
+    }, (err, doc, point, event) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
+      expect(point._id).to.eql(doc.points[0]._id)
       p = doc.points[0]
       expect(p.revisions[0].supporters.length).to.be(1)
       expect(p.revisions[0].supporters[0].user_id.toString()).to.be(
@@ -222,10 +228,11 @@ describe "tenpoints", ->
         name: "George"
         point_id: @tenpoint.points[0]._id.toString()
         vote: true
-      }, (err, doc, event) =>
+      }, (err, doc, point, event) =>
         expect(err).to.be(null)
         expect(doc).to.not.be(null)
         expect(event).to.not.be(null)
+        expect(point._id).to.eql(doc.points[0]._id)
         expect(doc.points[0].revisions[0].supporters.length).to.be(2)
         expect(doc.points[0].revisions[0].supporters[1].name).to.be("George")
         expect(doc.points[0].revisions[0].supporters[1].user_id).to.be(null)
@@ -236,9 +243,10 @@ describe "tenpoints", ->
           name: "George"
           point_id: @tenpoint.points[0]._id.toString()
           vote: false
-        }, (err, doc, event) =>
+        }, (err, doc, point, event) =>
           expect(err).to.be(null)
           expect(doc).to.not.be(null)
+          expect(point._id).to.eql(doc.points[0]._id)
           expect(doc.points[0].revisions[0].supporters.length).to.be(1)
           expect(doc.points[0].revisions[0].supporters[0].name).to.be(undefined)
           expect(
@@ -269,3 +277,23 @@ describe "tenpoints", ->
         expect(docs.public.length).to.be(1)
         expect(docs.public[0].id).to.be(@tenpoint.id)
         done()
+
+  it "indicates editing", (done) ->
+    tenpoints.set_editing @session, {
+      _id: @tenpoint._id
+      point_id: @tenpoint.points[0]._id
+      editing: true
+    }, (err, doc) =>
+      expect(doc.points[0].editing.length).to.be(1)
+      expect(doc.points[0].editing[0]).to.be(@session.anon_id)
+      done()
+
+  it "stops indicating editing", (done) ->
+    tenpoints.set_editing @session, {
+      _id: @tenpoint._id
+      point_id: @tenpoint.points[0]._id
+      editing: false
+    }, (err, doc) =>
+      expect(doc.points[0].editing.length).to.be(0)
+      done()
+

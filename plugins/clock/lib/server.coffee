@@ -19,7 +19,7 @@ start = (config, app, sockrooms) ->
 
   index_res = (req, res, initial_data) ->
     utils.list_accessible_documents schema.Clock, req.session, (err, docs) ->
-      return res.status(500).send("server error") if err?
+      return www_methods.handle_error(req, res, err) if err?
       for doc in docs
         doc.sharing = utils.clean_sharing(req.session, doc)
       res.render 'clock/index', {
@@ -74,13 +74,14 @@ start = (config, app, sockrooms) ->
   sockrooms.on "clock/fetch_clock", (socket, session, data) ->
     clock.fetch_clock data?._id, session, (err, doc) ->
       return socket.sendJSON("error", {error: err}) if err?
+      doc.sharing = utils.clean_sharing(session, doc)
       return socket.sendJSON(data.callback or "clock", {
         model: doc
         now: new Date()
       })
 
   sockrooms.on "clock/save_clock", (socket, session, data) ->
-    clock.save_clock session, data, (err, doc, type) ->
+    clock.save_clock session, data, (err, doc) ->
       return socket.sendJSON("error", {error: err}) if err?
       orig_sharing = doc.sharing
       # We want a different sharing cleaning, potentially, for each room

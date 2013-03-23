@@ -15,6 +15,7 @@ load = (config) ->
       advertise: Boolean
     }
     points: [{
+      editing: [String]
       revisions: [{
         text: String
         created: {type: Date, default: Date.now}
@@ -29,6 +30,8 @@ load = (config) ->
     return "/10/#{@slug}/"
   TenPointSchema.virtual('absolute_url').get ->
     return "#{config.apps.tenpoints.url}#{@url}"
+  TenPointSchema.set('toObject', {virtuals: true})
+  TenPointSchema.set('toJSON',   {virtuals: true})
 
   schemas = {}
   for name, schema of {TenPoint: TenPointSchema}

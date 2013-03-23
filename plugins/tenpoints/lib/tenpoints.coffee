@@ -41,7 +41,6 @@ module.exports = (config) ->
       entity: tenpoint.id
       user: session.auth?.user_id
       via_user: session.auth?.user_id
-      anon_id: session.anon_id
       group: tenpoint.sharing?.group_id
       data: {
         name: tenpoint.name
@@ -113,7 +112,7 @@ module.exports = (config) ->
         return callback("null doc") unless doc?
         tp.post_event_and_search session, doc, {type: "update"}, 0, (err, event, si) ->
           return callback(err) if err?
-          return callback(null, doc, event, si)
+          return callback(null, doc, point, event, si)
 
   tp.change_support = (session, data, callback) ->
     for key in ["_id", "point_id", "vote"]
@@ -124,7 +123,7 @@ module.exports = (config) ->
       return callback(err) if err?
       return callback("Not found") unless doc?
       return callback("Permission denied") unless utils.can_edit(session, doc)
-      point = _.find doc.points, (p) -> p._id.toString() == data.point_id
+      point = _.find doc.points, (p) -> p._id.toString() == data.point_id.toString()
       return callback("Point not found") unless point?
 
       rev = point.revisions[0]
@@ -159,6 +158,21 @@ module.exports = (config) ->
           }
         }, 0, (err, event) ->
           return callback(err) if err?
-          return callback(null, doc, event)
+          return callback(null, doc, point, event)
+
+  tp.set_editing = (session, data, callback) ->
+    for key in ["_id", "point_id", "editing"]
+      return callback("Missing param #{key}") unless data[key]?
+    schema.TenPoint.findOne {_id: data._id}, (err, doc) ->
+      return callback(err) if err?
+      return callback("Not found") unless doc?
+      return callback("Permission denied") unless utils.can_edit(session, doc)
+      point = _.find doc.points, (p) -> p._id.toString() == data.point_id.toString()
+      return callback("Point not found") unless point?
+      if data.editing
+        point.editing.push(session.anon_id)
+      else
+        point.editing = _.without(point.editing, session.anon_id)
+      doc.save (err, doc) -> callback(err, doc, point)
 
   return tp
