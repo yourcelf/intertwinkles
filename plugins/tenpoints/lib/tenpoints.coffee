@@ -21,7 +21,7 @@ module.exports = (config) ->
       delete data.model.sharing unless utils.can_change_sharing(session, doc)
 
       # Set fields
-      for key in ["name", "slug"]
+      for key in ["name", "slug", "number_of_points"]
         doc[key] = data.model[key] if data.model[key]?
       if data.model.sharing?
         _.extend(doc.sharing, data.model.sharing)

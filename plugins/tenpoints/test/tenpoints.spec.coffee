@@ -57,6 +57,7 @@ describe "tenpoints", ->
 
       expect(doc.name).to.be("My Ten Point")
       expect(doc.slug).to.be("my-ten-point")
+      expect(doc.number_of_points).to.be(10)
       expect(p for p in doc.points).to.eql([])
       expect(doc.sharing.group_id).to.eql(@all_groups['two-members'].id)
       expect(doc.url).to.eql("/10/my-ten-point/")

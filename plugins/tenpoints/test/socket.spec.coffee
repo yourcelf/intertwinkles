@@ -38,13 +38,14 @@ describe "Socket permissions", ->
   it "creates a tenpoint", (done) ->
     @client.writeJSON {
       route: "tenpoints/save_tenpoint"
-      body: {model: {name: "My Ten Point", slug: "my-ten-point"}}
+      body: {model: {name: "My Ten Point", slug: "my-ten-point", number_of_points: 5}}
     }
     @client.onceJSON (data) ->
-      expect(data.route).to.be("tenpoint:tenpoint")
+      expect(data.route).to.be("tenpoints:tenpoint")
       expect(data.body.model._id).to.not.be(null)
       expect(data.body.model.name).to.be("My Ten Point")
       expect(data.body.model.slug).to.be("my-ten-point")
+      expect(data.body.model.number_of_points).to.be(5)
       tenpoint = data.body.model
       done()
 
@@ -66,7 +67,7 @@ describe "Socket permissions", ->
     async.map [@client, @client2], (client, done) ->
       client.onceJSON (data) ->
         expect(data).to.eql({
-          route: "tenpoint:tenpoint",
+          route: "tenpoints:tenpoint",
           body: {model: _.extend {}, tenpoint, {name: "Your Ten Point"}}
         })
         tenpoint = data.body.model
@@ -83,7 +84,7 @@ describe "Socket permissions", ->
     }
     async.map [@client, @client2],  (client, done) =>
       client.onceJSON (data) =>
-        expect(data.route).to.be("tenpoint:point")
+        expect(data.route).to.be("tenpoints:point")
         expect(data.body._id).to.be(tenpoint._id)
         expect(data.body.point.revisions.length).to.be(1)
         expect(data.body.point.revisions[0].text).to.be("Be excellent to each other.")
@@ -105,7 +106,7 @@ describe "Socket permissions", ->
     }
     async.map [@client, @client2], (client, done) =>
       client.onceJSON (data) =>
-        expect(data.route).to.be("tenpoint:point")
+        expect(data.route).to.be("tenpoints:point")
         expect(data.body._id).to.be(tenpoint._id)
         expect(data.body.point.revisions.length).to.be(2)
         expect(data.body.point.revisions[0].text).to.be("Party on, dudes.")
@@ -128,7 +129,7 @@ describe "Socket permissions", ->
     }
     async.map [@client, @client2], (client, done) =>
       client.onceJSON (data) =>
-        expect(data.route).to.be("tenpoint:support")
+        expect(data.route).to.be("tenpoints:support")
         expect(data.body._id).to.be(tenpoint._id)
         expect(data.body.point_id).to.be(point._id)
         expect(data.body.user_id).to.be(@session.auth.user_id)
@@ -149,7 +150,7 @@ describe "Socket permissions", ->
     }
     async.map [@client, @client2], (client, done) =>
       client.onceJSON (data) =>
-        expect(data.route).to.be("tenpoint:support")
+        expect(data.route).to.be("tenpoints:support")
         expect(data.body._id).to.be(tenpoint._id)
         expect(data.body.point_id).to.be(point._id)
         expect(data.body.user_id).to.be(@session.auth.user_id)
@@ -169,7 +170,7 @@ describe "Socket permissions", ->
     }
     async.map [@client, @client2], (client, done) =>
       client.onceJSON (data) =>
-        expect(data.route).to.be("tenpoint:editing")
+        expect(data.route).to.be("tenpoints:editing")
         expect(data.body._id).to.be(tenpoint._id)
         expect(data.body.point_id).to.be(point._id)
         expect(data.body.editing).to.eql([@session.anon_id])
@@ -187,9 +188,33 @@ describe "Socket permissions", ->
     }
     async.map [@client, @client2], (client, done) =>
       client.onceJSON (data) =>
-        expect(data.route).to.be("tenpoint:editing")
+        expect(data.route).to.be("tenpoints:editing")
         expect(data.body._id).to.be(tenpoint._id)
         expect(data.body.point_id).to.be(point._id)
         expect(data.body.editing).to.eql([])
         done()
     , done
+
+  it "checks a slug", (done) ->
+    @client.writeJSON {
+      route: "tenpoints/check_slug"
+      body: { slug: "my-ten-point" }
+    }
+    @client.onceJSON (data) =>
+      expect(data).to.eql({
+        route: "tenpoints:check_slug"
+        body: {ok: false}
+      })
+
+      @client.writeJSON {
+        route: "tenpoints/check_slug"
+        body: { slug: "another-slug" }
+      }
+      @client.onceJSON (data) =>
+        expect(data).to.eql({
+          route: "tenpoints:check_slug"
+          body: {ok: true}
+        })
+        done()
+
+        

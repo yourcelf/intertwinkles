@@ -1,0 +1,84 @@
+extends ../../../../views/layout
+
+block poststyles
+  link(rel="stylesheet", type="text/css", href=asset("tenpoints/css/style.styl"))
+
+block postscripts
+  script(type="text/javascript", src=asset("tenpoints/js/frontend.coffee"))
+
+block preapp
+  div.pull-right(style='position: absolute; right: 1em; top: 60px;')
+    ul.sharing-online-group.pull-right
+      li.room-users
+      li.sharing
+  div(style='height: 2em;')
+
+block postapp
+  script(type='text/template', id='splashTemplate')
+    div.row-fluid
+      div.span6.offset3(style='text-align: center')
+        :markdown
+          # Ten Points
+          Develop a set of shared values or principles with your group.
+
+    div(style='text-align: center;')
+      a.btn.btn-large.btn-primary.softnav.add-new-tenpoint(href='/tenpoints/add/').
+        New Board
+
+    div.row-fluid
+      div.span6
+        h3(style='text-align: left;') Public boards
+        div.public-tenpoints Nothing here yet.
+      div.span6
+        h3(style='text-align: left;') From your groups
+        div.group-tenpoints.
+          <% if (intertwinkles.is_authenticated()) { %>
+            Nothing here yet.
+          <% } else { %>
+            Sign in to see your groups' boards.
+          <% } %>
+
+  script(type='text/template', id='splashItemTemplate')
+    li.
+      <a class='softnav' href='/tenpoints/10/<%- tenpoint.id %>/'>
+        <%- tenpoint.get("name") %>
+      </a>
+      <span class='group-name label varsub' data-group-id='<%- tenpoint.get("sharing").group_id %>'></span>
+
+  script(type='text/template', id='editTemplate')
+    h1 <%- title %>
+    div.row-fluid
+      div.span6.offset3
+        form.form-horizontal
+          div.control-group
+            label.control-label(for="id_name") Name for these points
+            div.controls
+              <input id='id_name' type='text' name='name' style='display: block' value='<%- model.name || "" %>' />
+          div.control-group
+            label.control-label(for="id_slug") URL name 
+            div.controls
+              <input id='id_slug' type='text' name='slug' style='display: block' value='<%- model.slug || "" %>' />
+              div.url-display
+                <%- model.absolute_url %>
+          div.control-group
+            label.control-label(for="id_number_of_points") Number of points
+            div.controls
+              <input id="id_number_of_points" type='text' name='number_of_points' style='display: block' value='<%- model.number_of_points || 10 %>' />
+
+          div.control-group
+            label.control-label(for='id_group') Group and sharing
+            div.controls#sharing_controls
+          div.control-group
+            div.controls.
+              <input class='btn btn-primary btn-large' type='submit' value='<%- action %>' />
+
+  script(type='text/template', id='tenpointTemplate')
+    h3 <%- model.name %>
+    div.summary
+    div.points
+
+  script(type='text/template', id='pointTemplate')
+
+  script(type='text/template', id='pointRevisionTemplate')
+
+  script(type='text/template', id='pointHistoryTemplate')

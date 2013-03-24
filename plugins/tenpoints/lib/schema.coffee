@@ -6,6 +6,7 @@ load = (config) ->
     name: {type: String, required: true}
     slug: {type: String, required: true, unique: true}
     created: {type: Date, default: Date.now}
+    number_of_points: {type: Number, default: 10}
     sharing: {
       group_id: String
       public_view_until: Date
