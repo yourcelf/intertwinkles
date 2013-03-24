@@ -61,9 +61,11 @@ describe "Socket permissions", ->
             expect(data.route).to.eql("room_users")
             done()
         (done) =>
-          @client2.onceJSON (data) ->
+          @client2.onceJSON (data) =>
             expect(data).to.eql({route: "join", body: {room: room, first: true}})
-            done()
+            @client2.onceJSON (data) ->
+              expect(data.route).to.eql("room_users")
+              done()
       ], done
 
   it "updates a tenpoint", (done) ->
