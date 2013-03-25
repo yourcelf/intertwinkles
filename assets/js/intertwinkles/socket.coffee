@@ -83,10 +83,15 @@ class intertwinkles.SocketClient
 
   identify: =>
     @state = @IDENTIFYING
-    @send "identify", {session_id: $.cookie("express.sid")}
-    if @_isReconnecting
-      @trigger "reconnected", this
-      @_isReconnecting = false
+    session_id = $.cookie("express.sid")
+    unless session_id
+      @disconnect()
+      @trigger "missing_cookie", this
+    else
+      @send "identify", {session_id: session_id}
+      if @_isReconnecting
+        @trigger "reconnected", this
+        @_isReconnecting = false
 
   isIdentified: =>
     return @state == @IDENTIFIED
@@ -130,6 +135,11 @@ class intertwinkles.SocketClient
 socket_status_view_template = _.template("""
   <% if (state == "error") { %>
     Sorry, there has been a server error. <a href='' class='reload'>Reload?</a>
+  <% } else if (state == "missing_cookie") { %>
+    It appears that cookies aren't enabled. This site requires cookies to
+    function. Please enable cookies for <b><%- window.location.host %></b>.
+    (You may be interested in our <a href='/about/privacy/'>Privacy Policy</a>)
+    <a class='dismiss' href='#' style='float: right;'>close</a>
   <% } else if (state == "connecting") { %>
     Connecting ...
   <% } else if (state == "reconnecting") { %>
@@ -143,6 +153,8 @@ socket_status_view_template = _.template("""
 
 class intertwinkles.SocketStatusView extends Backbone.View
   template: socket_status_view_template
+  events:
+    'click .dismiss': 'dismiss'
   initialize: (options) ->
     @socket = options.socket
     @socket.on "error",        => @render("error")
@@ -150,6 +162,7 @@ class intertwinkles.SocketStatusView extends Backbone.View
     @socket.on "identified",   => @render("ok")
     @socket.on "reconnecting", => @render("reconnecting")
     @socket.on "fail",         => @render("fail")
+    @socket.on "missing_cookie", => @render("missing_cookie")
 
   render: (state="hide") =>
     @$el.addClass("socket-status-view")
@@ -166,6 +179,10 @@ class intertwinkles.SocketStatusView extends Backbone.View
         unless @_showTimeout?
           @_showTimeout = setTimeout((=> @$el.slideDown()), 500)
     @$el.html(@template({state}))
+
+  dismiss: (event) =>
+    event.preventDefault()
+    @$el.slideUp()
 
 intertwinkles.add_socket_status_view = (socket, state="hide") ->
   status_view = new intertwinkles.SocketStatusView({socket})

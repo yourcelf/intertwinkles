@@ -13,11 +13,13 @@ sockjs_client = require 'sockjs-client'
 Schema       = mongoose.Schema
 config       = require './test_config'
 www_schema   = require('../lib/schema').load(config)
+api_methods  = require("../lib/api_methods")(config)
 server       = require '../lib/server'
 fixture      = require './fixture'
 email_server = require "../lib/email_server"
 email        = require "emailjs"
 mongoose     = require "mongoose"
+uuid         = require 'node-uuid'
 
 module.exports = c = {}
 
@@ -54,6 +56,8 @@ c.startUp = (done) ->
   # Re-Squelch logging to preserve mocha's reporter
   logger.setLevel(log4js.levels.FATAL)
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
+
+
   async.series [
     (done) ->
       c.clearDb(done)
@@ -188,6 +192,22 @@ c.buildSockjsClient = (callback) ->
     client.once "data", (str) -> func(JSON.parse(str))
   client.on "connection", callback
   return client
+
+c.identifiedSockjsClient = (server, session, email, callback) ->
+  session.session_id = uuid.v4() unless session.session_id?
+  session.anon_id = uuid.v4() unless session.anon_id?
+  session.cookie = {maxAge: 20000} unless session.cookie?
+  c.stubBrowserID({email: email})
+  api_methods.authenticate session, "assertion", ->
+    server.sockrooms.saveSession session, (err, session) =>
+      expect(err).to.be(null)
+      client = c.buildSockjsClient ->
+        client.writeJSON {route: "identify", body: {session_id: session.session_id}}
+        client.onceJSON (data) ->
+          expect(data).to.eql(
+            {route: "identify", body: {session_id: session.session_id}}
+          )
+          callback(client, session)
 
 c.getAllUsersAndGroups = (callback) ->
   out = {

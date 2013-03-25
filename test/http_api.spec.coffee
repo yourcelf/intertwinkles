@@ -389,8 +389,6 @@ describe "HTTP api", ->
             done()
 
   it "Posts a search index", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       url = config.api_url + "/api/search/"
@@ -420,8 +418,6 @@ describe "HTTP api", ->
           done()
 
   it "Updates a search index", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       url = config.api_url + "/api/search/"
@@ -452,8 +448,6 @@ describe "HTTP api", ->
           done()
     
   it "Removes a search index", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     schema.Group.findOne {slug: "two-members"}, (err, group) ->
       expect(err).to.be(null)
       url = config.api_url + "/api/search/"

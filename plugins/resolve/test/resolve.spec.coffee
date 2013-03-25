@@ -55,8 +55,6 @@ describe "resolve", ->
     }
 
   it "Posts search indices", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     resolve.post_search_index @proposal, (err, si) =>
       expect(err).to.be(null)
       expect(si).to.not.be(null)
@@ -108,7 +106,6 @@ describe "resolve", ->
 
     , (err, proposal, event, si, notices) =>
       # If we don't have solr, any part of the notice creation may have failed.
-      return done() if process.env.SKIP_SOLR_TESTS
       expect(proposal).to.not.be(null)
       expect(event.type).to.be("create")
       expect(event.absolute_url).to.be(proposal.absolute_url)
@@ -130,10 +127,6 @@ describe "resolve", ->
         done()
 
   it "Updates notifications based on resolution", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      @proposal_with_notices.resolved = new Date()
-      @proposal_with_notices.save done
-      return
     #general test of update notifications method.
     @proposal_with_notices.resolved = new Date()
     @proposal_with_notices.save (err, doc) =>
@@ -148,10 +141,6 @@ describe "resolve", ->
             done()
 
   it "Updates a proposal", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      @proposal_with_notices.resolved = null
-      @proposal_with_notices.save done
-      return
     expect(@proposal_with_notices.resolved).to.not.be(null)
     expect(@proposal_with_notices.sharing.group_id).to.not.be(null)
     resolve.update_proposal @session, {
@@ -174,8 +163,6 @@ describe "resolve", ->
       done()
 
   it "Updates notifications based on votes", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     prop = @proposal_with_notices
     expect(prop.resolved).to.be(null)
     user_id = prop.revisions[0].user_id
@@ -361,8 +348,6 @@ describe "resolve", ->
       done()
 
   it "Removes an opinion", (done) ->
-    if process.env.SKIP_SOLR_TESTS
-      return done()
     start_length = @proposal.opinions.length
     resolve.remove_opinion @session, {
       proposal: {_id: @proposal._id}

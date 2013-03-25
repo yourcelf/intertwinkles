@@ -50,6 +50,9 @@ intertwinkles.markup = (text) ->
     return urlize(text, 50, true, _.escape)
   return ""
 
+intertwinkles.slugify = (name) ->
+  return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
+
 html_colors = [
   [0x80, 0x00, 0x00, "maroon"],
   [0x8B, 0x00, 0x00, "darkred"],

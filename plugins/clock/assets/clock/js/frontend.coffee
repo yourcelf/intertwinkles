@@ -227,7 +227,7 @@ class EditView extends ClockBaseView
       title: @title
       action: @action
     }))
-    @sharing_contorl?.remove()
+    @sharing_control?.remove()
     @sharing_control = new intertwinkles.SharingFormControl({
       sharing: @model.get("sharing")
     })
@@ -685,7 +685,7 @@ class Router extends Backbone.Router
     "clock/":               "index"
 
   initialize: (options) ->
-    @model = new ClockModel(options.socket)
+    @model = new ClockModel()
     @model.setHandlers()
     @model.set(INITIAL_DATA.clock or {})
     @clock_list = INITIAL_DATA.clock_list
