@@ -38,6 +38,13 @@ class intertwinkles.AutoUpdatingDate extends Backbone.View
     @$el.html(str)
     this
 
+intertwinkles.user_icon = (user_id, name, size="small") ->
+  user = intertwinkles.users?[user_id]
+  if user?
+    return "<img src='#{_.escape(user.icon[size])}' title='#{user.name}' />"
+  else
+    return "<span style='width: 32px;'><i class='icon icon-user' title='#{name}'></i></span>"
+
 intertwinkles.inline_user = (user_id, name) ->
   user = intertwinkles.users?[user_id]
   if user?
@@ -47,7 +54,9 @@ intertwinkles.inline_user = (user_id, name) ->
 
 intertwinkles.markup = (text) ->
   if text
-    return urlize(text, 50, true, _.escape)
+    text = urlize(text, 50, true, _.escape)
+    text = text.replace(/\n/g, '\n<br />')
+    return text
   return ""
 
 intertwinkles.slugify = (name) ->

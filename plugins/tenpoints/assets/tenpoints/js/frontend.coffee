@@ -9,7 +9,7 @@ class TenPointModel extends Backbone.Model
     intertwinkles.socket.on "tenpoints:tenpoint", @_load
     intertwinkles.socket.on "tenpoints:point", @_pointSet
     intertwinkles.socket.on "tenpoints:support", @_supportSet
-    intertwinkles.socket.on "tenpoints:editing", @_edditingSet
+    intertwinkles.socket.on "tenpoints:editing", @_editingSet
     intertwinkles.socket.on "tenpoints:approved", @_approvedSet
     intertwinkles.socket.on "tenpoints:move", @_pointMoved
 
@@ -17,7 +17,7 @@ class TenPointModel extends Backbone.Model
     intertwinkles.socket.off "tenpoints:tenpoint", @_load
     intertwinkles.socket.off "tenpoints:point", @_pointSet
     intertwinkles.socket.off "tenpoints:support", @_supportSet
-    intertwinkles.socket.off "tenpoints:editing", @_edditingSet
+    intertwinkles.socket.off "tenpoints:editing", @_editingSet
     intertwinkles.socket.off "tenpoints:approved", @_approvedSet
     intertwinkles.socket.off "tenpoints:move", @_pointMoved
 
@@ -27,20 +27,38 @@ class TenPointModel extends Backbone.Model
     return _.find(@get("points"), (p) -> p._id == point_id) or
            _.find(@get("drafts"), (p) -> p._id == point_id)
 
-  _getListPos: (point_id) =>
+  getListPos: (point_id) =>
     for list in [@get("points"), @get("drafts")]
       for point, i in list
         if point._id == point_id
           return [list, i]
     return null
 
+  isApproved: (point_id) =>
+    list_i = @getListPos(point_id)
+    return false unless list_i?
+    [list, i] = list_i
+    return list == @get("points")
+
   _matchSupporter: (data, supporter) =>
     d = data
     s = supporter
     return (
       (s.user_id? and d.user_id? and s.user_id == d.user_id) or
-      (not s.user_id? and not data.user_id? and
+      (not s.user_id and not data.user_id and
        s.name and d.name and s.name == d.name)
+    )
+
+  isSupporter: (data, point) =>
+    for supporter in point.revisions[0].supporters
+      return true if @_matchSupporter(supporter, data)
+    return false
+
+
+  isSoleSupporter: (point) =>
+    me = {user_id: intertwinkles.user.id, name: intertwinkles.user.get("name")}
+    return point.revisions[0].supporters.length == 1 and (
+      @_matchSupporter(point.revisions[0].supporters[0], me)
     )
 
   #
@@ -50,8 +68,11 @@ class TenPointModel extends Backbone.Model
     # Await callback, as this is not an idempotent call.
     intertwinkles.socket.once "tenpoints:point", callback
     intertwinkles.socket.send "tenpoints/revise_point", {
+      _id: @id
       text: data.text
       point_id: data.point_id
+      user_id: data.user_id
+      name: data.name
     }
   # Socket push to set a point.
   _pointSet: (data) =>
@@ -59,9 +80,11 @@ class TenPointModel extends Backbone.Model
     if point?
       _.extend(point, data.point)
       @trigger "change:point:#{point._id}", point
+      @trigger "notify:point:#{point._id}", point
     else
-      @get("drafts").push(data.point)
+      @get("drafts").unshift(data.point)
       @trigger "change:drafts"
+      @trigger "notify:point:#{data.point._id}", data.point
 
   #
   # Change your vote for a point
@@ -69,33 +92,38 @@ class TenPointModel extends Backbone.Model
   setSupport: (data, callback) =>
     # Display immediately, then send socket. Response will be idempotent.
     @_supportSet(data)
+    console.log data
     intertwinkles.socket.once "tenpoints:support", callback
-    intertwinkles.socket.send "tenpoints/support_point", data
+    intertwinkles.socket.send "tenpoints/support_point", _.extend({
+      _id: @id
+    }, data)
 
   # Socket push for changed votes.
   _supportSet: (data) =>
     point = @getPoint(data.point_id)
     return @fetch() unless point?
-    find_supporter = _.find point.supporters, (s) => @_matchSupporter(data, s)
     if data.vote
-      if not _.find(point.supporters, find_supporter)
-        point.supporters.push({
+      if not _.find(point.revisions[0].supporters, (s) => @_matchSupporter(data, s))
+        point.revisions[0].supporters.push({
           user_id: data.user_id
           name: data.name
         })
         @trigger "change:point:#{point._id}"
     else
-      point.supporters = _.reject(point.supporters, find_supporter)
+      point.revisions[0].supporters = _.reject(
+        point.revisions[0].supporters,
+        (s) => @_matchSupporter(data, s)
+      )
       @trigger "change:point:#{point._id}"
 
   #
   # Set whether we are editing a point.
   #
   setEditing: (data, callback) =>
-    # Display immediately, then send socket. Response will be idempotent.
-    @_editingSet(data)
     intertwinkles.socket.once "tenpoints:editing", callback
-    intertwinkles.socket.send "tenpoints/set_editing", data
+    intertwinkles.socket.send "tenpoints/set_editing", _.extend({
+      _id: @id
+    }, data)
 
   _editingSet: (data) =>
     point = @getPoint(data.point_id)
@@ -110,12 +138,14 @@ class TenPointModel extends Backbone.Model
     # Display immediately, then send socket. Response will be idempotent.
     @_approvedSet(data)
     intertwinkles.socket.once "tenpoints:approved", callback
-    intertwinkles.socket.send "tenpoints/set_approved", data
+    intertwinkles.socket.send "tenpoints/set_approved", _.extend({
+      _id: @id,
+    }, data)
 
   # Socket push approval of point
   _approvedSet: (data) =>
     try
-      [list, pos] = @_getListPos(data.point_id)
+      [list, pos] = @getListPos(data.point_id)
     catch e
       return @fetch()
     if list == @get("drafts") == data.approved
@@ -130,6 +160,7 @@ class TenPointModel extends Backbone.Model
       @get("drafts").unshift(point)
     @trigger "change:points"
     @trigger "change:drafts"
+    @trigger "notify:point:#{data.point_id}"
 
   #
   # Move point
@@ -137,12 +168,14 @@ class TenPointModel extends Backbone.Model
   movePoint: (data, callback) =>
     # Wait for return, as this is not idempotent.
     intertwinkles.socket.once "tenpoints:move", callback
-    intertwinkles.socket.send "tenpoints/move_point", data
+    intertwinkles.socket.send "tenpoints/move_point", _.extend({
+      _id: @id,
+    }, data)
 
   # Socket push move of point
   _pointMoved: (data) =>
     try
-      [list, i] = @_getListPos(data.point_id)
+      [list, i] = @getListPos(data.point_id)
     catch e
       return @fetch()
     [point] = list.splice(i, 1)
@@ -237,6 +270,10 @@ class SplashView extends TenPointsBaseView
 
   _addItem: (selector, tenpoint) =>
     @$(selector).append(@itemTemplate(tenpoint: tenpoint))
+
+#
+# Edit or add a new board.
+#
   
 class EditTenPointView extends TenPointsBaseView
   template: _.template $("#editTemplate").html()
@@ -306,7 +343,6 @@ class EditTenPointView extends TenPointsBaseView
       @model.save {
         name: cleaned_data.name
         slug: cleaned_data.slug
-        number_of_points: cleaned_data.number_of_points
         sharing: @sharing_control.sharing
       }, {
         success: (model) =>
@@ -319,66 +355,248 @@ class EditTenPointView extends TenPointsBaseView
     return @validateFields "form", [
       ["#id_name", ((val) -> $.trim(val) or null), "This field is required."]
       ["#id_slug", ((val) -> $.trim(val) or null), "This field is required."]
-      ["#id_number_of_points", (val) ->
-        num = parseInt(val, 10)
-        if not isNaN(num) and num > 0
-          return num
-        return null
-      , "Number bigger than 0 required"]
     ]
+
+#
+# Display a single board.
+#
 
 class TenPointView extends TenPointsBaseView
   template: _.template $("#tenpointTemplate").html()
+  events:
+    'click .softnav': 'softNav'
+    'click a.add-point': 'addPoint'
+
   initialize: (options) ->
     super(options)
-    @adder = new EditPointView({model: options.model})
+    @model.on "change:points", @render, this
+    @model.on "change:drafts", @render, this
+    @model.on "change:name", @render, this
+
+  remove: =>
+    @model.off null, null, this
+    super()
+
+  addPoint: (event) =>
+    console.log "add-point"
+    event.preventDefault()
+    form = new EditPointView(model: @model)
+    form.render()
 
   render: =>
     @$el.html(@template(model: @model.toJSON()))
-    @adder.number = @model.get("points")?.length or 0
-    @addView(".add-point", @adder)
+    @renderPoints()
+    @renderDrafts()
+
+  _renderPointList: (list, dest) =>
+    cur = null
+    $dest = @$(dest)
+    for point,i in list
+      if i % 2 == 0
+        $dest.append(cur) if cur?
+        cur = $("<div class='row-fluid'></div>")
+      view = new PointView({model: @model, point: point})
+      cur.append(view.el)
+      view.render()
+    $dest.append(cur) if cur?
+
+  renderPoints: =>
+    @_renderPointList(@model.get("points"), ".points")
+
+  renderDrafts: =>
+    @_renderPointList(@model.get("drafts"), ".drafts")
+
+#
+# Display a single point.
+#
 
 class PointView extends TenPointsBaseView
   template: _.template $("#pointTemplate").html()
-
-class EditPointView extends TenPointsBaseView
-  template: _.template $("#editPointTemplate").html()
   events:
-    'click .cancel': 'cancel'
-    'click .save': 'save'
-    'keydown textarea': 'startEditing'
+    'click .softnav': 'softNav'
+    'click .edit':    'edit'
+    'click .mark-approved': 'approve'
+    'click .upboat':  'vote'
 
   initialize: (options) ->
     super(options)
-    @number = options.number
-    point = @model.get("points")[@number]
-    @editing = point and _.contains(point.editing, INITIAL_DATA.anon_id)
+    @point = options.point
+    @model.on "change:point:#{@point._id}", @render, this
+    @model.on "notify:point:#{@point._id}", @flash, this
+
+  remove: =>
+    @model.off "change:point:#{@point._id}", @render, this
+    @model.off "notify:point:#{@point._id}", @flash, this
+    super()
+
+  edit:    (event) =>
+    event.preventDefault()
+    form = new EditPointView({model: @model, point: @point })
+    form.render()
+
+  approve: (event) =>
+    event.preventDefault()
+    form = new ApprovePointView({model: @model, point: @point })
+    form.render()
+
+  vote: (event) =>
+    event.preventDefault()
+    form = new VoteView({model: @model, point: @point })
+    form.render()
+
+  flash: =>
+    @$el.effect('highlight', {}, 5000)
 
   render: =>
-    point = @model.get("points")[@number]
-    @$el.html(@template({
-      model: @model.toJSON()
-      number: @number
-      point: @model.get("points")[@number]
+    [list, number] = @model.getListPos(@point._id)
+    approved = list == @model.get("points")
+    @$el.addClass("point span6")
+        .toggleClass("draft", not approved)
+        .html(@template({
+          model: @model.toJSON()
+          point: @point
+          approved: approved
+          number: number
+          supporters_popover: (
+            "<nobr>#{intertwinkles.inline_user(s.user_id, s.name)}</nobr>" for s in @point.revisions[0].supporters
+          ).join(", ")
+          sessionSupports: @model.isSupporter({
+            user_id: intertwinkles.user.id, name: intertwinkles.user.get("name")
+          }, @point)
+        }))
+    @$("[rel=popover]").popover()
+
+class PointDetailView extends TenPointsBaseView
+  template: _.template $("#pointDetailTemplate").html()
+  initialize: (options) =>
+    @model = options.model
+    @point = @model.getPoint(options.point_id)
+    @pointView = new PointView({model: @model, point: @point})
+  render: =>
+    gid = @model.get("sharing")?.group_id
+    group = intertwinkles.groups?[gid]
+    @$el.html(@template({ model: @model.toJSON(), group: group }))
+    @$(".point-detail-point").append(@pointView.el)
+    @pointView.render()
+    @$(".point.span6")
+
+class HistoryView extends TenPointsBaseView
+  template: _.template $("#historyTemplate").html()
+  initialize: (options) ->
+    @model = options.model
+    @point = @model.getPoint(options.point_id)
+
+  render: =>
+    gid = @model.get("sharing")?.group_id
+    group = intertwinkles.groups?[gid] or null
+    @$el.html(@template({ model: @model.toJSON(), point: @point, group: group }))
+    intertwinkles.sub_vars(@el)
+
+class VoteView extends intertwinkles.BaseModalFormView
+  template: _.template $("#voteTemplate").html()
+  events:
+    'submit form': 'submit' # from super
+    'change #id_user': 'updateAction'
+
+  initialize: (options) ->
+    @model = options.model
+    @point = options.point
+    super {
+      context: {
+        model: @model
+        point: @point
+      }
+      validation: [
+        ["#id_user_id", ((val) -> val or ""), ""]
+        ["#id_user", ((val) -> $.trim(val) or null), "This field is required."]
+      ]
+    }
+
+    @on "submitted", (cleaned_data) =>
+      data = _.extend({point_id: @point?._id, vote: @canSupport}, cleaned_data)
+      data.user_id = data.user_id or null
+      @model.setSupport(data, @remove)
+
+  updateAction: =>
+    user_id = @$("#id_user_id").val()
+    name = @$("#id_user").val()
+    @canSupport = not @model.isSupporter({user_id, name}, @point)
+    if @canSupport
+      @$(".status").html("#{name} does not support this point yet.")
+      @$(".btn-primary").html("<i class='icon-thumbs-up'></i> Add vote")
+    else
+      @$(".status").html("#{name} supports this point.")
+      @$(".btn-primary").html("<i class='icon-thumbs-down'></i> Remove vote")
+  
+  render: =>
+    super()
+    user_choice = new intertwinkles.UserChoice(model: {
+      user_id: intertwinkles.user.id
+      name: intertwinkles.user.get("name")
+    })
+    @addView(".name-input", user_choice)
+    @updateAction()
+
+#
+# Edit a point
+#
+
+class EditPointView extends intertwinkles.BaseModalFormView
+  template: _.template $("#editPointTemplate").html()
+  initialize: (options) ->
+    @model = options.model
+    @point = options.point
+    super {
+      context: {
+        model: @model.toJSON()
+        point: @point
+        soleSupporter: (not @point) or @model.isSoleSupporter(@point)
+      }
+      validation: [
+        ["#id_user_id", ((val) -> val or ""), ""]
+        ["#id_user", ((val) -> $.trim(val) or null), "Please enter your name"]
+        ["#id_text", ((val) -> $.trim(val) or null), "This field is required"]
+      ]
+    }
+    if @point?
+      @on "hidden", =>
+        @model.setEditing({point_id: @point._id, editing: false})
+        "setEditing on hidden"
+        @remove() unless @removed
+
+    @on "submitted", (cleaned_data) =>
+      data = _.extend({point_id: @point?._id}, cleaned_data)
+      @model.revisePoint(data, @remove)
+
+  render: =>
+    if @point?
+      @model.setEditing({point_id: @point._id, editing: true})
+    super()
+    @addView(".name-input", new intertwinkles.UserChoice(model: {
+      user_id: intertwinkles.user.id
+      name: intertwinkles.user.get("name")
     }))
-    @showEditing()
 
-  showEditing: =>
-    @$(".control-line").toggle(@editing)
+class ApprovePointView extends intertwinkles.BaseModalFormView
+  template: _.template $("#approvePointTemplate").html()
+  initialize: (options) ->
+    @model = options.model
+    @point = options.point
+    @approved = @model.isApproved(@point._id)
 
-  startEditing: (event) =>
-    unless @editing
-      point = @model.get("points")[@number]
-      unless point?
-        point = {revisions: [{text: ""}], editing: {}}
-        @model.get("points").push(point)
+    super {
+      context: {
+        model: @model.toJSON()
+        point: @point
+        approved: @approved
+      }
+      validation: []
+    }
+    @on "hidden", => @remove() unless @removed
+    @on "submitted", (cleaned_data) =>
+      @model.setApproved({ point_id: @point._id, approved: not @approved })
+      @remove()
 
-    
-
-  cancel: (event) =>
-    event.preventDefault()
-  save: (event) =>
-    event.preventDefault()
 
 ###########################################################
 # Router
@@ -399,6 +617,8 @@ class Router extends Backbone.Router
     @model.set(INITIAL_DATA.tenpoint or {})
     @tenPointList = INITIAL_DATA.ten_points_list
     @_joinRoom(@model) if @model.id?
+    @model.on "change:_id", =>
+      if @model.id? then @_joinRoom(@model) else @_leaveRoom()
     super()
 
   pointDetail: (slug, point_id) =>

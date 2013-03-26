@@ -59,9 +59,9 @@ module.exports = (config) ->
       title: tenpoint.name
       sharing: tenpoint.sharing
       text: [tenpoint.name].concat(
-        point.revisions[0].text for point in tenpoint.points
+        point.revisions[0]?.text for point in tenpoint.points
       ).concat(
-        point.revisions[0].text for point in tenpoint.drafts
+        point.revisions[0]?.text for point in tenpoint.drafts
       ).join("\n")
     }
     api_methods.add_search_index(search_data, callback)
@@ -101,18 +101,27 @@ module.exports = (config) ->
       return callback(null, doc, point)
 
   tp.revise_point = (session, data, callback) ->
+    user_id = null
+    if (data.user_id? and utils.is_authenticated(session) and
+        session.users[data.user_id]?)
+      user_id = data.user_id
+    console.log user_id
+    unless user_id or data.name?
+      return callback("Missing user_id or name.")
     get_point session, data, ["_id", "text"], (err, doc, point) ->
       return callback(err) if err?
       if not point?
-        doc.drafts.push({ revisions: []})
-        point = doc.drafts[doc.drafts.length - 1]
+        doc.drafts.unshift({ revisions: []})
+        point = doc.drafts[0]
 
       point.revisions.unshift({})
       rev = point.revisions[0]
       rev.text = data.text
       rev.supporters = []
-      rev.supporters.push({user_id: session.auth?.user_id, name: data.name})
-
+      rev.supporters.push({
+        user_id: user_id
+        name: data.name
+      })
       doc.save (err, doc) ->
         return callback(err) if err?
         return callback("null doc") unless doc?
@@ -124,11 +133,12 @@ module.exports = (config) ->
     unless data.name or data.user_id
       return callback("Missing one of name or user_id")
     get_point session, data, ["_id", "point_id", "vote"], (err, doc, point) ->
+      return callback(err) if err?
       rev = point.revisions[0]
       supporter_matches = (s) -> return (
           (data.user_id? and s.user_id? and
             s.user_id.toString() == data.user_id.toString()) or
-          ((not data.user_id?) and (not s.user_id?) and
+          ((not data.user_id) and (not s.user_id) and
             s.name? and data.name?  and s.name == data.name)
         )
 

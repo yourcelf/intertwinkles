@@ -42,7 +42,7 @@ start = (config, app, sockrooms) ->
   app.get '/tenpoints/add/', (req, res) -> index_res(req, res)
 
   utils.append_slash(app, "/tenpoints/10/.*[^/]$")
-  app.get '/tenpoints/10/:slug/:tag?/', (req, res) ->
+  app.get '/tenpoints/10/:slug/:tag?/:id?/', (req, res) ->
     schema.TenPoint.findOne {slug: req.params.slug}, (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
       return www_methods.not_found(req, res) unless doc?
@@ -143,5 +143,31 @@ start = (config, app, sockrooms) ->
     schema.TenPoint.findOne {slug: data.slug}, '_id', (err, doc) ->
       return sockrooms.handleError(socket, err) if err?
       socket.sendJSON(data.callback or "tenpoints:check_slug", {ok: not doc?})
+
+  sockrooms.on "leave", (data) ->
+    #
+    # Clear any active editing when a socket disconnects.
+    #
+    {socket, session, room, last} = data
+    [channel, _id] = room.split('/')
+    if channel == "tenpoints"
+      schema.TenPoint.findOne {_id}, (err, doc) ->
+        return sockrooms.handleError(socket, err) if err?
+        return unless doc?
+        emissions = []
+        for list in [doc.points, doc.drafts]
+          for point in list
+            if _.contains(point.editing, session.anon_id)
+              point.editing = _.without(point.editing, session.anon_id)
+              emissions.push {
+                _id: doc._id
+                point_id: point._id
+                editing: point.editing
+              }
+        return unless emissions.length > 0
+        doc.save (err, doc) ->
+          if err? then sockrooms.handleError(socket, err)
+          for emission in emissions
+            sockrooms.broadcast(room, "tenpoints:editing", emission)
 
 module.exports = {start}

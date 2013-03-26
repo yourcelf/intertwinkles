@@ -9,6 +9,7 @@
 #= require ../vendor/backbone.js
 #= require ../vendor/date.js
 #= require ../vendor/jscolor/jscolor.js
+#= require ../vendor/diff_match_patch.js
 #= require ../../bootstrap/js/bootstrap-transition.js
 #= require ../../bootstrap/js/bootstrap-dropdown.js
 #= require ../../bootstrap/js/bootstrap-transition.js
