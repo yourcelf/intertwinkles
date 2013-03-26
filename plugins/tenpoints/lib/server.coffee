@@ -106,7 +106,7 @@ start = (config, app, sockrooms) ->
       return sockrooms.handleError(socket, err) if err?
       sockrooms.broadcast("tenpoints/#{doc.id}", "tenpoints:support", {
         _id: doc.id
-        point_id: data.point_id
+        point_id: point._id
         user_id: data.user_id
         name: data.name
         vote: data.vote
@@ -117,8 +117,26 @@ start = (config, app, sockrooms) ->
       return sockrooms.handleError(socket, err) if err?
       sockrooms.broadcast("tenpoints/#{doc.id}", "tenpoints:editing", {
         _id: doc.id
-        point_id: data.point_id
+        point_id: point._id
         editing: point.editing
+      })
+
+  sockrooms.on "tenpoints/set_approved", (socket, session, data) ->
+    tenpoints.set_approved session, data, (err, doc, point) ->
+      return sockrooms.handleError(socket, err) if err?
+      sockrooms.broadcast("tenpoints/#{doc.id}", "tenpoints:approved", {
+        _id: doc.id
+        point_id: point._id
+        approved: doc.is_approved(point)
+      })
+
+  sockrooms.on "tenpoints/move_point", (socket, session, data) ->
+    tenpoints.move_point session, data, (err, doc, point) ->
+      return sockrooms.handleError(socket, err) if err?
+      sockrooms.broadcast("tenpoints/#{doc.id}", "tenpoints:move", {
+        _id: doc.id
+        point_id: point._id
+        position: data.position
       })
 
   sockrooms.on "tenpoints/check_slug", (socket, session, data) ->

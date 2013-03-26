@@ -21,7 +21,7 @@ module.exports = (config) ->
       delete data.model.sharing unless utils.can_change_sharing(session, doc)
 
       # Set fields
-      for key in ["name", "slug", "number_of_points"]
+      for key in ["name", "slug"]
         doc[key] = data.model[key] if data.model[key]?
       if data.model.sharing?
         _.extend(doc.sharing, data.model.sharing)
@@ -60,6 +60,8 @@ module.exports = (config) ->
       sharing: tenpoint.sharing
       text: [tenpoint.name].concat(
         point.revisions[0].text for point in tenpoint.points
+      ).concat(
+        point.revisions[0].text for point in tenpoint.drafts
       ).join("\n")
     }
     api_methods.add_search_index(search_data, callback)
@@ -85,21 +87,25 @@ module.exports = (config) ->
       return callback("Permission denied") unless utils.can_view(session, doc)
       return callback(null, doc)
 
-  tp.revise_point = (session, data, callback) ->
-    for key in ["_id", "text"]
+  get_point = (session, data, required, callback) ->
+    for key in required
       return callback("Missing param #{key}") unless data[key]?
     schema.TenPoint.findOne {_id: data._id}, (err, doc) ->
       return callback(err) if err?
       return callback("Not found") unless doc?
       return callback("Permission denied") unless utils.can_edit(session, doc)
       if data.point_id
-        point = _.find doc.points, (p) -> p._id.toString() == data.point_id.toString()
-        unless point?
+        point = doc.find_point(data.point_id)
+        if not point?
           return callback("Point with id #{data.point_id} not found")
-      else
-        doc.points.push({ revisions: []})
-        point = doc.points[doc.points.length - 1]
+      return callback(null, doc, point)
 
+  tp.revise_point = (session, data, callback) ->
+    get_point session, data, ["_id", "text"], (err, doc, point) ->
+      return callback(err) if err?
+      if not point?
+        doc.drafts.push({ revisions: []})
+        point = doc.drafts[doc.drafts.length - 1]
 
       point.revisions.unshift({})
       rev = point.revisions[0]
@@ -115,17 +121,9 @@ module.exports = (config) ->
           return callback(null, doc, point, event, si)
 
   tp.change_support = (session, data, callback) ->
-    for key in ["_id", "point_id", "vote"]
-      return callback("Missing param #{key}") unless data[key]?
     unless data.name or data.user_id
       return callback("Missing one of name or user_id")
-    schema.TenPoint.findOne {_id: data._id}, (err, doc) ->
-      return callback(err) if err?
-      return callback("Not found") unless doc?
-      return callback("Permission denied") unless utils.can_edit(session, doc)
-      point = _.find doc.points, (p) -> p._id.toString() == data.point_id.toString()
-      return callback("Point not found") unless point?
-
+    get_point session, data, ["_id", "point_id", "vote"], (err, doc, point) ->
       rev = point.revisions[0]
       supporter_matches = (s) -> return (
           (data.user_id? and s.user_id? and
@@ -161,18 +159,52 @@ module.exports = (config) ->
           return callback(null, doc, point, event)
 
   tp.set_editing = (session, data, callback) ->
-    for key in ["_id", "point_id", "editing"]
-      return callback("Missing param #{key}") unless data[key]?
-    schema.TenPoint.findOne {_id: data._id}, (err, doc) ->
-      return callback(err) if err?
-      return callback("Not found") unless doc?
-      return callback("Permission denied") unless utils.can_edit(session, doc)
-      point = _.find doc.points, (p) -> p._id.toString() == data.point_id.toString()
-      return callback("Point not found") unless point?
+    get_point session, data, ["_id", "point_id", "editing"], (err, doc, point) ->
       if data.editing
         point.editing.push(session.anon_id)
       else
         point.editing = _.without(point.editing, session.anon_id)
+      doc.save (err, doc) -> callback(err, doc, point)
+
+  tp.set_approved = (session, data, callback) ->
+    get_point session, data, ["_id", "point_id", "approved"], (err, doc, point) ->
+      is_approved = doc.is_approved(point)
+      if data.approved == is_approved
+        # No change -- must be out of sync.
+        return callback("No change")
+      else
+        if data.approved
+          # Move from drafts to points.
+          doc.drafts = _.reject(doc.drafts, (p) -> p._id == point._id)
+          doc.points.push(point)
+        else
+          # Move from points to drafts.
+          doc.points = _.reject(doc.points, (p) -> p._id == point._id)
+          doc.drafts.unshift(point)
+        doc.save (err, doc) -> callback(err, doc, point)
+  
+  tp.move_point = (session, data, callback) ->
+    get_point session, data, ["_id", "point_id", "position"], (err, doc, point) ->
+      list = if doc.is_approved(point) then doc.points else doc.drafts
+      if isNaN(data.position) or data.position < 0 or data.position >= list.length
+        return callback("Bad position #{data.position}", doc)
+
+      start_pos = null
+      for p,i in list
+        if p._id == point._id
+          start_pos = i
+          break
+      unless start_pos?
+        throw new Error("Unmatched point id #{point._id}")
+      
+      if start_pos == data.position
+        # No change -- must be out of sync.
+        return callback("No change", doc)
+
+      # Remove the point from its current position.
+      list.splice(start_pos, 1)
+      # Insert it to the revised destination.
+      list.splice(data.position, 0, point)
       doc.save (err, doc) -> callback(err, doc, point)
 
   return tp

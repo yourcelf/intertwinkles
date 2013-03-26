@@ -76,9 +76,22 @@ block postapp
     h3 <%- model.name %>
     div.summary
     div.points
+    div.add-point
 
   script(type='text/template', id='pointTemplate')
 
-  script(type='text/template', id='pointRevisionTemplate')
 
+  script(type='text/template', id='editPointTemplate').
+    <% if (number == null) { %>
+      <a href='#' class='btn add-point'>Add Point</a>
+    <% } else { %>
+      <div class='number'><%- number + 1 %></div>
+      <textarea class='point-text' placeholder='Type new point...'><%- point ? point.revisions[0].text : "" %></textarea>
+      <div class='control-line'>
+        <a href='#' class='cancel'>cancel</a>
+        <a class='btn btn-primary save'>Save</a>
+      </div>
+    <% } %>
+
+  script(type='text/template', id='pointRevisionTemplate')
   script(type='text/template', id='pointHistoryTemplate')
