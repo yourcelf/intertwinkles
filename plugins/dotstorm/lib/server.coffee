@@ -56,6 +56,8 @@ start = (config, app, sockrooms) ->
       ).exec (err, doc) ->
         return unless passes_checks(err, doc)
         res.setHeader("Content-Type", "application/json; charset=utf-8")
+        res.setHeader("Content-Disposition",
+          "attachment; filename=\"#{encodeURIComponent(req.params.slug)}.json\"")
         return res.send(doc.exportJSON())
     else if req.params.action == "csv"
       rows = []
@@ -64,6 +66,8 @@ start = (config, app, sockrooms) ->
       ).exec (err, doc) ->
         return unless passes_checks(err, doc)
         res.setHeader("Content-Type", "text/csv; charset=utf-8")
+        res.setHeader("Content-Disposition",
+          "attachment; filename=\"#{encodeURIComponent(req.params.slug)}.csv\"")
         return res.send(utils.array_to_csv(doc.exportRows()))
     else
       schema.Dotstorm.findOne {slug: req.params.slug}, (err, doc) ->
