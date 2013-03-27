@@ -5,17 +5,34 @@
 class TenPointModel extends Backbone.Model
   idAttribute: "_id"
 
-  setHandlers: =>
+  addHandlers: =>
     intertwinkles.socket.on "tenpoints:tenpoint", @_load
-    intertwinkles.socket.on "tenpoints:point", @_setPoint
-    intertwinkles.socket.on "tenpoints:support", @_setSupport
-    intertwinkles.socket.on "tenpoints:editing", @_setEditing
+    intertwinkles.socket.on "tenpoints:point", @_pointSet
+    intertwinkles.socket.on "tenpoints:support", @_supportSet
+    intertwinkles.socket.on "tenpoints:editing", @_edditingSet
+    intertwinkles.socket.on "tenpoints:approved", @_approvedSet
+    intertwinkles.socket.on "tenpoints:move", @_pointMoved
 
-  _load: (data) =>
-    @set data.model
+  removeHandlers: =>
+    intertwinkles.socket.off "tenpoints:tenpoint", @_load
+    intertwinkles.socket.off "tenpoints:point", @_pointSet
+    intertwinkles.socket.off "tenpoints:support", @_supportSet
+    intertwinkles.socket.off "tenpoints:editing", @_edditingSet
+    intertwinkles.socket.off "tenpoints:approved", @_approvedSet
+    intertwinkles.socket.off "tenpoints:move", @_pointMoved
 
-  _getPoint: (point_id) =>
-    return _.find @get("points"), (p) -> p._id == point_id
+  _load: (data) => @set data.model
+
+  getPoint: (point_id) =>
+    return _.find(@get("points"), (p) -> p._id == point_id) or
+           _.find(@get("drafts"), (p) -> p._id == point_id)
+
+  _getListPos: (point_id) =>
+    for list in [@get("points"), @get("drafts")]
+      for point, i in list
+        if point._id == point_id
+          return [list, i]
+    return null
 
   _matchSupporter: (data, supporter) =>
     d = data
@@ -26,17 +43,38 @@ class TenPointModel extends Backbone.Model
        s.name and d.name and s.name == d.name)
     )
 
-  _setPoint: (data) =>
-    point = @_getPoint(data.point._id)
+  #
+  # Add a new revision to a point, or create a new point with the given text.
+  #
+  revisePoint: (data, callback) =>
+    # Await callback, as this is not an idempotent call.
+    intertwinkles.socket.once "tenpoints:point", callback
+    intertwinkles.socket.send "tenpoints/revise_point", {
+      text: data.text
+      point_id: data.point_id
+    }
+  # Socket push to set a point.
+  _pointSet: (data) =>
+    point = @getPoint(data.point._id)
     if point?
       _.extend(point, data.point)
       @trigger "change:point:#{point._id}", point
     else
-      @get("points").push(data.point)
-      @trigger "change:points"
+      @get("drafts").push(data.point)
+      @trigger "change:drafts"
 
-  _setSupport: (data) =>
-    point = @_getPoint(data.point_id)
+  #
+  # Change your vote for a point
+  #
+  setSupport: (data, callback) =>
+    # Display immediately, then send socket. Response will be idempotent.
+    @_supportSet(data)
+    intertwinkles.socket.once "tenpoints:support", callback
+    intertwinkles.socket.send "tenpoints/support_point", data
+
+  # Socket push for changed votes.
+  _supportSet: (data) =>
+    point = @getPoint(data.point_id)
     return @fetch() unless point?
     find_supporter = _.find point.supporters, (s) => @_matchSupporter(data, s)
     if data.vote
@@ -45,17 +83,76 @@ class TenPointModel extends Backbone.Model
           user_id: data.user_id
           name: data.name
         })
-        trigger "change:point:#{point._id}"
+        @trigger "change:point:#{point._id}"
     else
       point.supporters = _.reject(point.supporters, find_supporter)
-      trigger "change:point:#{point._id}"
+      @trigger "change:point:#{point._id}"
 
-  _setEditing: (data) =>
-    point = @_getPoint(data.point_id)
+  #
+  # Set whether we are editing a point.
+  #
+  setEditing: (data, callback) =>
+    # Display immediately, then send socket. Response will be idempotent.
+    @_editingSet(data)
+    intertwinkles.socket.once "tenpoints:editing", callback
+    intertwinkles.socket.send "tenpoints/set_editing", data
+
+  _editingSet: (data) =>
+    point = @getPoint(data.point_id)
     return @fetch() unless point?
     point.editing = data.editing
-    trigger "change:point:#{point._id}"
+    @trigger "change:point:#{point._id}"
 
+  #
+  # Set whether or not a point is approved
+  #
+  setApproved: (data, callback) =>
+    # Display immediately, then send socket. Response will be idempotent.
+    @_approvedSet(data)
+    intertwinkles.socket.once "tenpoints:approved", callback
+    intertwinkles.socket.send "tenpoints/set_approved", data
+
+  # Socket push approval of point
+  _approvedSet: (data) =>
+    try
+      [list, pos] = @_getListPos(data.point_id)
+    catch e
+      return @fetch()
+    if list == @get("drafts") == data.approved
+      # We're inconsistent -- we got a message to move something to where it
+      # already is.
+      console.debug("Inconsistent", data, this)
+      return @fetch()
+    [point] = list.splice(pos, 1)
+    if data.approved
+      @get("points").push(point)
+    else
+      @get("drafts").unshift(point)
+    @trigger "change:points"
+    @trigger "change:drafts"
+
+  #
+  # Move point
+  #
+  movePoint: (data, callback) =>
+    # Wait for return, as this is not idempotent.
+    intertwinkles.socket.once "tenpoints:move", callback
+    intertwinkles.socket.send "tenpoints/move_point", data
+
+  # Socket push move of point
+  _pointMoved: (data) =>
+    try
+      [list, i] = @_getListPos(data.point_id)
+    catch e
+      return @fetch()
+    [point] = list.splice(i, 1)
+    list.splice(data.position, 0, point)
+    changed = if list == @get("drafts") then "drafts" else "points"
+    @trigger "change:#{changed}"
+
+  #
+  # Retrieve all data for this tenpoint.
+  #
   fetch: (cb) =>
     return unless @get("slug")
     if cb?
@@ -64,6 +161,9 @@ class TenPointModel extends Backbone.Model
         cb(null, this)
     intertwinkles.socket.send "tenpoints/fetch_tenpoint", {slug: @get("slug")}
 
+  #
+  # Save changes to the name, slug, and sharing, but not points/drafts.
+  #
   save: (update, opts) =>
     @set(update) if update?
     data = {
@@ -71,7 +171,6 @@ class TenPointModel extends Backbone.Model
         _id: @id
         name: @get("name")
         slug: @get("slug")
-        number_of_points: @get("number_of_points")
         sharing: @get("sharing")
       }
     }
@@ -80,7 +179,6 @@ class TenPointModel extends Backbone.Model
         opts.error(data.error) if data.error?
         opts.success(data.model) if data.model?
     intertwinkles.socket.send "tenpoints/save_tenpoint", data
-        
 
 fetchTenPointList = (cb) =>
   intertwinkles.socket.once "tenpoints:list", cb
@@ -92,7 +190,11 @@ fetchTenPointList = (cb) =>
 
 class TenPointsBaseView extends intertwinkles.BaseView
   events: 'click .softnav': 'softNav'
-  render: => @$el.html(@template())
+  initialize: (options={}) ->
+    super()
+    @model = options.model
+  render: =>
+    @$el.html(@template())
 
 #
 # Front matter
@@ -103,6 +205,7 @@ class SplashView extends TenPointsBaseView
   itemTemplate: _.template $("#splashItemTemplate").html()
   
   initialize: (options) ->
+    super(options)
     @setTenPointList(options.tenPointList, false)
     intertwinkles.user.on  "change", @fetchTenPointList, this
 
@@ -144,7 +247,7 @@ class EditTenPointView extends TenPointsBaseView
     'keyup #id_slug': 'checkSlug'
 
   initialize: (options) ->
-    super()
+    super(options)
     if options?.model.id
       @model = options.model
       @title = "Edit Board Settings"
@@ -177,11 +280,12 @@ class EditTenPointView extends TenPointsBaseView
           showURL()
         else
           parent.addClass('error')
-          @$("#id_slug").after("<span class='help-inline error-msg'>Name not available</span>")
+          @$("#id_slug").after(
+            "<span class='help-inline error-msg'>Name not available</span>"
+          )
           parent.find(".url-display").html("")
     else if val == @model.get("slug")
       showURL()
-
 
   render: =>
     @$el.html(@template({
@@ -206,7 +310,9 @@ class EditTenPointView extends TenPointsBaseView
         sharing: @sharing_control.sharing
       }, {
         success: (model) =>
-          intertwinkles.app.navigate("/tenpoints/10/#{model.slug}/", {trigger: true})
+          intertwinkles.app.navigate("/tenpoints/10/#{model.slug}/", {
+            trigger: true
+          })
       }
 
   validate: =>
@@ -224,9 +330,55 @@ class EditTenPointView extends TenPointsBaseView
 class TenPointView extends TenPointsBaseView
   template: _.template $("#tenpointTemplate").html()
   initialize: (options) ->
-    @model = options.model
+    super(options)
+    @adder = new EditPointView({model: options.model})
+
   render: =>
     @$el.html(@template(model: @model.toJSON()))
+    @adder.number = @model.get("points")?.length or 0
+    @addView(".add-point", @adder)
+
+class PointView extends TenPointsBaseView
+  template: _.template $("#pointTemplate").html()
+
+class EditPointView extends TenPointsBaseView
+  template: _.template $("#editPointTemplate").html()
+  events:
+    'click .cancel': 'cancel'
+    'click .save': 'save'
+    'keydown textarea': 'startEditing'
+
+  initialize: (options) ->
+    super(options)
+    @number = options.number
+    point = @model.get("points")[@number]
+    @editing = point and _.contains(point.editing, INITIAL_DATA.anon_id)
+
+  render: =>
+    point = @model.get("points")[@number]
+    @$el.html(@template({
+      model: @model.toJSON()
+      number: @number
+      point: @model.get("points")[@number]
+    }))
+    @showEditing()
+
+  showEditing: =>
+    @$(".control-line").toggle(@editing)
+
+  startEditing: (event) =>
+    unless @editing
+      point = @model.get("points")[@number]
+      unless point?
+        point = {revisions: [{text: ""}], editing: {}}
+        @model.get("points").push(point)
+
+    
+
+  cancel: (event) =>
+    event.preventDefault()
+  save: (event) =>
+    event.preventDefault()
 
 ###########################################################
 # Router
@@ -243,7 +395,7 @@ class Router extends Backbone.Router
 
   initialize: ->
     @model = new TenPointModel()
-    @model.setHandlers()
+    @model.addHandlers()
     @model.set(INITIAL_DATA.tenpoint or {})
     @tenPointList = INITIAL_DATA.ten_points_list
     @_joinRoom(@model) if @model.id?

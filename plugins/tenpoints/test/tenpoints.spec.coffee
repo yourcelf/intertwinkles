@@ -57,7 +57,7 @@ describe "tenpoints", ->
 
       expect(doc.name).to.be("My Ten Point")
       expect(doc.slug).to.be("my-ten-point")
-      expect(doc.number_of_points).to.be(10)
+      expect(p for p in doc.drafts).to.eql([])
       expect(p for p in doc.points).to.eql([])
       expect(doc.sharing.group_id).to.eql(@all_groups['two-members'].id)
       expect(doc.url).to.eql("/10/my-ten-point/")
@@ -128,8 +128,8 @@ describe "tenpoints", ->
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
-      expect(doc.points.length).to.be(1)
-      p = doc.points[0]
+      expect(doc.drafts.length).to.be(1)
+      p = doc.drafts[0]
       expect(p.revisions.length).to.be(1)
       expect(p.revisions[0].text).to.be("Be excellent to each other.")
       expect(p.revisions[0].supporters.length).to.be(1)
@@ -141,14 +141,14 @@ describe "tenpoints", ->
   it "revises a point", (done) ->
     tenpoints.revise_point @session2, {
       _id: @tenpoint.id
-      point_id: @tenpoint.points[0]._id.toString()
+      point_id: @tenpoint.drafts[0]._id.toString()
       text: "Party on, dude."
     }, (err, doc, point, event, si) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
-      expect(doc.points.length).to.be(1)
-      p = doc.points[0]
+      expect(doc.drafts.length).to.be(1)
+      p = doc.drafts[0]
       expect(p.revisions.length).to.be(2)
       expect(p.revisions[0].text).to.be("Party on, dude.")
       expect(p.revisions[1].text).to.be("Be excellent to each other.")
@@ -161,7 +161,7 @@ describe "tenpoints", ->
   it "supports a point", (done) ->
     tenpoints.change_support @session, {
       _id: @tenpoint.id
-      point_id: @tenpoint.points[0]._id.toString()
+      point_id: @tenpoint.drafts[0]._id.toString()
       user_id: @session.auth.user_id
       vote: true
     }, (err, doc, point, event) =>
@@ -169,7 +169,7 @@ describe "tenpoints", ->
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
 
-      p = doc.points[0]
+      p = doc.drafts[0]
       expect(p.revisions[0].supporters.length).to.be(2)
       supporter_ids = (
         s.user_id.toString() for s in p.revisions[0].supporters
@@ -183,7 +183,7 @@ describe "tenpoints", ->
       expect(event.data.name).to.be("Your Ten Point")
       expect(event.data.action.support).to.be(true)
       expect(event.data.action.point_id.toString()).to.be(
-        @tenpoint.points[0]._id.toString())
+        @tenpoint.drafts[0]._id.toString())
       expect(event.data.action.user_id.toString()).to.be(@session.auth.user_id)
       expect(event.data.action.name).to.be(undefined)
       done()
@@ -193,14 +193,14 @@ describe "tenpoints", ->
     tenpoints.change_support @session, {
       _id: @tenpoint.id
       user_id: @session2.auth.user_id
-      point_id: @tenpoint.points[0]._id.toString()
+      point_id: @tenpoint.drafts[0]._id.toString()
       vote: false
     }, (err, doc, point, event) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
-      expect(point._id).to.eql(doc.points[0]._id)
-      p = doc.points[0]
+      expect(point._id).to.eql(doc.drafts[0]._id)
+      p = doc.drafts[0]
       expect(p.revisions[0].supporters.length).to.be(1)
       expect(p.revisions[0].supporters[0].user_id.toString()).to.be(
         @session.auth.user_id)
@@ -227,31 +227,31 @@ describe "tenpoints", ->
         _id: @tenpoint.id
         user_id: null
         name: "George"
-        point_id: @tenpoint.points[0]._id.toString()
+        point_id: @tenpoint.drafts[0]._id.toString()
         vote: true
       }, (err, doc, point, event) =>
         expect(err).to.be(null)
         expect(doc).to.not.be(null)
         expect(event).to.not.be(null)
-        expect(point._id).to.eql(doc.points[0]._id)
-        expect(doc.points[0].revisions[0].supporters.length).to.be(2)
-        expect(doc.points[0].revisions[0].supporters[1].name).to.be("George")
-        expect(doc.points[0].revisions[0].supporters[1].user_id).to.be(null)
+        expect(point._id).to.eql(doc.drafts[0]._id)
+        expect(doc.drafts[0].revisions[0].supporters.length).to.be(2)
+        expect(doc.drafts[0].revisions[0].supporters[1].name).to.be("George")
+        expect(doc.drafts[0].revisions[0].supporters[1].user_id).to.be(null)
 
         tenpoints.change_support {}, {
           _id: @tenpoint.id
           user_id: null
           name: "George"
-          point_id: @tenpoint.points[0]._id.toString()
+          point_id: @tenpoint.drafts[0]._id.toString()
           vote: false
         }, (err, doc, point, event) =>
           expect(err).to.be(null)
           expect(doc).to.not.be(null)
-          expect(point._id).to.eql(doc.points[0]._id)
-          expect(doc.points[0].revisions[0].supporters.length).to.be(1)
-          expect(doc.points[0].revisions[0].supporters[0].name).to.be(undefined)
+          expect(point._id).to.eql(doc.drafts[0]._id)
+          expect(doc.drafts[0].revisions[0].supporters.length).to.be(1)
+          expect(doc.drafts[0].revisions[0].supporters[0].name).to.be(undefined)
           expect(
-            doc.points[0].revisions[0].supporters[0].user_id.toString()
+            doc.drafts[0].revisions[0].supporters[0].user_id.toString()
           ).to.be(
             @session.auth.user_id
           )
@@ -282,19 +282,131 @@ describe "tenpoints", ->
   it "indicates editing", (done) ->
     tenpoints.set_editing @session, {
       _id: @tenpoint._id
-      point_id: @tenpoint.points[0]._id
+      point_id: @tenpoint.drafts[0]._id
       editing: true
     }, (err, doc) =>
-      expect(doc.points[0].editing.length).to.be(1)
-      expect(doc.points[0].editing[0]).to.be(@session.anon_id)
+      expect(doc.drafts[0].editing.length).to.be(1)
+      expect(doc.drafts[0].editing[0]).to.be(@session.anon_id)
       done()
 
   it "stops indicating editing", (done) ->
     tenpoints.set_editing @session, {
       _id: @tenpoint._id
-      point_id: @tenpoint.points[0]._id
+      point_id: @tenpoint.drafts[0]._id
       editing: false
     }, (err, doc) =>
-      expect(doc.points[0].editing.length).to.be(0)
+      expect(doc.drafts[0].editing.length).to.be(0)
       done()
 
+  it "adds more points", (done) ->
+    tenpoints.revise_point @session, {
+      _id: @tenpoint.id
+      text: "Whoa."
+    }, (err, doc, point, event, si) =>
+      expect(doc.drafts.length).to.be(2)
+      tenpoints.revise_point @session, {
+        _id: @tenpoint.id
+        text: "G'day, mate."
+      }, (err, doc, point, event, si) =>
+        expect(doc.drafts.length).to.be(3)
+        @tenpoint = doc
+        done()
+
+  it "approves points", (done) ->
+    tenpoints.set_approved @session, {
+      _id: @tenpoint.id
+      point_id: @tenpoint.drafts[0]._id
+      approved: true
+    }, (err, doc, point) =>
+      expect(err).to.be(null)
+      expect(doc.points.length).to.be(1)
+      expect(doc.drafts.length).to.be(2)
+      expect(doc.points[0]._id.toString()).to.be(
+        @tenpoint.drafts[0]._id.toString()
+      )
+      expect(doc.is_approved(point)).to.be(true)
+      expect(_.find(doc.drafts, (p) =>
+        p._id.toString() == @tenpoint.drafts[0]._id.toString()
+      )).to.be(undefined)
+
+      @tenpoint = doc
+      tenpoints.set_approved @session, {
+        _id: @tenpoint.id
+        point_id: @tenpoint.drafts[0]._id
+        approved: true
+      }, (err, doc, point) =>
+        expect(err).to.be(null)
+        expect(doc.points.length).to.be(2)
+        expect(doc.drafts.length).to.be(1)
+        expect(doc.points[1]._id.toString()).to.be(
+          @tenpoint.drafts[0]._id.toString()
+        )
+        expect(doc.is_approved(point)).to.be(true)
+        expect(doc.drafts[0]._id.toString()).to.not.be(
+          point._id.toString()
+        )
+        @tenpoint = doc
+        done()
+
+  it "unapproves points", (done) ->
+    tenpoints.set_approved @session, {
+      _id: @tenpoint.id
+      point_id: @tenpoint.points[0]._id
+      approved: false
+    }, (err, doc, point) =>
+      expect(err).to.be(null)
+      expect(doc.points.length).to.be(1)
+      expect(doc.drafts.length).to.be(2)
+      expect(doc.drafts[0]._id.toString()).to.be(
+        @tenpoint.points[0]._id.toString()
+      )
+
+      @tenpoint = doc
+
+      tenpoints.set_approved @session, {
+        _id: @tenpoint.id
+        point_id: @tenpoint.points[0]._id
+        approved: false
+      }, (err, doc, point) =>
+        expect(err).to.be(null)
+        expect(doc.points.length).to.be(0)
+        expect(doc.drafts.length).to.be(3)
+        @tenpoint = doc
+        done()
+
+  it "moves points", (done) ->
+    _check_move = (from, to, result, error, cb) =>
+      tenpoints.move_point @session, {
+        _id: @tenpoint._id
+        point_id: @tenpoint.drafts[from]._id
+        position: to
+      }, (err, doc, point) =>
+        expect(err).to.be(error)
+        expect(p._id.toString() for p in doc.drafts).to.eql(
+          @tenpoint.drafts[i]._id.toString() for i in result
+        )
+        return cb() if error?
+        # move it back.
+        tenpoints.move_point @session, {
+          _id: @tenpoint._id
+          point_id: @tenpoint.drafts[from]._id
+          position: from
+        }, (err, doc, point) =>
+          expect(err).to.be(null)
+          expect(p._id.toString() for p in doc.drafts).to.eql(
+            p._id.toString() for p in @tenpoint.drafts)
+          cb()
+
+    async.series [
+      (done) -> _check_move(0, 1, [1, 0, 2], null, done)
+      (done) -> _check_move(0, 2, [1, 2, 0], null, done)
+      (done) -> _check_move(1, 0, [1, 0, 2], null, done)
+      (done) -> _check_move(1, 2, [0, 2, 1], null, done)
+      (done) -> _check_move(2, 0, [2, 0, 1], null, done)
+      (done) -> _check_move(2, 1, [0, 2, 1], null, done)
+      (done) -> _check_move(0, 3, [0, 1, 2], "Bad position 3", done)
+      (done) -> _check_move(0, -1, [0, 1, 2], "Bad position -1", done)
+      (done) -> _check_move(0, 0, [0, 1, 2], "No change", done)
+      (done) -> _check_move(1, 1, [0, 1, 2], "No change", done)
+    ], (err, results) ->
+      done()

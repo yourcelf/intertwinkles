@@ -38,14 +38,13 @@ describe "Socket permissions", ->
   it "creates a tenpoint", (done) ->
     @client.writeJSON {
       route: "tenpoints/save_tenpoint"
-      body: {model: {name: "My Ten Point", slug: "my-ten-point", number_of_points: 5}}
+      body: {model: {name: "My Ten Point", slug: "my-ten-point"}}
     }
     @client.onceJSON (data) ->
       expect(data.route).to.be("tenpoints:tenpoint")
       expect(data.body.model._id).to.not.be(null)
       expect(data.body.model.name).to.be("My Ten Point")
       expect(data.body.model.slug).to.be("my-ten-point")
-      expect(data.body.model.number_of_points).to.be(5)
       tenpoint = data.body.model
       done()
 
@@ -226,4 +225,79 @@ describe "Socket permissions", ->
         })
         done()
 
-        
+  it "sets approved", (done) ->
+    @client.writeJSON {
+      route: "tenpoints/set_approved"
+      body: {
+        _id: tenpoint._id
+        point_id: point._id
+        approved: true
+      }
+    }
+    async.map [@client, @client2], (client, done) =>
+      client.onceJSON (data) =>
+        expect(data.route).to.be("tenpoints:approved")
+        expect(data.body._id).to.be(tenpoint._id)
+        expect(data.body.point_id).to.be(point._id)
+        expect(data.body.approved).to.be(true)
+        done()
+    , done
+
+  it "unsets approved", (done) ->
+    @client.writeJSON {
+      route: "tenpoints/set_approved"
+      body: {
+        _id: tenpoint._id
+        point_id: point._id
+        approved: false
+      }
+    }
+    async.map [@client, @client2], (client, done) =>
+      client.onceJSON (data) =>
+        expect(data.route).to.be("tenpoints:approved")
+        expect(data.body._id).to.be(tenpoint._id)
+        expect(data.body.point_id).to.be(point._id)
+        expect(data.body.approved).to.be(false)
+        done()
+    , done
+
+  it "moves a point", (done) ->
+    add_point = (cb) =>
+      @client.writeJSON {
+        route: "tenpoints/revise_point"
+        body: {
+          _id: tenpoint._id
+          text: "Inconceivable!"
+        }
+      }
+      async.map [@client, @client2], (client, done) =>
+        client.onceJSON (data) =>
+          expect(data.route).to.be("tenpoints:point")
+          done()
+      , cb
+
+    async.series [
+      # Add a couple more points first
+      (done) -> add_point(done)
+      (done) -> add_point(done)
+      # Now practice moving
+      (done) =>
+        @client.writeJSON {
+          route: "tenpoints/move_point"
+          body: {
+            _id: tenpoint._id
+            point_id: point._id
+            position: 2 # move it to the end
+          }
+        }
+        async.map [@client, @client2], (client, done) =>
+          client.onceJSON (data) =>
+            expect(data.route).to.be("tenpoints:move")
+            expect(data.body._id).to.be(tenpoint._id)
+            expect(data.body.point_id).to.be(point._id)
+            expect(data.body.position).to.be(2)
+            done()
+        , done
+    ], done
+
+
