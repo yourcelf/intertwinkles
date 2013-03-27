@@ -124,6 +124,8 @@ describe "tenpoints", ->
     tenpoints.revise_point @session, {
       _id: @tenpoint.id,
       text: "Be excellent to each other."
+      user_id: @session.auth.user_id
+      name: @session.users[@session.auth.user_id].name
     }, (err, doc, point, event, si) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
@@ -143,6 +145,8 @@ describe "tenpoints", ->
       _id: @tenpoint.id
       point_id: @tenpoint.drafts[0]._id.toString()
       text: "Party on, dude."
+      user_id: @session2.auth.user_id
+      name: @session2.users[@session2.auth.user_id]
     }, (err, doc, point, event, si) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
@@ -302,12 +306,18 @@ describe "tenpoints", ->
     tenpoints.revise_point @session, {
       _id: @tenpoint.id
       text: "Whoa."
+      user_id: undefined
+      name: "Anonymouse"
     }, (err, doc, point, event, si) =>
+      expect(err).to.be(null)
       expect(doc.drafts.length).to.be(2)
       tenpoints.revise_point @session, {
         _id: @tenpoint.id
         text: "G'day, mate."
+        user_id: undefined
+        name: "Aussie"
       }, (err, doc, point, event, si) =>
+        expect(err).to.be(null)
         expect(doc.drafts.length).to.be(3)
         @tenpoint = doc
         done()

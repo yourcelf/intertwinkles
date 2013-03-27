@@ -105,7 +105,6 @@ module.exports = (config) ->
     if (data.user_id? and utils.is_authenticated(session) and
         session.users[data.user_id]?)
       user_id = data.user_id
-    console.log user_id
     unless user_id or data.name?
       return callback("Missing user_id or name.")
     get_point session, data, ["_id", "text"], (err, doc, point) ->

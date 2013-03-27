@@ -5,7 +5,7 @@ common        = require '../../../test/common'
 config        = require '../../../test/test_config'
 api_methods   = require('../../../lib/api_methods')(config)
 
-describe "Socket permissions", ->
+describe "Socket tenpoints", ->
   before (done) ->
     common.startUp (server) =>
       @server = server
@@ -88,6 +88,7 @@ describe "Socket permissions", ->
       body: {
         _id: tenpoint._id
         text: "Be excellent to each other."
+        user_id: @session.auth.user_id
       }
     }
     async.map [@client, @client2],  (client, done) =>
@@ -110,6 +111,7 @@ describe "Socket permissions", ->
         _id: tenpoint._id
         point_id: point._id
         text: "Party on, dudes."
+        user_id: @session2.auth.user_id
       }
     }
     async.map [@client, @client2], (client, done) =>
@@ -268,6 +270,8 @@ describe "Socket permissions", ->
         body: {
           _id: tenpoint._id
           text: "Inconceivable!"
+          user_id: undefined
+          name: "Mua ha"
         }
       }
       async.map [@client, @client2], (client, done) =>
@@ -287,7 +291,8 @@ describe "Socket permissions", ->
           body: {
             _id: tenpoint._id
             point_id: point._id
-            position: 2 # move it to the end
+            position: 0 # move it to the front -- adding unshifts, so
+                        # point should be starting at position 2.
           }
         }
         async.map [@client, @client2], (client, done) =>
@@ -295,7 +300,7 @@ describe "Socket permissions", ->
             expect(data.route).to.be("tenpoints:move")
             expect(data.body._id).to.be(tenpoint._id)
             expect(data.body.point_id).to.be(point._id)
-            expect(data.body.position).to.be(2)
+            expect(data.body.position).to.be(0)
             done()
         , done
     ], done
