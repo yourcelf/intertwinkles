@@ -5,6 +5,7 @@ models     = require('../lib/schema').load(config)
 common     = require '../../../test/common'
 
 describe "Dotstorm Canvas to image from idea", ->
+  this.timeout(10000)
   before (done) ->
     @mahId = undefined
     common.startUp (server) =>
