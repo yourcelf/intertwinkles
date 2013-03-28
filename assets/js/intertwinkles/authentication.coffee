@@ -82,6 +82,7 @@ intertwinkles.onlogin = (assertion) ->
 
   intertwinkles.socket.once "login", handle
   intertwinkles.socket.send "verify", {callback: "login", assertion: assertion}
+  intertwinkles.socket.on "force_logout", -> navigator.id.logout()
 
 intertwinkles.onlogout = (count) ->
   intertwinkles.users = null
