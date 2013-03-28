@@ -86,7 +86,7 @@ class intertwinkles.NotificationMenu extends Backbone.View
       })
 
       @dateViews = []
-      @$(".date").each (el) =>
+      @$(".date").each (i, el) =>
         view = new intertwinkles.AutoUpdatingDate(date: $(el).attr("data-date"))
         @dateViews.push(view)
         $(el).html view.render().el
