@@ -170,4 +170,9 @@ start = (config, app, sockrooms) ->
           for emission in emissions
             sockrooms.broadcast(room, "tenpoints:editing", emission)
 
+  sockrooms.on "tenpoints/get_tenpoint_events", (socket, session, data) ->
+    tenpoints.get_events session, data, (err, events) ->
+      return sockrooms.handleError(socket, err) if err?
+      socket.sendJSON("tenpoint:events", {_id: data._id, events: events})
+
 module.exports = {start}

@@ -219,4 +219,17 @@ module.exports = (config) ->
       list.splice(data.position, 0, point)
       doc.save (err, doc) -> callback(err, doc, point)
 
+  tp.get_events = (session, data, callback) ->
+    return callback("Missing tenpoint ID") unless data._id?
+    schema.TenPoint.findOne {_id: data._id}, 'session', (err, doc) ->
+      return callback(err) if err?
+      return callback("Not found") unless doc?
+      return callback("Permission denied") unless utils.can_view(session, doc)
+      api_methods.get_events {
+        application: "tenpoints"
+        entity: doc._id
+      }, (err, events) ->
+        return callback(err) if err?
+        return callback(null, events)
+
   return tp

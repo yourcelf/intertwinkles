@@ -85,13 +85,21 @@ block postapp
           <% } %>
       ul.drafts.two-col
 
+    div.row-fluid.timeline-holder-holder
+      h3 Timeline
+      div.timeline-holder.span11
+
   script(type='text/template', id='supportersTemplate').
-    <span rel='popover'
+    <span
+      <% if (supporters.length > 0) { %>
+       rel='popover'
+
        title='Supporters'
-       data-content='<% _.each(supporters, function(s, i) { %>&lt;nobr&gt;<%- intertwinkles.inline_user(s.user_id, s.name) %>&lt;/nobr&gt;<%- i < supporters.length ? ", " : "" %><% }); %>'
+       data-content='<% _.each(supporters, function(s, i) { %>&lt;nobr&gt;<%- intertwinkles.inline_user(s.user_id, s.name) %>&lt;/nobr&gt;<%- i < supporters.length - 1 ? ", " : "" %><% }); %>'
        data-html='true'
        data-trigger='click'
        data-placement='left'
+      <% } %>
       ><%- supporters.length %>
       supporter<%- supporters.length == 1 ? "" : "s" %>:
     </span>
@@ -171,10 +179,10 @@ block postapp
 
 
   script(type='text/template', id='pointDetailTemplate')
-    div.point-detail
+    div.point-detail.row-fluid
       h3(style='text-align: center').
         <%- model.name %> <%- group ? "by " + group.name : "" %>
-      div.point-detail-point
+      div.point-detail-point.span6.offset3
       div(style='clear: both;')
         <a class='softnav' href='/tenpoints/10/<%- model.slug %>/'>More points</a>
 

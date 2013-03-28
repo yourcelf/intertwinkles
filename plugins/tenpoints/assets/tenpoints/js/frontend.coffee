@@ -369,6 +369,10 @@ class TenPointView extends TenPointsBaseView
     @listenTo @model, "change:name", @render
     @listenTo @model, "change:points", @renderPoints
     @listenTo @model, "change:drafts", @renderDrafts
+    @listenTo intertwinkles.socket, "tenpoint:events", @buildTimeline
+    #intertwinkles.socket.send "tenpoints/get_tenpoint_events", {
+    #  _id: @model.id
+    #}
 
   addPoint: (event) =>
     event.preventDefault()
@@ -391,7 +395,7 @@ class TenPointView extends TenPointsBaseView
       view.on "startdrag", @startDrag
       views.push(view)
     if intertwinkles.can_edit(@model)
-      $(".drag-handle", dest).addClass("activateable")
+      $(dest).addClass("children-draggable")
     return views
 
   renderPoints: =>
@@ -463,12 +467,22 @@ class TenPointView extends TenPointsBaseView
       targets: []
       number: number
       type: if list == @model.get("points") then "points" else "drafts"
+      listDims: {}
     }
+    for type in ["drafts", "points"]
+      el = @$("." + type)
+      offset = el.offset()
+      @dragState.listDims[type] = {
+        x1: offset.left
+        y1: offset.top
+        x2: offset.left + el.width()
+        y2: offset.top + el.height()
+      }
 
     # Build a list of drag targets for all the points in our lists.
     for [list,type] in [[@pointviews, "points"], [@draftviews, "drafts"]]
       continue if list.length == 0
-      if @dragState.number != 0
+      unless @dragState.number == 0 and @dragState.type == type
         @dragState.targets = @dragState.targets.concat(
           @_drop_target_dims(null, list[0], 0, type))
       for abovegap, i in list
@@ -486,6 +500,32 @@ class TenPointView extends TenPointsBaseView
           belowgap = null
         @dragState.targets = @dragState.targets.concat(
           @_drop_target_dims(abovegap, belowgap, number, type))
+      # final drop target is the space at the end of the list.  Only add a
+      # target at the end of the list if we are not already at the end of that
+      # list, and the list has space at its end.
+      if @dragState.type != type or @dragState.number != list.length - 1
+        {x1, y1, x2, y2} = @dragState.listDims[type]
+        lastPoint = @dragState.targets[@dragState.targets.length - 1]
+        # Does the list have space at the end? 20 is arbitrary padding here.
+        if (x2 > lastPoint.x2 + 20) or (y2 > lastPoint.y2 + 20)
+          # Bottom-right corner is easy: it's just the bottom-right of the
+          # container.
+          extra = {
+            x2: x2, y2: y2, $el: lastPoint.$el,
+            type: lastPoint.type, number: lastPoint.number
+          }
+          # Top left is trickier. Either:
+          # 1. The top-right corner of lastPoint if the final column is unoccupied
+          # 2. The bottom-left corner of lastPoint otherwise
+          if lastPoint.x2 + 20 < x2
+            # 1. Final column isn't occupied. Use top-right.
+            extra.x1 = lastPoint.x2
+            extra.y1 = lastPoint.y1
+          else
+            # 2. Final column is occupied. Use bottom-left.
+            extra.x1 = lastPoint.x1
+            extra.y1 = lastPoint.y2
+          @dragState.targets.push(extra)
 
     # Build a clone of the point being dragged to render as the thing under our hands.
     @dragState.dragger = $("<div></div>").append(
@@ -503,7 +543,6 @@ class TenPointView extends TenPointsBaseView
       opacity: 0.9
       "z-index": 10000
     })
-    @dragState.dragger.find(".drag-handle").css("color", "#ff0088")
     # Show our clone.
     $("body").append(@dragState.dragger)
     # Hide the original, without reflowing.
@@ -614,6 +653,50 @@ class TenPointView extends TenPointsBaseView
     @_clearTarget()
     @dragState = null
 
+  buildTimeline: (data) =>
+    collection = new intertwinkles.EventCollection()
+    for event in data.events
+      event.date = new Date(event.date)
+      collection.add new intertwinkles.Event(event)
+    intertwinkles.build_timeline @$(".timeline-holder"), collection, (event) ->
+      user = intertwinkles.users?[event.user]
+      via_user = intertwinkles.users?[event.via_user]
+      via_user = null if via_user? and via_user.id == user?.id
+      if user?
+        icon = "<img src='#{user.icon.tiny}' />"
+      else
+        icon = "<i class='icon-user'></i>"
+      switch event.type
+        when "create"
+          title = "Board created"
+          content = "#{user?.name or "Anonymous"} created this board."
+        when "visit"
+          title = "Visit"
+          content = "#{user?.name or "Anonymous"} stopped by."
+        when "append"
+          title = "Point added"
+          if via_user?
+            content = "#{user?.name or event.data.action.name} added a point (via #{via_user.name})."
+          else
+            content = "#{user?.name or event.data.action.name} added a point."
+        when "update"
+          title = "Board updated"
+          content = "#{user?.name or "Anonymous"} updated the board."
+        when "trim"
+          title = "Point removed"
+          content = "#{user?.name or "Anonymous"} removed
+                    the point by #{event.data.action.deleted_opinion.name}."
+        when "vote"
+          title = "Vote"
+          content = "#{user?.name or "Anonymous"} voted"
+        else
+          console.info "Unhandled event type", event.type
+      return """
+        <a class='#{ event.type }' rel='popover' data-placement='bottom'
+          data-trigger='hover' title='#{ title }'
+          data-content='#{ content }'>#{ icon }</a>
+      """
+
 #
 # Display a single point.
 #
@@ -662,7 +745,6 @@ class PointView extends TenPointsBaseView
     @trigger('startdrag', this, event)
 
   render: =>
-    console.log "render point"
     [list, number] = @model.getListPos(@point._id)
     @$el.attr("data-id", @point._id)
     @$el.attr("data-number", number)
