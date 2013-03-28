@@ -36,9 +36,14 @@ route = (config, sockrooms) ->
   api_methods = require("./api_methods")(config)
 
   sockrooms.on 'verify', (socket, session, reqdata) ->
+    forceLogout = (err) ->
+      sockrooms.handleError(socket, err)
+      socket.sendJSON("force_logout")
+
     api_methods.authenticate session, reqdata.assertion, (err, session, message) ->
+      return forceLogout(err) if err?
       sockrooms.saveSession session, (err) ->
-        return socket.sendJSON "error", {error: err} if err?
+        return forceLogout(err) if err?
 
         socket.sendJSON(reqdata.callback, {
           user_id: session.auth.user_id
