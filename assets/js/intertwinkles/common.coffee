@@ -69,7 +69,6 @@ class intertwinkles.BaseModalFormView extends intertwinkles.BaseView
   remove: =>
     @removed = true
     @$el.on "hidden", =>
-      console.log "remove on hidden"
       super()
     @$el.modal('hide')
 

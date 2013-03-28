@@ -92,7 +92,6 @@ class TenPointModel extends Backbone.Model
   setSupport: (data, callback) =>
     # Display immediately, then send socket. Response will be idempotent.
     @_supportSet(data)
-    console.log data
     intertwinkles.socket.once "tenpoints:support", callback
     intertwinkles.socket.send "tenpoints/support_point", _.extend({
       _id: @id
@@ -115,6 +114,7 @@ class TenPointModel extends Backbone.Model
         (s) => @_matchSupporter(data, s)
       )
       @trigger "change:point:#{point._id}"
+    @trigger "notify:supporter:#{point._id}", data
 
   #
   # Set whether we are editing a point.
@@ -182,6 +182,7 @@ class TenPointModel extends Backbone.Model
     list.splice(data.position, 0, point)
     changed = if list == @get("drafts") then "drafts" else "points"
     @trigger "change:#{changed}"
+    @trigger "notify:point:#{data.point_id}"
 
   #
   # Retrieve all data for this tenpoint.
@@ -240,11 +241,7 @@ class SplashView extends TenPointsBaseView
   initialize: (options) ->
     super(options)
     @setTenPointList(options.tenPointList, false)
-    intertwinkles.user.on  "change", @fetchTenPointList, this
-
-  remove: =>
-    super()
-    intertwinkles.user.off "change", @fetchTenPointList, this
+    @listenTo intertwinkles.user, "change", @fetchTenPointList
 
   fetchTenPointList: => fetchTenPointList(@setTenPointList)
 
@@ -369,16 +366,11 @@ class TenPointView extends TenPointsBaseView
 
   initialize: (options) ->
     super(options)
-    @model.on "change:points", @render, this
-    @model.on "change:drafts", @render, this
-    @model.on "change:name", @render, this
-
-  remove: =>
-    @model.off null, null, this
-    super()
+    @listenTo @model, "change:name", @render
+    @listenTo @model, "change:points", @renderPoints
+    @listenTo @model, "change:drafts", @renderDrafts
 
   addPoint: (event) =>
-    console.log "add-point"
     event.preventDefault()
     form = new EditPointView(model: @model)
     form.render()
@@ -389,22 +381,238 @@ class TenPointView extends TenPointsBaseView
     @renderDrafts()
 
   _renderPointList: (list, dest) =>
-    cur = null
-    $dest = @$(dest)
+    dest = $(dest)
+    views = []
+    dest.html("")
     for point,i in list
-      if i % 2 == 0
-        $dest.append(cur) if cur?
-        cur = $("<div class='row-fluid'></div>")
       view = new PointView({model: @model, point: point})
-      cur.append(view.el)
+      dest.append($("<li></li>").html(view.el))
       view.render()
-    $dest.append(cur) if cur?
+      view.on "startdrag", @startDrag
+      views.push(view)
+    if intertwinkles.can_edit(@model)
+      $(".drag-handle", dest).addClass("activateable")
+    return views
 
   renderPoints: =>
-    @_renderPointList(@model.get("points"), ".points")
+    @pointviews = @_renderPointList(@model.get("points"), ".points")
 
   renderDrafts: =>
-    @_renderPointList(@model.get("drafts"), ".drafts")
+    @draftviews = @_renderPointList(@model.get("drafts"), ".drafts")
+
+  _get_box: ($el) ->
+    offset = $el.offset()
+    w = $el.outerWidth(true)
+    h = $el.outerHeight(true)
+    return {
+      x1: offset.left
+      y1: offset.top
+      x2: offset.left + w
+      y2: offset.top + h
+      w: w
+      h: h
+    }
+
+  # Utility to calculate the x/y coordinates for the gap between two points,
+  # which is the drop target.
+  _drop_target_dims: (abovegap, belowgap, number, type) =>
+    x1 = x2 = y1 = y2 = null
+    targets = []
+    if belowgap?
+      $el = belowgap.$el
+    else
+      # Create a sentinel.
+      @dragState.sentinel or= {}
+      @dragState.sentinel[type]?.remove()
+      @dragState.sentinel[type] = $("<div></div>")
+      abovegap.$el.after(@dragState.sentinel[type])
+      $el = @dragState.sentinel[type]
+    if abovegap
+      box = @_get_box(abovegap.$el)
+      targets.push({
+        # Add arbitrary padding below y2
+        x1: box.x1, y1: box.y1 + box.h / 2, x2: box.x2, y2: box.y2 + 5,
+        $el: $el, number: number, type: type
+      })
+    if belowgap
+      box = @_get_box(belowgap.$el)
+      targets.push({
+        # Add arbitrary padding above y1.
+        x1: box.x1, y1: box.y1 - 5, x2: box.x2, y2: box.y1 + box.h / 2 + 5,
+        $el: $el, number: number, type: type
+      })
+    return targets
+
+  #
+  # Start dragging a point to reorder it.
+  #
+
+  startDrag: (pointview, event) =>
+    event.preventDefault()
+    return unless intertwinkles.can_edit(@model)
+    console.log("Drag start")
+    # Calculate all the things!
+    [list, number] = @model.getListPos(pointview.point._id)
+    @dragState = {
+      pointview: pointview
+      startOffset: pointview.$el.offset()
+      width: pointview.$el.width()
+      height: pointview.$el.height()
+      startX: event.clientX
+      startY: event.clientY
+      targets: []
+      number: number
+      type: if list == @model.get("points") then "points" else "drafts"
+    }
+
+    # Build a list of drag targets for all the points in our lists.
+    for [list,type] in [[@pointviews, "points"], [@draftviews, "drafts"]]
+      continue if list.length == 0
+      if @dragState.number != 0
+        @dragState.targets = @dragState.targets.concat(
+          @_drop_target_dims(null, list[0], 0, type))
+      for abovegap, i in list
+        number = i + 1
+        if @dragState.type == type and i >= @dragState.number
+          # If this is a movement within the same list, and we're moving
+          # forward in the list, we need to decrement the number as we have
+          # popped ourselves from the list.  If it's a foreign list we're being
+          # teleported into, we don't need to do that.
+          number -= 1
+        continue if (number == @dragState.number and type == @dragState.type)
+        if i < list.length - 1
+          belowgap = list[i + 1]
+        else
+          belowgap = null
+        @dragState.targets = @dragState.targets.concat(
+          @_drop_target_dims(abovegap, belowgap, number, type))
+
+    # Build a clone of the point being dragged to render as the thing under our hands.
+    @dragState.dragger = $("<div></div>").append(
+      pointview.$el.clone()
+    ).css({
+      width: @dragState.width
+      height: @dragState.height
+      transform: "rotate(1deg)"
+      position: "absolute"
+      "background-image": $("body").css("background-image")
+      left: @dragState.startOffset.left + "px"
+      top: @dragState.startOffset.top + "px"
+      "box-shadow": "0px 0px 10px #aaa"
+      "user-select": "none"
+      opacity: 0.9
+      "z-index": 10000
+    })
+    @dragState.dragger.find(".drag-handle").css("color", "#ff0088")
+    # Show our clone.
+    $("body").append(@dragState.dragger)
+    # Hide the original, without reflowing.
+    pointview.$el.css("opacity", 0)
+    # Listen to mouse!
+    $(window).on "mousemove", @continueDrag
+    $(window).on "mouseup", @stopDrag
+
+  continueDrag: (event) =>
+    # Stop everything if we don't have a drag state.
+    @stopDrag unless @dragState?
+    # Update the position of the dragger.
+    x = event.clientX
+    y = event.clientY
+    @dragState.dragger.css({
+      left: @dragState.startOffset.left + (x - @dragState.startX) + "px"
+      top: @dragState.startOffset.top + (y - @dragState.startY) + "px"
+    })
+    
+    # Update the target as needed.
+    for target in @dragState.targets
+      if (target.x1 <= x < target.x2) and (target.y1 <= y < target.y2)
+        return @_setTarget(target)
+    @_clearTarget()
+
+  _setTarget: (target) =>
+    # If necessary, set a new drop target.
+    return if (@dragState.target?.number == target.number and
+               @dragState.target?.type == target.type)
+    console.log "set target", target.type, target.number
+    @_clearTarget()
+    @dragState.placeholder = $("<div></div>").css({
+      width: @dragState.width
+      height: @dragState.height
+      "-webkit-box-sizing": "border-box"
+      "-moz-box-sizing": "border-box"
+      "box-sizing": "border-box"
+      border: "6px dashed #aaa"
+      display: "none"
+      "margin-top": "5px"
+      "margin-bottom": "5px"
+    }).slideDown(100)
+    target.$el.before(@dragState.placeholder)
+    @dragState.target = target
+    #@dragState.pointview.$el.slideUp(100)
+
+  _clearTarget: =>
+    # Remove the drop target.
+    # Re-show ourselves, so we take up space again.
+    #@dragState.pointview.$el.slideDown(100)
+    if @dragState?.placeholder or @dragState?.target
+      @dragState.placeholder?.slideUp(100)
+      delete @dragState?.target
+
+  stopDrag: (event) =>
+    console.log "stop drag"
+    $(window).off "mousemove", @continueDrag
+    $(window).off "mouseup", @stopDrag
+    $(".point").off "mouseover", @dragOver
+
+    if @dragState.target?
+      # Move points around.
+      if @dragState.type != @dragState.target.type
+        # We've changed types! Forbid moving to the position we'd start in.
+        position = @dragState.target.number
+        if (@dragState.target.type == "drafts" and position == 0) or (
+            @dragState.target.type == "points" and
+                          position == @model.get("points").length)
+          # New drafts start at 0.
+          position = null
+
+        console.log @dragState.target.type, position
+        # Confirm that we want to change types.
+        form = new ApprovePointView({
+          model: @model, point: @dragState.pointview.point
+        })
+        form.render()
+        form.on "done", =>
+          # We do. Now rearrange, if we aren't forbidden.
+          if position?
+            @model.movePoint {point_id: form.point._id, position: position}
+        form.on "canceled", =>
+          @renderPoints()
+          @renderDrafts()
+
+      else
+        # Moving within the same type.  Just set the position.
+        @model.movePoint({
+          point_id: @dragState.pointview.point._id
+          position: @dragState.target.number
+        })
+
+      @dragState.placeholder.before(@dragState.dragger)
+      @dragState.dragger.css({
+        position: "relative"
+        transform: "none"
+        left: "0px"
+        top: "0px"
+        "z-index": "0"
+      })
+    else
+      console.log "remove?"
+      @dragState.pointview.$el.css("opacity", 1.0)
+      @dragState.dragger.remove()
+
+    for type, el of @dragState.sentinel or {}
+      el.remove()
+    @_clearTarget()
+    @dragState = null
 
 #
 # Display a single point.
@@ -412,22 +620,21 @@ class TenPointView extends TenPointsBaseView
 
 class PointView extends TenPointsBaseView
   template: _.template $("#pointTemplate").html()
+  supportersTemplate: _.template $("#supportersTemplate").html()
   events:
     'click .softnav': 'softNav'
     'click .edit':    'edit'
     'click .mark-approved': 'approve'
     'click .upboat':  'vote'
+    'mousedown .drag-handle': 'startDrag'
 
   initialize: (options) ->
     super(options)
     @point = options.point
-    @model.on "change:point:#{@point._id}", @render, this
-    @model.on "notify:point:#{@point._id}", @flash, this
-
-  remove: =>
-    @model.off "change:point:#{@point._id}", @render, this
-    @model.off "notify:point:#{@point._id}", @flash, this
-    super()
+    @listenTo @model, "change:point:#{@point._id}", @render
+    @listenTo @model, "notify:point:#{@point._id}", @flash
+    @listenTo @model, "notify:supporter:#{@point._id}", @flashSupporter
+    @listenTo intertwinkles.user, "login", @render
 
   edit:    (event) =>
     event.preventDefault()
@@ -447,22 +654,30 @@ class PointView extends TenPointsBaseView
   flash: =>
     @$el.effect('highlight', {}, 5000)
 
+  flashSupporter: (data) =>
+    q = @$("[data-id=#{data.user_id or ""}][data-name=#{data.name or ""}]")
+    q.addClass("added").effect('highlight', {}, 5000)
+
+  startDrag: (event) =>
+    @trigger('startdrag', this, event)
+
   render: =>
+    console.log "render point"
     [list, number] = @model.getListPos(@point._id)
+    @$el.attr("data-id", @point._id)
+    @$el.attr("data-number", number)
     approved = list == @model.get("points")
-    @$el.addClass("point span6")
+    @$el.addClass("point")
         .toggleClass("draft", not approved)
         .html(@template({
           model: @model.toJSON()
           point: @point
           approved: approved
           number: number
-          supporters_popover: (
-            "<nobr>#{intertwinkles.inline_user(s.user_id, s.name)}</nobr>" for s in @point.revisions[0].supporters
-          ).join(", ")
           sessionSupports: @model.isSupporter({
             user_id: intertwinkles.user.id, name: intertwinkles.user.get("name")
           }, @point)
+          supportersTemplate: @supportersTemplate
         }))
     @$("[rel=popover]").popover()
 
@@ -472,6 +687,8 @@ class PointDetailView extends TenPointsBaseView
     @model = options.model
     @point = @model.getPoint(options.point_id)
     @pointView = new PointView({model: @model, point: @point})
+    @listenTo(intertwinkles.user, "login", @render)
+
   render: =>
     gid = @model.get("sharing")?.group_id
     group = intertwinkles.groups?[gid]
@@ -482,6 +699,7 @@ class PointDetailView extends TenPointsBaseView
 
 class HistoryView extends TenPointsBaseView
   template: _.template $("#historyTemplate").html()
+  supportersTemplate: _.template $("#supportersTemplate").html()
   initialize: (options) ->
     @model = options.model
     @point = @model.getPoint(options.point_id)
@@ -489,8 +707,14 @@ class HistoryView extends TenPointsBaseView
   render: =>
     gid = @model.get("sharing")?.group_id
     group = intertwinkles.groups?[gid] or null
-    @$el.html(@template({ model: @model.toJSON(), point: @point, group: group }))
+    @$el.html(@template({
+      model: @model.toJSON()
+      point: @point
+      group: group
+      supportersTemplate: @supportersTemplate
+    }))
     intertwinkles.sub_vars(@el)
+    @$("[rel=popover]").popover()
 
 class VoteView extends intertwinkles.BaseModalFormView
   template: _.template $("#voteTemplate").html()
@@ -592,9 +816,15 @@ class ApprovePointView extends intertwinkles.BaseModalFormView
       }
       validation: []
     }
-    @on "hidden", => @remove() unless @removed
+    @on "hidden", =>
+      @remove() unless @removed
+      @trigger "canceled" unless @notCanceled
+
     @on "submitted", (cleaned_data) =>
-      @model.setApproved({ point_id: @point._id, approved: not @approved })
+      @notCanceled = true
+      @model.setApproved({ point_id: @point._id, approved: not @approved }, =>
+        @trigger "done"
+      )
       @remove()
 
 
@@ -617,7 +847,7 @@ class Router extends Backbone.Router
     @model.set(INITIAL_DATA.tenpoint or {})
     @tenPointList = INITIAL_DATA.ten_points_list
     @_joinRoom(@model) if @model.id?
-    @model.on "change:_id", =>
+    @listenTo @model, "change:_id", =>
       if @model.id? then @_joinRoom(@model) else @_leaveRoom()
     super()
 

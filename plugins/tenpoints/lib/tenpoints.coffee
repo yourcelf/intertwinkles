@@ -169,6 +169,7 @@ module.exports = (config) ->
 
   tp.set_editing = (session, data, callback) ->
     get_point session, data, ["_id", "point_id", "editing"], (err, doc, point) ->
+      return callback(err) if err?
       if data.editing
         point.editing.push(session.anon_id)
       else
@@ -177,6 +178,7 @@ module.exports = (config) ->
 
   tp.set_approved = (session, data, callback) ->
     get_point session, data, ["_id", "point_id", "approved"], (err, doc, point) ->
+      return callback(err) if err?
       is_approved = doc.is_approved(point)
       if data.approved == is_approved
         # No change -- must be out of sync.
@@ -194,6 +196,7 @@ module.exports = (config) ->
   
   tp.move_point = (session, data, callback) ->
     get_point session, data, ["_id", "point_id", "position"], (err, doc, point) ->
+      return callback(err) if err?
       list = if doc.is_approved(point) then doc.points else doc.drafts
       if isNaN(data.position) or data.position < 0 or data.position >= list.length
         return callback("Bad position #{data.position}", doc)

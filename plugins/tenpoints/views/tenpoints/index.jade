@@ -73,16 +73,33 @@ block postapp
       h1
         <%- model.name %>
         <a class='edit-link softnav' href='/tenpoints/10/<%- model.slug %>/edit/'>edit</a>
-    div.points
+    ul.points.two-col
     hr
-    div.drafts-area
+
+    div.drafts-area.row-fluid
       div(style='text-align: center;')
         h3 Drafts
         div.add-point
           <% if (intertwinkles.can_edit(model)) { %>
           a.btn.add-point(href='#') Add Point
           <% } %>
-      div.drafts
+      ul.drafts.two-col
+
+  script(type='text/template', id='supportersTemplate').
+    <span rel='popover'
+       title='Supporters'
+       data-content='<% _.each(supporters, function(s, i) { %>&lt;nobr&gt;<%- intertwinkles.inline_user(s.user_id, s.name) %>&lt;/nobr&gt;<%- i < supporters.length ? ", " : "" %><% }); %>'
+       data-html='true'
+       data-trigger='click'
+       data-placement='left'
+      ><%- supporters.length %>
+      supporter<%- supporters.length == 1 ? "" : "s" %>:
+    </span>
+    <% _.each(supporters, function(supporter) { %>
+      <span data-id="<%- supporter.user_id || '' %>" data-name="<%- supporter.name || ''%>">
+        <%= intertwinkles.user_icon(supporter.user_id, supporter.name, "tiny") %>
+      </span>
+    <% }); %>
 
   script(type='text/template', id='pointTemplate')
     div.point-table
@@ -97,18 +114,7 @@ block postapp
           
         div.therest
           div.supporters.
-            <span rel='popover'
-               title='Supporters'
-               data-content='<%- supporters_popover %>'
-               data-html='true'
-               data-trigger='hover'
-               data-placement='left'
-              ><%- point.revisions[0].supporters.length %>
-              supporter<%- point.revisions[0].supporters.length == 1 ? "" : "s" %>:
-            </span>
-            <% _.each(point.revisions[0].supporters, function(supporter) { %>
-              <%= intertwinkles.user_icon(supporter.user_id, supporter.name, "tiny") %>
-            <% }); %>
+            <%= supportersTemplate({supporters: point.revisions[0].supporters}) %>
           div.text.
             <%= intertwinkles.markup(point.revisions[0].text) %>
           div.edit-line
@@ -200,12 +206,14 @@ block postapp
       div.modal-header
         button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
         h3 <%- approved ? "Retire point" : "Adopt point" %>
-      div.modal-body.
-        <% if (approved) { %>
-          Does your group want to retire this point?
-        <% } else { %>
-          Is your group ready to adopt this point?
-        <% } %>
+      div.modal-body
+        blockquote <%= intertwinkles.markup(point.revisions[0].text) %>
+        p.
+          <% if (approved) { %>
+            Does your group want to retire this point?
+          <% } else { %>
+            Is your group ready to adopt this point?
+          <% } %>
       div.modal-footer
         button.btn.btn-primary(type='submit')
           <%- approved ? "Retire point" : "Adopt point" %>
@@ -224,11 +232,7 @@ block postapp
           <div class='row-fluid'>
             <div class='revision span6 offset3 point'>
               <div class='supporters'>
-                <%- rev.supporters.length %>
-                supporter<%- rev.supporters.length == 1 ? "" : "s" %>:
-                <% _.each(rev.supporters, function(supporter) { %>
-                  <%= intertwinkles.user_icon(supporter.user_id, supporter.name) %>
-                <% }); %>
+                <%= supportersTemplate({supporters: rev.supporters}) %>
               </div>
               <div class='text'>
                 <% if (next) { %>
