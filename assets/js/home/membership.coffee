@@ -154,7 +154,7 @@ class MembershipTable extends Backbone.View
         role: @change_set.update[email]?.role or invitee.role
         role_changed: @change_set.update[email]?.role?
         new_invitee: false
-        removed: @change_set.remove[invitee.user.email]?
+        removed: @change_set.remove[email]?
       }))
 
     @$(".has-been-invited-header").toggle(@group.invited_members?.length > 0)
