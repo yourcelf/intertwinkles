@@ -155,7 +155,7 @@ module.exports = (config) ->
           user: data.user_id
           via_user: session.auth?.user_id
           data: {
-            name: doc.name
+            title: doc.name
             action: {
               support: data.vote
               point_id: point._id

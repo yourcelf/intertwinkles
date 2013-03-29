@@ -70,7 +70,7 @@ describe "pointslib", ->
       expect(event.user.toString()).to.be(@all_users['one@mockmyid.com'].id)
       expect(event.via_user.toString()).to.be(event.user.toString())
       expect(event.group.toString()).to.eql(@all_groups['two-members'].id)
-      expect(event.data).to.eql({name: "My Ten Point", slug: "my-ten-point"})
+      expect(event.data).to.eql({title: "My Ten Point", slug: "my-ten-point"})
 
       expect(si.application).to.be("points")
       expect(si.entity).to.eql(doc.id)
@@ -184,7 +184,7 @@ describe "pointslib", ->
       expect(event.type).to.be("vote")
       expect(event.user.toString()).to.be(@session.auth.user_id)
       expect(event.via_user.toString()).to.be(@session.auth.user_id)
-      expect(event.data.name).to.be("Your Ten Point")
+      expect(event.data.title).to.be("Your Ten Point")
       expect(event.data.action.support).to.be(true)
       expect(event.data.action.point_id.toString()).to.be(
         @pointset.drafts[0]._id.toString())
