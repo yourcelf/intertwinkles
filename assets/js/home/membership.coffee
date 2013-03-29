@@ -5,7 +5,7 @@ membershipTableTemplate = _.template("""
   <tr>
     <th>User</th>
     <th>Voting <i class='icon-question-sign voting'></i></th>
-    <th>Role <i class='icon-question-sign role'></i></th>
+    <!--<th>Role <i class='icon-question-sign role'></i></th>-->
     <th></th>
   </tr>
   <tr class='members-header'></tr>
@@ -26,9 +26,11 @@ membershipTableTemplate = _.template("""
         Can Vote
       </label>
     </td>
+    <!--
     <td>
       <input type='text' placeholder='Optional' id='add_role' />
     </td>
+    -->
     <td></td>
   </tr>
 </table>
@@ -51,10 +53,12 @@ membershipRowTemplate = _.template("""
         Can vote
       </label>
     </td>
+    <!--
     <td class='<%- role_changed ? "changed" : "" %>'>
       <input type='text' data-email='<%- email %>'
              value='<%- role %>' placeholder='Optional' class='role' />
     </td>
+    -->
     <td class='link'>
       <a href='#' data-email='<%- email %>' class='remove'>
         <%- removed ? 'undo' : 'remove' %>
