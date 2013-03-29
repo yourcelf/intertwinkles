@@ -2,24 +2,24 @@
 # Model
 ############################################################
 
-class TenPointModel extends Backbone.Model
+class PointsModel extends Backbone.Model
   idAttribute: "_id"
 
   addHandlers: =>
-    intertwinkles.socket.on "tenpoints:tenpoint", @_load
-    intertwinkles.socket.on "tenpoints:point", @_pointSet
-    intertwinkles.socket.on "tenpoints:support", @_supportSet
-    intertwinkles.socket.on "tenpoints:editing", @_editingSet
-    intertwinkles.socket.on "tenpoints:approved", @_approvedSet
-    intertwinkles.socket.on "tenpoints:move", @_pointMoved
+    intertwinkles.socket.on "points:pointset", @_load
+    intertwinkles.socket.on "points:point", @_pointSet
+    intertwinkles.socket.on "points:support", @_supportSet
+    intertwinkles.socket.on "points:editing", @_editingSet
+    intertwinkles.socket.on "points:approved", @_approvedSet
+    intertwinkles.socket.on "points:move", @_pointMoved
 
   removeHandlers: =>
-    intertwinkles.socket.off "tenpoints:tenpoint", @_load
-    intertwinkles.socket.off "tenpoints:point", @_pointSet
-    intertwinkles.socket.off "tenpoints:support", @_supportSet
-    intertwinkles.socket.off "tenpoints:editing", @_editingSet
-    intertwinkles.socket.off "tenpoints:approved", @_approvedSet
-    intertwinkles.socket.off "tenpoints:move", @_pointMoved
+    intertwinkles.socket.off "points:pointset", @_load
+    intertwinkles.socket.off "points:point", @_pointSet
+    intertwinkles.socket.off "points:support", @_supportSet
+    intertwinkles.socket.off "points:editing", @_editingSet
+    intertwinkles.socket.off "points:approved", @_approvedSet
+    intertwinkles.socket.off "points:move", @_pointMoved
 
   _load: (data) => @set data.model
 
@@ -66,8 +66,8 @@ class TenPointModel extends Backbone.Model
   #
   revisePoint: (data, callback) =>
     # Await callback, as this is not an idempotent call.
-    intertwinkles.socket.once "tenpoints:point", callback
-    intertwinkles.socket.send "tenpoints/revise_point", {
+    intertwinkles.socket.once "points:point", callback
+    intertwinkles.socket.send "points/revise_point", {
       _id: @id
       text: data.text
       point_id: data.point_id
@@ -92,8 +92,8 @@ class TenPointModel extends Backbone.Model
   setSupport: (data, callback) =>
     # Display immediately, then send socket. Response will be idempotent.
     @_supportSet(data)
-    intertwinkles.socket.once "tenpoints:support", callback
-    intertwinkles.socket.send "tenpoints/support_point", _.extend({
+    intertwinkles.socket.once "points:support", callback
+    intertwinkles.socket.send "points/support_point", _.extend({
       _id: @id
     }, data)
 
@@ -120,8 +120,8 @@ class TenPointModel extends Backbone.Model
   # Set whether we are editing a point.
   #
   setEditing: (data, callback) =>
-    intertwinkles.socket.once "tenpoints:editing", callback
-    intertwinkles.socket.send "tenpoints/set_editing", _.extend({
+    intertwinkles.socket.once "points:editing", callback
+    intertwinkles.socket.send "points/set_editing", _.extend({
       _id: @id
     }, data)
 
@@ -137,8 +137,8 @@ class TenPointModel extends Backbone.Model
   setApproved: (data, callback) =>
     # Display immediately, then send socket. Response will be idempotent.
     @_approvedSet(data)
-    intertwinkles.socket.once "tenpoints:approved", callback
-    intertwinkles.socket.send "tenpoints/set_approved", _.extend({
+    intertwinkles.socket.once "points:approved", callback
+    intertwinkles.socket.send "points/set_approved", _.extend({
       _id: @id,
     }, data)
 
@@ -167,8 +167,8 @@ class TenPointModel extends Backbone.Model
   #
   movePoint: (data, callback) =>
     # Wait for return, as this is not idempotent.
-    intertwinkles.socket.once "tenpoints:move", callback
-    intertwinkles.socket.send "tenpoints/move_point", _.extend({
+    intertwinkles.socket.once "points:move", callback
+    intertwinkles.socket.send "points/move_point", _.extend({
       _id: @id,
     }, data)
 
@@ -185,15 +185,15 @@ class TenPointModel extends Backbone.Model
     @trigger "notify:point:#{data.point_id}"
 
   #
-  # Retrieve all data for this tenpoint.
+  # Retrieve all data for this pointset.
   #
   fetch: (cb) =>
     return unless @get("slug")
     if cb?
-      intertwinkles.socket.once "tenpoints:tenpoint", (data) =>
+      intertwinkles.socket.once "points:pointset", (data) =>
         @_load(data)
         cb(null, this)
-    intertwinkles.socket.send "tenpoints/fetch_tenpoint", {slug: @get("slug")}
+    intertwinkles.socket.send "points/fetch_pointset", {slug: @get("slug")}
 
   #
   # Save changes to the name, slug, and sharing, but not points/drafts.
@@ -209,20 +209,20 @@ class TenPointModel extends Backbone.Model
       }
     }
     if opts.success? or opts.error?
-      intertwinkles.socket.once "tenpoints:tenpoint", (data) =>
+      intertwinkles.socket.once "points:pointset", (data) =>
         opts.error(data.error) if data.error?
         opts.success(data.model) if data.model?
-    intertwinkles.socket.send "tenpoints/save_tenpoint", data
+    intertwinkles.socket.send "points/save_pointset", data
 
-fetchTenPointList = (cb) =>
-  intertwinkles.socket.once "tenpoints:list", cb
-  intertwinkles.socket.send "tenpoints/fetch_tenpoint_list"
+fetchPointsList = (cb) =>
+  intertwinkles.socket.once "points:list", cb
+  intertwinkles.socket.send "points/fetch_pointset_list"
 
 ###########################################################
 # Views
 ###########################################################
 
-class TenPointsBaseView extends intertwinkles.BaseView
+class PointsBaseView extends intertwinkles.BaseView
   events: 'click .softnav': 'softNav'
   initialize: (options={}) ->
     super()
@@ -234,49 +234,49 @@ class TenPointsBaseView extends intertwinkles.BaseView
 # Front matter
 #
 
-class SplashView extends TenPointsBaseView
+class SplashView extends PointsBaseView
   template:     _.template $("#splashTemplate").html()
   itemTemplate: _.template $("#splashItemTemplate").html()
   
   initialize: (options) ->
     super(options)
-    @setTenPointList(options.tenPointList, false)
-    @listenTo intertwinkles.user, "change", @fetchTenPointList
+    @setPointsList(options.pointSetList, false)
+    @listenTo intertwinkles.user, "change", @fetchPointsList
 
-  fetchTenPointList: => fetchTenPointList(@setTenPointList)
+  fetchPointsList: => fetchPointsList(@setPointsList)
 
-  setTenPointList: (data, render=true) =>
-    @tenPointList = {
-      group: (new TenPointModel(tp) for tp in data.group or [])
-      public: (new TenPointModel(tp) for tp in data.public or [])
+  setPointsList: (data, render=true) =>
+    @pointSetList = {
+      group: (new PointsModel(tp) for tp in data.group or [])
+      public: (new PointsModel(tp) for tp in data.public or [])
     }
     if render
       @render()
 
   render: =>
     @$el.html(@template())
-    if @tenPointList.group?.length > 0
-      @$(".group-tenpoints").html("<ul></ul>")
-      for tenpoint in @tenPointList.group
-        @_addItem(".group-tenpoints ul", tenpoint)
-    if @tenPointList.public?.length > 0
-      @$(".public-tenpoints").html("<ul></ul>")
-      for tenpoint in @tenPointList.public
-        @_addItem(".public-tenpoints ul", tenpoint)
+    if @pointSetList.group?.length > 0
+      @$(".group-pointsets").html("<ul></ul>")
+      for pointset in @pointSetList.group
+        @_addItem(".group-pointsets ul", pointset)
+    if @pointSetList.public?.length > 0
+      @$(".public-pointsets").html("<ul></ul>")
+      for pointset in @pointSetList.public
+        @_addItem(".public-pointsets ul", pointset)
     intertwinkles.sub_vars(@el)
 
-  _addItem: (selector, tenpoint) =>
-    @$(selector).append(@itemTemplate(tenpoint: tenpoint))
+  _addItem: (selector, pointset) =>
+    @$(selector).append(@itemTemplate(pointset: pointset))
 
 #
 # Edit or add a new board.
 #
   
-class EditTenPointView extends TenPointsBaseView
+class EditPointSetView extends PointsBaseView
   template: _.template $("#editTemplate").html()
   events:
     'click .softnav': 'softNav'
-    'submit    form': 'saveTenPoint'
+    'submit    form': 'savePointSet'
     'keyup #id_name': 'setSlug'
     'keyup #id_slug': 'checkSlug'
 
@@ -287,7 +287,7 @@ class EditTenPointView extends TenPointsBaseView
       @title = "Edit Board Settings"
       @action = "Save"
     else
-      @model = new TenPointModel()
+      @model = new PointsModel()
       @title = "Add new board"
       @action = "Add board"
 
@@ -303,11 +303,11 @@ class EditTenPointView extends TenPointsBaseView
     parent = @$("#id_slug").closest(".control-group")
     showURL = ->
       parent.find(".url-display").html(
-        "#{INTERTWINKLES_APPS.tenpoints.url}/10/#{encodeURIComponent(val)}/"
+        "#{INTERTWINKLES_APPS.points.url}/u/#{encodeURIComponent(val)}/"
       )
     if val and val != @model.get("slug")
-      intertwinkles.socket.send "tenpoints/check_slug", {slug: val}
-      intertwinkles.socket.once "tenpoints:check_slug", (data) =>
+      intertwinkles.socket.send "points/check_slug", {slug: val}
+      intertwinkles.socket.once "points:check_slug", (data) =>
         parent.removeClass('error')
         parent.find(".error-msg").remove()
         if data.ok
@@ -333,7 +333,7 @@ class EditTenPointView extends TenPointsBaseView
     })
     @addView("#sharing_controls", @sharing_control)
   
-  saveTenPoint: (event) =>
+  savePointSet: (event) =>
     event.preventDefault()
     cleaned_data = @validate()
     if cleaned_data
@@ -343,7 +343,7 @@ class EditTenPointView extends TenPointsBaseView
         sharing: @sharing_control.sharing
       }, {
         success: (model) =>
-          intertwinkles.app.navigate("/tenpoints/10/#{model.slug}/", {
+          intertwinkles.app.navigate("/points/u/#{model.slug}/", {
             trigger: true
           })
       }
@@ -358,8 +358,8 @@ class EditTenPointView extends TenPointsBaseView
 # Display a single board.
 #
 
-class TenPointView extends TenPointsBaseView
-  template: _.template $("#tenpointTemplate").html()
+class PointSetView extends PointsBaseView
+  template: _.template $("#pointsetTemplate").html()
   events:
     'click .softnav': 'softNav'
     'click a.add-point': 'addPoint'
@@ -369,8 +369,8 @@ class TenPointView extends TenPointsBaseView
     @listenTo @model, "change:name", @render
     @listenTo @model, "change:points", @renderPoints
     @listenTo @model, "change:drafts", @renderDrafts
-    @listenTo intertwinkles.socket, "tenpoint:events", @buildTimeline
-    #intertwinkles.socket.send "tenpoints/get_tenpoint_events", {
+    @listenTo intertwinkles.socket, "points:events", @buildTimeline
+    #intertwinkles.socket.send "points/get_points_events", {
     #  _id: @model.id
     #}
 
@@ -701,7 +701,7 @@ class TenPointView extends TenPointsBaseView
 # Display a single point.
 #
 
-class PointView extends TenPointsBaseView
+class PointView extends PointsBaseView
   template: _.template $("#pointTemplate").html()
   supportersTemplate: _.template $("#supportersTemplate").html()
   events:
@@ -763,7 +763,7 @@ class PointView extends TenPointsBaseView
         }))
     @$("[rel=popover]").popover()
 
-class PointDetailView extends TenPointsBaseView
+class PointDetailView extends PointsBaseView
   template: _.template $("#pointDetailTemplate").html()
   initialize: (options) =>
     @model = options.model
@@ -779,7 +779,7 @@ class PointDetailView extends TenPointsBaseView
     @pointView.render()
     @$(".point.span6")
 
-class HistoryView extends TenPointsBaseView
+class HistoryView extends PointsBaseView
   template: _.template $("#historyTemplate").html()
   supportersTemplate: _.template $("#supportersTemplate").html()
   initialize: (options) ->
@@ -916,47 +916,47 @@ class ApprovePointView extends intertwinkles.BaseModalFormView
 
 class Router extends Backbone.Router
   routes:
-    "tenpoints/10/:slug/point/:point_id/": "pointDetail"
-    "tenpoints/10/:slug/history/:point_id/": "history"
-    "tenpoints/10/:slug/edit/": "edit"
-    "tenpoints/10/:slug/": "board"
-    "tenpoints/add/": "add"
-    "tenpoints/": "index"
+    "points/u/:slug/point/:point_id/": "pointDetail"
+    "points/u/:slug/history/:point_id/": "history"
+    "points/u/:slug/edit/": "edit"
+    "points/u/:slug/": "board"
+    "points/add/": "add"
+    "points/": "index"
 
   initialize: ->
-    @model = new TenPointModel()
+    @model = new PointsModel()
     @model.addHandlers()
-    @model.set(INITIAL_DATA.tenpoint or {})
-    @tenPointList = INITIAL_DATA.ten_points_list
+    @model.set(INITIAL_DATA.pointset or {})
+    @pointSetList = INITIAL_DATA.pointsets_list
     @_joinRoom(@model) if @model.id?
     @listenTo @model, "change:_id", =>
       if @model.id? then @_joinRoom(@model) else @_leaveRoom()
     super()
 
   pointDetail: (slug, point_id) =>
-    $("title").html(@model.get("name") + " - Ten Points")
+    $("title").html(@model.get("name") + " - Points of Unity")
     @_open(
       new PointDetailView({model: @model, point_id: point_id}), slug
     )
   history: (slug, point_id) =>
-    $("title").html(@model.get("name") + " - Ten Points")
+    $("title").html(@model.get("name") + " - Points of Unity")
     @_open(
       new HistoryView({model: @model, point_id: point_id}), slug
     )
   edit: (slug) =>
-    $("title").html("Edit " + @model.get("name") + " - Ten Points")
-    @_open(new EditTenPointView({model: @model}), slug)
+    $("title").html("Edit " + @model.get("name") + " - Points of Unity")
+    @_open(new EditPointSetView({model: @model}), slug)
   board: (slug) =>
-    $("title").html(@model.get("name") + " - Ten Points")
-    @_open(new TenPointView({model: @model}), slug)
+    $("title").html(@model.get("name") + " - Points of Unity")
+    @_open(new PointSetView({model: @model}), slug)
   add: =>
-    $("title").html("Add - Ten Points")
-    @_open(new EditTenPointView({model: @model}), null)
+    $("title").html("Add - Points of Unity")
+    @_open(new EditPointSetView({model: @model}), null)
   index: =>
-    $("title").html("Ten Points")
-    view = new SplashView(tenPointList: @tenPointList)
+    $("title").html("Points of Unity")
+    view = new SplashView(pointSetList: @pointSetList)
     if @view?
-      fetchTenPointList(view.setTenPointList)
+      fetchPointsList(view.setPointsList)
     @_open(view, null)
 
   onReconnect: =>
@@ -969,7 +969,7 @@ class Router extends Backbone.Router
     if slug? and not @model.get("slug")?
       @model.set({slug: slug})
       return @model.fetch =>
-        $("title").html(@model.get("name") + " - Ten Points")
+        $("title").html(@model.get("name") + " - Points of Unity")
         @_joinRoom(@model)
         @_showView(view)
     else
@@ -990,7 +990,7 @@ class Router extends Backbone.Router
   _joinRoom: =>
     @_leaveRoom()
 
-    @roomView = new intertwinkles.RoomUsersMenu(room: "tenpoints/#{@model.id}")
+    @roomView = new intertwinkles.RoomUsersMenu(room: "points/#{@model.id}")
     $(".sharing-online-group .room-users").replaceWith(@roomView.el)
     @roomView.render()
 
@@ -1006,7 +1006,7 @@ class Router extends Backbone.Router
 
 app = null
 intertwinkles.connect_socket ->
-  intertwinkles.build_toolbar($("header"), {applabel: "tenpoints"})
+  intertwinkles.build_toolbar($("header"), {applabel: "points"})
   intertwinkles.build_footer($("footer"))
 
   unless app?

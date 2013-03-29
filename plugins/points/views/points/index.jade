@@ -1,10 +1,10 @@
 extends ../../../../views/layout
 
 block poststyles
-  link(rel="stylesheet", type="text/css", href=asset("tenpoints/css/style.styl"))
+  link(rel="stylesheet", type="text/css", href=asset("points/css/style.styl"))
 
 block postscripts
-  script(type="text/javascript", src=asset("tenpoints/js/frontend.coffee"))
+  script(type="text/javascript", src=asset("points/js/frontend.coffee"))
 
 block preapp
   div.pull-right(style='position: absolute; right: 1em; top: 60px;')
@@ -18,20 +18,20 @@ block postapp
     div.row-fluid
       div.span6.offset3(style='text-align: center')
         :markdown
-          # Ten Points
+          # Points of Unity
           Develop a set of shared values or principles with your group.
 
     div(style='text-align: center;')
-      a.btn.btn-large.btn-primary.softnav.add-new-tenpoint(href='/tenpoints/add/').
+      a.btn.btn-large.btn-primary.softnav.add-new-pointset(href='/points/add/').
         New Board
 
     div.row-fluid
       div.span6
         h3(style='text-align: left;') Public boards
-        div.public-tenpoints Nothing here yet.
+        div.public-pointsets Nothing here yet.
       div.span6
         h3(style='text-align: left;') From your groups
-        div.group-tenpoints.
+        div.group-pointsets.
           <% if (intertwinkles.is_authenticated()) { %>
             Nothing here yet.
           <% } else { %>
@@ -40,10 +40,10 @@ block postapp
 
   script(type='text/template', id='splashItemTemplate')
     li.
-      <a class='softnav' href='/tenpoints/10/<%- tenpoint.id %>/'>
-        <%- tenpoint.get("name") %>
+      <a class='softnav' href='/points/u/<%- pointset.id %>/'>
+        <%- pointset.get("name") %>
       </a>
-      <span class='group-name label varsub' data-group-id='<%- tenpoint.get("sharing").group_id %>'></span>
+      <span class='group-name label varsub' data-group-id='<%- pointset.get("sharing").group_id %>'></span>
 
   script(type='text/template', id='editTemplate')
     h1 <%- title %>
@@ -68,11 +68,11 @@ block postapp
             div.controls.
               <input class='btn btn-primary btn-large' type='submit' value='<%- action %>' />
 
-  script(type='text/template', id='tenpointTemplate')
+  script(type='text/template', id='pointsetTemplate')
     div.hover-edit(style='text-align: center;')
       h1
         <%- model.name %>
-        <a class='edit-link softnav' href='/tenpoints/10/<%- model.slug %>/edit/'>edit</a>
+        <a class='edit-link softnav' href='/points/u/<%- model.slug %>/edit/'>edit</a>
     ul.points.two-col
     hr
 
@@ -133,7 +133,7 @@ block postapp
               <% if (point.revisions.length > 1) { %>
               li.
                 <a class='softnav'
-                   href='/tenpoints/10/<%- model.slug %>/history/<%- point._id %>/'>
+                   href='/points/u/<%- model.slug %>/history/<%- point._id %>/'>
                   history
                 </a>
               <% } %>
@@ -153,7 +153,7 @@ block postapp
                 <% } %>
               li.
                 <a class='only softnav'
-                    href='/tenpoints/10/<%- model.slug %>/point/<%- point._id %>/'
+                    href='/points/u/<%- model.slug %>/point/<%- point._id %>/'
                     title='Show detail'>
                   <i class='icon-fullscreen'></i>
                 </a>
@@ -184,7 +184,7 @@ block postapp
         <%- model.name %> <%- group ? "by " + group.name : "" %>
       div.point-detail-point.span6.offset3
       div(style='clear: both;')
-        <a class='softnav' href='/tenpoints/10/<%- model.slug %>/'>More points</a>
+        <a class='softnav' href='/points/u/<%- model.slug %>/'>More points</a>
 
   script(type='text/template', id='editPointTemplate')
     form.edit-point.form-horizontal

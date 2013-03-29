@@ -10,7 +10,7 @@ require "better-stack-traces"
 module.exports = {
   run: (config, jsonpath) ->
     schema = require("./schema").load(config)
-    tenpoints = require("./tenpoints")(config)
+    pointslib = require("./pointslib")(config)
     db = mongoose.connect(
       "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
     )
@@ -19,7 +19,7 @@ module.exports = {
 
     create_vote  = (_id, point_id, voter, cb) ->
       return cb() unless voter
-      tenpoints.change_support {}, {
+      pointslib.change_support {}, {
         _id: _id, point_id: point_id, name: voter, vote: true
       }, cb
 
@@ -27,7 +27,7 @@ module.exports = {
       return cb() unless text
       user = _.find(votes, (v) -> not not v)
       return cb() unless user
-      tenpoints.revise_point {}, {
+      pointslib.revise_point {}, {
         _id, text, name: user
       }, (err, doc, point) ->
         return cb(err) if err?
@@ -45,14 +45,14 @@ module.exports = {
         console.log("Skipping #{slug}; empty")
         return done()
 
-      schema.TenPoint.findOne {slug: slug}, (err, doc) ->
+      schema.PointSet.findOne {slug: slug}, (err, doc) ->
         return done(err) if err?
         if doc?
           console.log("Skipping #{slug}; already exists")
           return done()
 
         console.log("Creating #{slug}")
-        tenpoints.save_tenpoint {}, {
+        pointslib.save_pointset {}, {
           model: {
             name: slug.replace(/[-]/g, " ")
             slug: slug
