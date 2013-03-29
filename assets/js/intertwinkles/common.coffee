@@ -67,7 +67,9 @@ class intertwinkles.BaseModalFormView extends intertwinkles.BaseView
     @validation = options.validation
 
   remove: =>
-    @$el.modal().on("hidden", => super())
+    @removed = true
+    @$el.on "hidden", =>
+      super()
     @$el.modal('hide')
 
   submit: (event) =>
@@ -84,6 +86,9 @@ class intertwinkles.BaseModalFormView extends intertwinkles.BaseView
     @$el.addClass("modal hide fade")
     @$el.html @template(@context)
     @$el.modal('show')
+    @$el.on "hidden", =>
+      console.log "render on hidden"
+      @trigger "hidden", this
 
 intertwinkles.BaseEvents = {
   'click .softnav': 'softNav'

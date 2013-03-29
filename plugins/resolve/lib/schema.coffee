@@ -51,6 +51,8 @@ load = (config) ->
   ProposalSchema.virtual('url').get -> "/p/#{@_id}/"
   ProposalSchema.virtual('absolute_url').get ->
     return "#{config.apps.resolve.url}#{@url}"
+  ProposalSchema.set('toObject', {virtuals: true})
+  ProposalSchema.set('toJSON', {virtuals: true})
 
   schemas = {}
   for name, schema of {Proposal: ProposalSchema}

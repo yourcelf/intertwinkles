@@ -247,7 +247,7 @@ class ShowProposalView extends intertwinkles.BaseView
               data-entity='#{resolve.model.id}'
               data-subentity='#{rev._id}'
               data-recipient='#{rev.user_id}'
-              data-url='#{window.location.pathname}'></span>")
+              data-url='#{resolve.model.get("url")}'></span>")
 
       @addView ".proposal .date-auto", new intertwinkles.AutoUpdatingDate(date: rev.date)
       title = resolve.model.get("revisions")[0].text.split(" ").slice(0, 20).join(" ") + "..."
@@ -304,6 +304,7 @@ class ShowProposalView extends intertwinkles.BaseView
         _id: opinion._id
         rev_id: opinion.revisions[0]._id
         proposal_id: resolve.model.id
+        proposal_url: resolve.model.get("url")
         user_id: opinion.user_id
         rendered_user: @renderUser(opinion.user_id, opinion.name)
         vote_value: opinion.revisions[0].vote

@@ -265,7 +265,6 @@ class RoomManager extends events.EventEmitter
         @socketIdToSessionId[sock.sid] == session_id
       )
       # Announce to any RoomManager listeners that this socket has left.
-      channel = room.split("/")[0]
       emission = {socket, session, room, last}
       @emit "leave", emission
       # Respond to the socket, acknowledging the leave.

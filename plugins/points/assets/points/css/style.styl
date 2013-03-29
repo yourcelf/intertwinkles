@@ -1,0 +1,179 @@
+@-webkit-keyframes wiggle {
+  0% {-webkit-transform:rotate(4deg);}
+  50% {-webkit-transform:rotate(-4deg);}
+  100% {-webkit-transform:rotate(4deg);}
+}
+ 
+/* firefox */
+@-moz-keyframes wiggle {
+  0% {-moz-transform:rotate(4deg);}
+  50% {-moz-transform:rotate(-4deg);}
+  100% {-moz-transform:rotate(4deg);}
+}
+ 
+@keyframes wiggle {
+  0% {transform:rotate(4deg);}
+  50% {transform:rotate(-4deg);}
+  100% {transform:rotate(4deg);}
+}
+
+// http://stackoverflow.com/a/10229096
+.typeahead
+  z-index: 1051
+
+.hover-edit
+  h1
+    display: inline-block
+    position: relative
+    .edit-link
+      display: none
+      position: absolute
+      top: 0
+      right: -2em
+      font-size: 16px
+  &:hover
+    .edit-link
+      display: inline-block
+
+.url-display
+  font-size: smaller
+  color: green
+  font-style: sans-serif
+  white-space: nowrap
+
+.add-point-holder
+  display: inline-block
+  .control-line
+    text-align: right
+
+ul.two-col
+  -moz-column-count: 2
+  -moz-column-gap: 2.5%
+  -webkit-column-count: 2
+  -webkit-column-gap: 2.5%
+  column-count: 2
+  column-gap: 20px
+  margin: 1em 0 0 0
+  li
+    list-style-type: none
+
+@media (max-width: 767px)
+  ul.two-col
+    -moz-column-count: 1
+    -webkit-column-count: 1
+    column-count: 1
+
+.point
+  display: inline-block
+  width: 100%
+  border: 1px solid #eee
+  box-shadow: 0px 0px 5px #ddd
+  &.dragging
+    box-shadow: 0px 0px 5px #f08
+  &.draft
+    opacity: 0.7
+    box-shadow: none
+
+  .point-table
+    display: table
+    width: 100%
+
+  .point-row
+    display: table-row
+
+  .number
+    display: table-cell
+    font-size: 24px
+    line-height: 1.1
+    width: 48px
+    min-height: 2em
+    vertical-align: middle
+    height: 100%
+    background-color: rgba(245, 245, 245, 0.8)
+    text-align: center
+    color: #ccc
+    a
+      color: #aaa
+      &.supported
+        color: #ff0088
+
+  .therest
+    display: table-cell
+    margin-left: 48px
+
+  .text
+    padding: 0 0.5em 0.5em 0.5em
+
+  .supporters
+    padding: 0.2em 0.2em 0 0
+    text-align: right
+    color: #aaa
+    font-family: sans-serif
+    font-size: 14px
+    span[rel=popover]
+      cursor: help
+    .added img
+      -webkit-animation: wiggle 0.5s 8
+      -moz-animation: wiggle 0.5s 8
+      animation: wiggle 0.5s 8
+
+  .edit-line
+    a
+      color: #999
+    a:hover
+      color: #05f
+    background-color: rgba(245, 245, 245, 0.8)
+    ul.group
+      margin: 0
+      li
+        float: left
+        margin: 0
+        padding: 0
+        margin-right: 0.5em
+        list-style-type: none
+        .only
+          opacity: 0.7
+        .edit.being-edited
+          color: #aaa
+        
+  
+  .editing
+    i
+      -webkit-animation: wiggle 0.5s infinite
+      -moz-animation: wiggle 0.5s infinite
+      animation: wiggle 0.5s infinite
+    width: 32px
+    border-radius: 5px
+    text-align: center
+    background-color: #f90
+    display: none
+    &.active
+      display: inline-block
+
+
+.point-detail
+  text-align: center
+  .point-detail-point
+    display: inline-block
+    text-align: left
+
+.point-history .edit-date
+  text-align: center
+
+.drag-handle
+  opacity: 0
+.children-draggable .drag-handle
+  opacity: 1
+  &:hover
+    color: #ff0088
+    cursor: move
+
+.timeline-holder-holder
+  margin-top: 2em
+  margin-bottom: 2em
+  // Dead for now..
+  display: none
+
+@media (max-width: 480px)
+  .timeline-holder-holder
+    display: none

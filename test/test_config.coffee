@@ -16,7 +16,7 @@ config.apps.resolve.url = "#{config.api_url}/resolve"
 config.apps.dotstorm.url = "#{config.api_url}/dotstorm"
 config.apps.twinklepad.url = "#{config.api_url}/twinklepad"
 config.apps.clock.url = "#{config.api_url}/clock"
-config.apps.tenpoints.url = "#{config.api_url}/tenpoints"
+config.apps.points.url = "#{config.api_url}/points"
 config.email = {port: 2526, host: "localhost"}
 if process.env.SKIP_SOLR_TESTS
   config.solr = {fake_solr: true}

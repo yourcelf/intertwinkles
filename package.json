@@ -4,7 +4,7 @@
   "description": "Web application for group collaboration and decision making",
   "scripts": {
       "start": "bin/run.js",
-      "test": "mocha --compilers coffee:coffee-script --timeout 5000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
+      "test": "mocha --compilers coffee:coffee-script --timeout 10000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
       "postinstall": "bin/install_dependencies.py config secrets assets"
   },
   "repository": "",
