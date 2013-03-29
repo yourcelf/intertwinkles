@@ -14,7 +14,10 @@ run = (config) ->
         dest = config.apps.dotstorm.url + req.url
       else if host == "tenpoints.intertwinkles.org"
         # Legacy tenpoints URLs.
-        dest = config.apps.points.url + "/u" + req.url
+        if req.url == "/" or req.url == ""
+          dest = config.apps.points.url + "/"
+        else
+          dest = config.apps.points.url + "/u" + req.url
       else
         # Plain port 80 redirects.
         dest = config.apps.www.url + req.url
