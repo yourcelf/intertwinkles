@@ -18,6 +18,8 @@ asset_folders = [
   __dirname + "/../plugins/resolve/assets",
   __dirname + "/../plugins/firestarter/assets",
   __dirname + "/../plugins/twinklepad/assets",
+  __dirname + "/../plugins/clock/assets",
+  __dirname + "/../plugins/points/assets",
 ]
 
 compiled_files = [

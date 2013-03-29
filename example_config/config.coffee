@@ -84,6 +84,7 @@ config = {
       name: "Points of Unity"
       about: "Develop a set of principles or values with your group"
       url: "#{base_url}/points"
+      image: "#{base_url}/static/points/img/points_tile.png"
     }
     clock: {
       name: "Progressive Clock"

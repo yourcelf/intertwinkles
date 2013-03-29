@@ -188,6 +188,7 @@ load = (config) ->
       update: "updated"
       join: "joined"
       decline: "declined"
+      vote: "voted"
     }[@type] or @type + "ed"
   EventSchema.virtual("absolute_url").get(absolute_url)
   EventSchema.virtual("title").get ->

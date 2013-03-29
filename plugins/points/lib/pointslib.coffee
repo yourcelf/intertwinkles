@@ -43,7 +43,7 @@ module.exports = (config) ->
       via_user: session.auth?.user_id
       group: pointset.sharing?.group_id
       data: {
-        name: pointset.name
+        title: pointset.name
         slug: pointset.slug
       }
     }, opts
