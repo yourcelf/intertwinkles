@@ -738,7 +738,7 @@ class PointView extends PointsBaseView
     @$el.effect('highlight', {}, 5000)
 
   flashSupporter: (data) =>
-    q = @$("[data-id=#{data.user_id or ""}][data-name=#{data.name or ""}]")
+    q = @$("[data-id=\"#{data.user_id or ""}\"][data-name=\"#{data.name or ""}\"]")
     q.addClass("added").effect('highlight', {}, 5000)
 
   startDrag: (event) =>
