@@ -16,7 +16,7 @@ load = (config) ->
       }]
     }]
   }
-  TenPointSchema = new Schema
+  PointSetSchema = new Schema
     name: {type: String, required: true}
     slug: {type: String, required: true, unique: true}
     created: {type: Date, default: Date.now}
@@ -30,20 +30,20 @@ load = (config) ->
     }
     points: [Point]
     drafts: [Point]
-  TenPointSchema.virtual('url').get ->
-    return "/10/#{@slug}/"
-  TenPointSchema.virtual('absolute_url').get ->
-    return "#{config.apps.tenpoints.url}#{@url}"
-  TenPointSchema.set('toObject', {virtuals: true})
-  TenPointSchema.set('toJSON',   {virtuals: true})
-  TenPointSchema.methods.find_point = (id) ->
+  PointSetSchema.virtual('url').get ->
+    return "/u/#{@slug}/"
+  PointSetSchema.virtual('absolute_url').get ->
+    return "#{config.apps.points.url}#{@url}"
+  PointSetSchema.set('toObject', {virtuals: true})
+  PointSetSchema.set('toJSON',   {virtuals: true})
+  PointSetSchema.methods.find_point = (id) ->
     point = _.find(@points, (p) -> p._id.toString() == id.toString()) or \
             _.find(@drafts, (p) -> p._id.toString() == id.toString())
-  TenPointSchema.methods.is_approved = (point) ->
+  PointSetSchema.methods.is_approved = (point) ->
     return not not _.find(@points, (p) -> p._id.toString() == point._id.toString())
 
   schemas = {}
-  for name, schema of {TenPoint: TenPointSchema}
+  for name, schema of {PointSet: PointSetSchema}
     try
       schemas[name] = mongoose.model(name)
     catch e

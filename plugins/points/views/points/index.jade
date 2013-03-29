@@ -1,0 +1,256 @@
+extends ../../../../views/layout
+
+block poststyles
+  link(rel="stylesheet", type="text/css", href=asset("points/css/style.styl"))
+
+block postscripts
+  script(type="text/javascript", src=asset("points/js/frontend.coffee"))
+
+block preapp
+  div.pull-right(style='position: absolute; right: 1em; top: 60px;')
+    ul.sharing-online-group.pull-right
+      li.room-users
+      li.sharing
+  div(style='height: 2em;')
+
+block postapp
+  script(type='text/template', id='splashTemplate')
+    div.row-fluid
+      div.span6.offset3(style='text-align: center')
+        :markdown
+          # Points of Unity
+          Develop a set of shared values or principles with your group.
+
+    div(style='text-align: center;')
+      a.btn.btn-large.btn-primary.softnav.add-new-pointset(href='/points/add/').
+        New Board
+
+    div.row-fluid
+      div.span6
+        h3(style='text-align: left;') Public boards
+        div.public-pointsets Nothing here yet.
+      div.span6
+        h3(style='text-align: left;') From your groups
+        div.group-pointsets.
+          <% if (intertwinkles.is_authenticated()) { %>
+            Nothing here yet.
+          <% } else { %>
+            Sign in to see your groups' boards.
+          <% } %>
+
+  script(type='text/template', id='splashItemTemplate')
+    li.
+      <a class='softnav' href='/points/u/<%- pointset.id %>/'>
+        <%- pointset.get("name") %>
+      </a>
+      <span class='group-name label varsub' data-group-id='<%- pointset.get("sharing").group_id %>'></span>
+
+  script(type='text/template', id='editTemplate')
+    h1 <%- title %>
+    div.row-fluid
+      div.span6.offset3
+        form.form-horizontal
+          div.control-group
+            label.control-label(for="id_name") Name for these points
+            div.controls
+              <input id='id_name' type='text' name='name' style='display: block' value='<%- model.name || "" %>' />
+          div.control-group
+            label.control-label(for="id_slug") URL name 
+            div.controls
+              <input id='id_slug' type='text' name='slug' style='display: block' value='<%- model.slug || "" %>' />
+              div.url-display
+                <%- model.absolute_url %>
+
+          div.control-group
+            label.control-label(for='id_group') Group and sharing
+            div.controls#sharing_controls
+          div.control-group
+            div.controls.
+              <input class='btn btn-primary btn-large' type='submit' value='<%- action %>' />
+
+  script(type='text/template', id='pointsetTemplate')
+    div.hover-edit(style='text-align: center;')
+      h1
+        <%- model.name %>
+        <a class='edit-link softnav' href='/points/u/<%- model.slug %>/edit/'>edit</a>
+    ul.points.two-col
+    hr
+
+    div.drafts-area.row-fluid
+      div(style='text-align: center;')
+        h3 Drafts
+        div.add-point
+          <% if (intertwinkles.can_edit(model)) { %>
+          a.btn.add-point(href='#') Add Point
+          <% } %>
+      ul.drafts.two-col
+
+    div.row-fluid.timeline-holder-holder
+      h3 Timeline
+      div.timeline-holder.span11
+
+  script(type='text/template', id='supportersTemplate').
+    <span
+      <% if (supporters.length > 0) { %>
+       rel='popover'
+
+       title='Supporters'
+       data-content='<% _.each(supporters, function(s, i) { %>&lt;nobr&gt;<%- intertwinkles.inline_user(s.user_id, s.name) %>&lt;/nobr&gt;<%- i < supporters.length - 1 ? ", " : "" %><% }); %>'
+       data-html='true'
+       data-trigger='click'
+       data-placement='left'
+      <% } %>
+      ><%- supporters.length %>
+      supporter<%- supporters.length == 1 ? "" : "s" %>:
+    </span>
+    <% _.each(supporters, function(supporter) { %>
+      <span data-id="<%- supporter.user_id || '' %>" data-name="<%- supporter.name || ''%>">
+        <%= intertwinkles.user_icon(supporter.user_id, supporter.name, "tiny") %>
+      </span>
+    <% }); %>
+
+  script(type='text/template', id='pointTemplate')
+    div.point-table
+      div.point-row
+        div.number.
+          <% if (intertwinkles.can_edit(model)) { %>
+            <a class='upboat<%- sessionSupports ? " supported": "" %>' href='#'>
+              &#x25b2;
+            </a><br />
+          <% } %>
+          <span class='drag-handle'>&bull;</span><br />
+          
+        div.therest
+          div.supporters.
+            <%= supportersTemplate({supporters: point.revisions[0].supporters}) %>
+          div.text.
+            <%= intertwinkles.markup(point.revisions[0].text) %>
+          div.edit-line
+            <% if (!approved) { %>
+            a.mark-approved.pull-left(href='#') adopt
+            <% } %>
+            ul.group.pull-right
+              <% if (point.revisions.length > 1) { %>
+              li.
+                <a class='softnav'
+                   href='/points/u/<%- model.slug %>/history/<%- point._id %>/'>
+                  history
+                </a>
+              <% } %>
+              <% if (approved) { %>
+              li
+                a.mark-approved(href='#') retire
+              <% } %>
+              li.
+                <span
+                    class='editing<%- point.editing.length > 0 ? " active" : "" %>'
+                    title='Currently being edited...'>
+                  <i class='icon-pencil'></i>
+                </span>
+                <% if (intertwinkles.can_edit(model)) { %>
+                  <a class='edit<%- point.editing.length > 0 ? " being-edited" : "" %>'
+                     href='#'>edit</a>
+                <% } %>
+              li.
+                <a class='only softnav'
+                    href='/points/u/<%- model.slug %>/point/<%- point._id %>/'
+                    title='Show detail'>
+                  <i class='icon-fullscreen'></i>
+                </a>
+            div(style='clear: both;')
+
+  script(type='text/template', id='voteTemplate')
+    form.vote-form.form-horizontal
+      div.modal-body
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        blockquote <%= intertwinkles.markup(point.revisions[0].text) %>
+        p(style='font-style: italic;').
+          This point currently has <%- point.revisions[0].supporters.length %>
+          supporter<%- point.revisions[0].supporters.length == 1 ? "" : "s" %>.
+        div.control-group
+          label.control-label(for='id_user') Voting for:
+          div.controls.name-input(style='z-index: 1000')
+      div.modal-footer
+        button.pull-right.btn.btn-primary(type='submit')
+        div.status.pull-right(style='margin-right: 0.5em;')
+        a.close.pull-left.btn(href='#', data-dismiss='modal') Cancel
+          
+
+
+
+  script(type='text/template', id='pointDetailTemplate')
+    div.point-detail.row-fluid
+      h3(style='text-align: center').
+        <%- model.name %> <%- group ? "by " + group.name : "" %>
+      div.point-detail-point.span6.offset3
+      div(style='clear: both;')
+        <a class='softnav' href='/points/u/<%- model.slug %>/'>More points</a>
+
+  script(type='text/template', id='editPointTemplate')
+    form.edit-point.form-horizontal
+      div.modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        h3 <%- point ? "Edit Point" : "Add Point" %>
+        <% if (!soleSupporter) { %>
+        div.alert
+          | Others have supported this point. Changing it now will clear their votes.
+        <% } %>
+      div.modal-body
+        div.control-group.name
+          label.control-label(for="id_user") Name:
+          div.controls
+            div.name-input
+        div.control-group.text
+          label.control-label(for="id_text") Text:
+          div.controls
+            textarea#id_text(rows='10', cols='30', name='text')
+              <%- point ? point.revisions[0].text : "" %>
+      div.modal-footer
+        button.btn.btn-primary(type='submit') Save
+        a.close.pull-left.btn(href='#', data-dismiss='modal') Cancel
+
+  script(type='text/template', id='approvePointTemplate')
+    form.approve-point.form-horizontal
+      div.modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        h3 <%- approved ? "Retire point" : "Adopt point" %>
+      div.modal-body
+        blockquote <%= intertwinkles.markup(point.revisions[0].text) %>
+        p.
+          <% if (approved) { %>
+            Does your group want to retire this point?
+          <% } else { %>
+            Is your group ready to adopt this point?
+          <% } %>
+      div.modal-footer
+        button.btn.btn-primary(type='submit')
+          <%- approved ? "Retire point" : "Adopt point" %>
+        a.close.pull-left.btn(href='#', data-dismiss='modal') Cancel
+
+  script(type='text/template', id='historyTemplate')
+    div.point-history
+      h3(style='text-align: center').
+        <%- model.name %> <%- group ? "by " + group.name: "" %>
+      div.point-revisions.
+        <% for (var i = 0; i < point.revisions.length; i++) { %>
+          <% var rev = point.revisions[i]; %>
+          <% var next = i < point.revisions.length ? point.revisions[i + 1] : null; %>
+          <% var dmp = new diff_match_patch(); dmp.Diff_EditCost = 4; %>
+          <div class='edit-date varsub' data-date='<%- rev.created %>'></div>
+          <div class='row-fluid'>
+            <div class='revision span6 offset3 point'>
+              <div class='supporters'>
+                <%= supportersTemplate({supporters: rev.supporters}) %>
+              </div>
+              <div class='text'>
+                <% if (next) { %>
+                  <% var d = dmp.diff_main(next.text, rev.text); %>
+                  <% dmp.diff_cleanupSemantic(d); %>
+                  <%= dmp.diff_prettyHtml(d) %>
+                <% } else { %>
+                  <%= intertwinkles.markup(rev.text || "") %>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% } %>
