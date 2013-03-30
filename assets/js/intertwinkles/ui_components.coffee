@@ -487,17 +487,28 @@ class intertwinkles.InviteHelper extends Backbone.View
     'click .barcode': 'getBarcode'
     'click .short-url': 'getShortUrl'
     'click input': 'selectText'
+    'click .dropdown-toggle': 'checkLocation'
+
   initialize: (options) ->
     @message = options?.message or "Invite others with this link:"
     @url = options?.url or window.location.href
     @application = options?.application or INITIAL_DATA.application
+    @current_location = window.location.href
+
+  checkLocation: (event) =>
+    if window.location.href != @current_location
+      event.preventDefault()
+      @render()
+      @current_location = window.location.href
+      setTimeout (=> @$(".dropdown-toggle").click()), 1
+      return
 
   selectText: (event) =>
     $(event.currentTarget).select()
     event.stopPropagation()
     event.preventDefault()
 
-  render: (event) =>
+  render: =>
     @$el.addClass("invite-helper dropdown")
     if @application? and @url?
       @$el.html(@template({
