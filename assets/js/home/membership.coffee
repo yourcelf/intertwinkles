@@ -171,12 +171,13 @@ class MembershipTable extends Backbone.View
     td = @$("td.add-email")
     td.removeClass("error")
     td.find(".error-msg").remove()
-    email = $.trim(@$("#add_email").val())
-    return unless email
+    email = $.trim(@$("#add_email").val()).toLowerCase()
+    return null unless email
     valid = EMAIL_RE.test(email)
     unless valid
       td.addClass("error")
       td.append("<span class='help-inline error-msg'>This doesn't look like a valid email...</span>")
+    return email
 
   updateChangeSet: (email, key, val) =>
     member  = (
@@ -229,19 +230,21 @@ class MembershipTable extends Backbone.View
 
   addMember: (event) =>
     event.preventDefault()
-    @validateEmail(event)
-    email = $.trim(@$("#add_email").val())
+    email = @validateEmail(event)
+    return unless email
     role = @$("#add_role").val()
     voting = @$("#add_voting").is(":checked")
     email_td = @$("#add_email").parent()
 
+    get_email = (m) => return m.user?.email or @users[m.user].email
+
     if email_td.hasClass("error")
       console.info "error"
       return
-    else if _.find(@group.members, (m) => @users[m.user]?.email == email)?
+    else if _.find(@group.members, (m) => get_email(m) == email)?
       email_td.addClass("error")
       flash "info", "That user is already a member."
-    else if _.find(@group.invited_members, (m) => @users[m.user]?.email == email)?
+    else if _.find(@group.invited_members, (m) => get_email(m) == email)?
       email_td.addClass("error")
       flash "info", "That user has already been invited."
     else

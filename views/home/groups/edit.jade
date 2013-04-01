@@ -120,6 +120,8 @@ block append postscripts
       $(".undo-remove-logo").hide()
 
     $("form").on "submit", (event) ->
+      if $("#add_email").val()
+        $(".add-new-invitee").click()
       proceed = $(".error", this).length == 0
       unless $("[name=name]").val()
         errorify($("[name=name]"), "This field is required.")
