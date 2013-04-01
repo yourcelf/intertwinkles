@@ -53,7 +53,7 @@ describe "www methods", ->
           id: evt.id,
           absolute_url: "http://localhost:#{config.port}/groups/hey"
           verbed: 'tested'
-          title: "Home"
+          title: "Groups"
         }, event_params)
         expect(evt).to.eql(result_params)
         events[0].remove(done)
