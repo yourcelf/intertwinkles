@@ -13,7 +13,7 @@ membershipTableTemplate = _.template("""
     <td class='4'><h3>Has been invited:</h3></td>
   </tr>
   <tr class='to-be-invited-header'>
-    <td colspan='4'><h3>To be invited</h3>
+    <td colspan='4'><h3>To be invited (changes not saved)</h3>
   </tr>
   <tr class='add-row'>
     <td class='add-email'>
