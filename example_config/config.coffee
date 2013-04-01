@@ -46,9 +46,10 @@ config = {
   # Installed apps.
   apps: {
     www: {
-      name: "Home"
+      name: "Groups"
       about: "Recent activity from all your groups"
       url: base_url
+      image: "#{base_url}/static/img/groups.png"
     }
     firestarter: {
       name: "Firestarter"
