@@ -16,7 +16,7 @@ route = (config, app, sockrooms) ->
   # Routes
   #
 
-  context = (req, obj, initial_data) ->
+  context = (req, jade_context, initial_data) ->
     return _.extend({
       initial_data: _.extend(
         {application: "www"},
@@ -25,7 +25,7 @@ route = (config, app, sockrooms) ->
       )
       conf: utils.clean_conf(config)
       flash: req.flash(),
-    }, obj)
+    }, jade_context)
 
   #
   # About pages
@@ -61,56 +61,56 @@ route = (config, app, sockrooms) ->
           docs: recent_docs
         }
         groups: req.session.groups
-      })
+      }, {active_name: "Groups"})
 
   utils.append_slash(app, "/feedback")
   app.get '/feedback/', (req, res) ->
     res.render 'home/feedback', context(req, {
       title: "Feedback &amp; Support"
-    })
+    }, {active_name: "Feedback"})
 
   utils.append_slash(app, "/about")
   app.get '/about/', (req, res) ->
     res.render 'home/about/index', context(req, {
       title: "About InterTwinkles"
-    })
+    }, {active_name: "About"})
 
   utils.append_slash(app, "/about/starting")
   app.get '/about/starting/', (req, res) ->
     res.render 'home/starting', context(req, {
       title: "Getting Started with InterTwinkles"
-    })
+    }, {active_name: "Getting Started"})
 
   utils.append_slash(app, "/about/more")
   app.get '/about/more/', (req, res) ->
     res.render 'home/more', context(req, {
       title: "More InterTwinkles"
-    })
+    }, {active_name: "More"})
 
 
   utils.append_slash(app, "/about/terms")
   app.get '/about/terms/', (req, res) ->
     res.render 'home/about/terms', context(req, {
       title: "Terms of Use"
-    })
+    }, {active_name: "Terms"})
 
   utils.append_slash(app, "/about/dmca")
   app.get '/about/dmca/', (req, res) ->
     res.render 'home/about/dmca', context(req, {
       title: "DMCA"
-    })
+    }, {active_name: "DMCA"})
 
   utils.append_slash(app, "/about/privacy")
   app.get '/about/privacy/', (req, res) ->
     res.render 'home/about/privacy', context(req, {
       title: "Privacy Policy"
-    })
+    }, {active_name: "Privacy"})
 
   utils.append_slash(app, "/about/related")
   app.get '/about/related/', (req, res) ->
     res.render 'home/about/related', context(req, {
       title: "Related Work"
-    })
+    }, {active_name: "Related"})
 
 
   #
@@ -127,7 +127,7 @@ route = (config, app, sockrooms) ->
         docs: results?.response?.docs or []
         highlighting: results?.highlighting or {}
         q: req.query.q
-      })
+      }, {active_name: "Search"})
 
     return respond(null, {}) unless req.query.q
 
@@ -189,7 +189,7 @@ route = (config, app, sockrooms) ->
         title: "Profile settings"
         user: user
         carrier_list: _.keys(carriers)
-      })
+      }, {active_name: "Profile"})
 
   app.post '/profiles/edit/', (req, res) ->
     unless utils.is_authenticated(req.session)
@@ -205,7 +205,7 @@ route = (config, app, sockrooms) ->
   app.get '/profiles/icon_attribution/', (req, res) ->
     res.render 'home/profiles/icon_attribution', context(req, {
       title: "Icon Attribution"
-    })
+    }, {active_name: "Icons"})
 
   utils.append_slash(app, "/profiles/login")
   app.get '/profiles/login/', (req, res) ->
@@ -214,7 +214,7 @@ route = (config, app, sockrooms) ->
     res.render 'home/profiles/login', context(req, {
       title: "Sign in"
       next: req.query.next
-    })
+    }, {active_name: "Sign In"})
 
   utils.append_slash(app, "/profiles/logout")
   app.get '/profiles/logout/', (req, res) ->
@@ -232,7 +232,7 @@ route = (config, app, sockrooms) ->
     res.render 'home/groups/edit', context(req, {
       title: "New group"
       group: {}
-    })
+    }, {active_name: "Groups"})
 
   get_group_update_params = (req) ->
     group_update = {
@@ -281,7 +281,7 @@ route = (config, app, sockrooms) ->
       res.render 'home/groups/edit', context(req, {
         title: "Edit " + doc.name
         group: doc
-      })
+      }, {active_name: "Groups"})
 
   app.post '/groups/edit/:slug/', (req, res) ->
     unless utils.is_authenticated(req.session)
@@ -323,7 +323,7 @@ route = (config, app, sockrooms) ->
           title: "Join " + group.name
           group: group
           users: users
-        })
+        }, {active_name: "Groups"})
 
   app.post '/groups/join/:slug/', (req, res) ->
     www_methods.verify_invitation req.session, req.params.slug, (err, group) ->
@@ -365,7 +365,7 @@ route = (config, app, sockrooms) ->
           title: doc.name
           group: doc
           docs: search_indexes
-        })
+        }, {active_name: "Groups"})
 
   app.get "/r/:shortpath", (req, res) ->
     schema.ShortURL.findOne { short_path: req.params.shortpath }, (err, doc) ->

@@ -10,7 +10,10 @@ block body
 block postscripts
   script(type='text/javascript')
     intertwinkles.connect_socket(function() {
-      intertwinkles.build_toolbar($("header"), {applabel: "home"});
+      intertwinkles.build_toolbar($("header"), {
+        applabel: "www",
+        active_name: INITIAL_DATA.active_name
+      });
       intertwinkles.build_footer($("footer"));
     });
   include includes/uservoice

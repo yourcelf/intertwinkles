@@ -11,6 +11,7 @@
 
 .small-green
   small-green()
+ 
 
 /*
   Bootstrap overrides
@@ -51,7 +52,7 @@
 */
 
 body
-  background: url("/static/img/whitegrain.png") repeat
+  white-grain()
   min-width: 240px
   color: #210700
 
@@ -151,14 +152,31 @@ it-color = #ff0287
 /*
   App menu
 */
+.appmenu-toggle:focus
+  outline: none
 .appmenu
-  .active
-    font-size: 120%
-.nav-collapse .nav > li > a
-  font-weight: normal
-.nav-collapse .nav li
-  width: 100%
-.nav .brand.dropdown-toggle .caret
+  display: none
+  position: absolute
+  left: 20px
+  margin-right: 20px
+  top: 48px
+  white-grain()
+  padding: 1em
+  border: 0px 1px 1px 1px solid rgba(100, 100, 100, 0.8)
+  z-index: 10000
+  box-shadow: 0px 2px 2px #AAA
+  li
+    text-align: center
+    font-size: 14px
+@media (max-width: 384px)
+  .appmenu li
+    width: 128px
+@media (max-width: 480px)
+  .appmenu
+    margin-right: 0px
+    left: 0px
+
+.nav .brand.appmenu-toggle .caret
   border-bottom-color: #777
   border-top-color: #777
   color: #777

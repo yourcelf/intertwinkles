@@ -11,12 +11,18 @@ block body
               <a href='/groups/show/#{group.slug}'>#{group.name}</a>
               (#{group.members.length} members)
         a.btn(href='/groups/new') Add new group
+        div
+          if (activity.group.length > 0)
+            h4 Group activity
+            ul.events-and-docs
+              for event in activity.group
+                li.tile-link
+                  show_user = true
+                  include includes/event
 
-        h3(style='text-align: center;') Tools
-        include includes/app_list
       div.span9
         div.row-fluid
-          div.span4
+          div.span6
             if (activity.docs.length > 0)
               h3 Recent things
               ul.events-and-docs
@@ -25,19 +31,11 @@ block body
                     summary = "<span class='markmeup'>" + doc.summary + "</span>"
                     include includes/search_result
 
-          div.span4
+          div.span6
             if (activity.user.length > 0)
               h3 Your activity
               ul.events-and-docs
                 for event in activity.user
                   li.tile-link
                     show_user = false
-                    include includes/event
-          div.span4
-            if (activity.group.length > 0)
-              h3 Your groups' activity
-              ul.events-and-docs
-                for event in activity.group
-                  li.tile-link
-                    show_user = true
                     include includes/event

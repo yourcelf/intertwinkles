@@ -43,7 +43,10 @@ intertwinkles.connect_socket ->
     $(".getting-started-invitations").html(invite_view.el)
     invite_view.render()
 
-  intertwinkles.build_toolbar($("header"), {applabel: "home"})
+  intertwinkles.build_toolbar($("header"), {
+    applabel: "www"
+    active_name: INITIAL_DATA.active_name
+  })
   intertwinkles.build_footer($("footer"))
 
 intertwinkles.sub_vars()

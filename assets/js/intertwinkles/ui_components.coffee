@@ -165,35 +165,28 @@ toolbar_template = _.template("""
             <a href='#' class='sign-in'><img src='/static/img/sign_in_blue.png' /></a>
           </li>
         </ul>
-        <a class='brand dropdown-toggle'
-           data-target='.nav-collapse' data-toggle='collapse' href='#'
-           role='button' id='dlogo'>
+        <a class='brand appmenu-toggle' href='#' role='button' id='dlogo'>
           <span class='visible-phone'>
             <img src='/static/img/star-icon.png' alt='IT' style='max-height: 24px;'/>
-            <span style='font-size: 12px;'><%- apps[0].name %></span>
+            <span style='font-size: 12px;'><%- active_name %></span>
           </span>
           <span class='hidden-phone'>
             Inter<span class='intertwinkles'>Twinkles</span>:
-            <span class='appname'><%- apps[0].name %></span>
+            <span class='appname'><%- active_name %></span>
             <b class='caret'></b>
             <span class='label' style='font-size: 50%;'>BETA</span>
           </span>
         </a>
-        <div class='pull-left nav-collapse collapse' style='height: 0px;'>
-          <ul class='nav appmenu'>
-            <% for (var i = 0; i < apps.length; i++) { %>
-              <% var app = apps[i]; %>
-              <li class='<%- i == 0 ? "active" : "" %>'>
+        <div class='appmenu'>
+          <ul class='nav'>
+            <% _.each(apps, function(app, i) { %>
+              <li class='<%- app.class %>'>
                 <a href='<%- app.url + "/" %>'>
-                  <b><%- app.name %></b>:
-                  <% if (app.name == "Home" && !intertwinkles.is_authenticated()) { %>
-                    Introducing InterTwinkles
-                  <% } else { %>
-                    <%- app.about %>
-                  <% } %>
+                  <img src='<%- app.image %>' alt='<%- app.name %>' /><br />
+                  <%- app.name %>
                 </a>
               </li>
-            <% } %>
+            <% }); %>
           </ul>
         </div>
       </div>
@@ -205,24 +198,34 @@ class intertwinkles.Toolbar extends Backbone.View
   template: toolbar_template
   events:
     'click .sign-in':  'signIn'
+    'click      .appmenu-toggle': 'toggleAppmenu'
+    'touchstart .appmenu-toggle': 'toggleAppmenu'
+
   initialize: (options={}) ->
     @applabel = options.applabel
+    @active_name = options.active_name or INTERTWINKLES_APPS[@applabel].name
+    $('html').on('click.dropdown.data-api', @_hideAppmenu)
 
   remove: =>
     @user_menu?.remove()
     @notification_menu?.remove()
+    $('html').off('click.dropdown.data-api', @_hideAppmenu)
     super()
 
   render: =>
     apps = []
     thisapp = null
     for label, app of INTERTWINKLES_APPS
-      if label == @applabel
-        apps.unshift(app)
-      else if label != "clock" and label != "points" #XXX fat hack to not get progressive clock in menu.
-        apps.push(app)
+      menu_app = _.extend {}, app
+      menu_app.class = if label == @applabel then "active" else ""
+      if label == "www" and not intertwinkles.is_authenticated()
+        menu_app.name = "Home"
+      apps.push(menu_app)
 
-    @$el.html @template({apps: apps})
+    @$el.html @template({
+      apps: apps
+      active_name: @active_name
+    })
 
     @user_menu?.remove()
     @user_menu = new intertwinkles.UserMenu()
@@ -240,11 +243,28 @@ class intertwinkles.Toolbar extends Backbone.View
 
     this
 
-  setAuthFrameVisibility: => @user_menu.setAuthFrameVisibility()
+  setAuthFrameVisibility: =>
+    @user_menu.setAuthFrameVisibility()
 
   signIn: (event) =>
     event.preventDefault()
     intertwinkles.request_login()
+
+  toggleAppmenu: (event) =>
+    if event.type == "touchstart"
+      @_isTouch = true
+    else if @_isTouch
+      return
+    menu = @$(".appmenu")
+    if menu.is(":visible")
+      @_hideAppmenu(event)
+    else
+      event.preventDefault()
+      event.stopPropagation()
+      menu.show()
+
+  _hideAppmenu: (event) =>
+    @$(".appmenu").hide()
 
 
 #
