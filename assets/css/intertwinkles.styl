@@ -17,7 +17,8 @@
   Bootstrap overrides
 */
 .typeahead
-  z-index: 1051
+  // Ensure typeaheads inside modals are still on top.
+  z-index: 10000 !important
 
 .btn.loading
   background-image: url("/static/img/spinner.gif")

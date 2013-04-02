@@ -38,7 +38,7 @@ ruled_timeline_template = "
   </div>
 "
 
-class RuledTimelineView extends Backbone.View
+class TimelineView extends Backbone.View
   template:  _.template(ruled_timeline_template)
 
   initialize: (options) ->
@@ -115,5 +115,28 @@ class RuledTimelineView extends Backbone.View
     @$el.html @template({ rows, ticks })
     @$("[rel=popover]").popover()
 
-TimelineView = RuledTimelineView
+
+class EventBox extends Backbone.View
+  # All event types are counted as "visits", but not all are counted as
+  # "changes". Since one of the important distinctions we're after is "who has
+  # seen the latest?", we want to identify those keys that do not count as a
+  # "change". If a change event happens, any prior visitors are no longer
+  # considered up-to-date.
+  visit_whitelist: ["visit", "vote"]
+  # This should be constructed with a collection of events that all refer to a
+  # single entity.
+  initialize: (options) ->
+    @coll = options.collection
+    @visit_witelist = options.visit_whitelist if options.visit_whitelist?
+
+  render: =>
+    visted_contributors = {}
+    contributors = []
+    visted_visitors = {}
+    visitors = []
+    @coll.each (event, i) =>
+
+
+
+
 
