@@ -63,7 +63,7 @@ describe "clock", ->
           expect(doc.id).to.be(event.id)
           expect(doc.entity).to.be(event.entity)
           expect("#{doc.group}").to.be(@clock.sharing.group_id)
-          expect(doc.entity_url).to.be(@clock.url)
+          expect(doc.url).to.be(@clock.url)
           done()
     }
 
@@ -101,7 +101,7 @@ describe "clock", ->
       expect(event).to.not.be(null)
       expect(event.type).to.be("update")
       expect(event.entity).to.eql(doc.id)
-      expect(event.entity_url).to.be(doc.url)
+      expect(event.url).to.be(doc.url)
       expect(si).to.not.be(null)
       expect(si.url).to.be(doc.url)
       done()

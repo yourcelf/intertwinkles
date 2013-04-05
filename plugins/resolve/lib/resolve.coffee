@@ -18,7 +18,7 @@ module.exports = (config) ->
     event = _.extend {
         application: "resolve"
         type: type
-        entity_url: proposal.url
+        url: proposal.url
         entity: proposal._id
         user: session.auth?.user_id
         via_user: session.auth?.user_id

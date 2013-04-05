@@ -143,7 +143,7 @@ module.exports.run = (config, done) ->
       create_event(name, {
         application: "resolve"
         type: "create"
-        entity_url: "/p/#{doc._id}"
+        url: "/p/#{doc._id}"
         entity: doc._id
         user: cache.users[name].id
         date: attributes.on
@@ -158,7 +158,7 @@ module.exports.run = (config, done) ->
     create_event name, {
         application: "resolve"
         type: "visit"
-        entity_url: "/p/#{proposal._id}"
+        url: "/p/#{proposal._id}"
         entity: proposal._id
         user: cache.users[name]?.id
         date: date
@@ -204,7 +204,7 @@ module.exports.run = (config, done) ->
         create_event name, {
           application: "resolve"
           type: "append"
-          entity_url: "/p/#{doc._id}"
+          url: "/p/#{doc._id}"
           entity: doc._id
           user: cache.users[name]?.id
           date: attributes.date

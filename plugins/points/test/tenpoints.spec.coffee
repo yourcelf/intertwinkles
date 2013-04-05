@@ -64,7 +64,7 @@ describe "pointslib", ->
       expect(doc.absolute_url).to.eql("http://localhost:8888/points/u/my-ten-point/")
 
       expect(event.application).to.be("points")
-      expect(event.entity_url).to.be(doc.url)
+      expect(event.url).to.be(doc.url)
       expect(event.absolute_url).to.be(doc.absolute_url)
       expect(event.type).to.be("create")
       expect(event.user.toString()).to.be(@all_users['one@mockmyid.com'].id)

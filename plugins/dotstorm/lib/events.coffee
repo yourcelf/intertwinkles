@@ -11,7 +11,7 @@ module.exports = (config) ->
       event = _.extend {
           application: "dotstorm"
           type: type
-          entity_url: "/d/#{dotstorm.slug}/"
+          url: "/d/#{dotstorm.slug}/"
           entity: dotstorm._id
           user: session.auth?.user_id
           via_user: session.auth?.user_id

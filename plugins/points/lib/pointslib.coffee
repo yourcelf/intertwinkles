@@ -37,9 +37,10 @@ module.exports = (config) ->
   pl.post_event = (session, pointset, opts, timeout, callback) ->
     event = _.extend {
       application: "points"
-      entity_url: pointset.url
+      url: pointset.url
       entity: pointset.id
       user: session.auth?.user_id
+      anon_id: session.anon_id
       via_user: session.auth?.user_id
       group: pointset.sharing?.group_id
       data: {

@@ -151,7 +151,7 @@ describe "HTTP api", ->
           application: "firestarter"
           entity: "one"
           type: "create"
-          entity_url: "/f/cheese/"
+          url: "/f/cheese/"
           group: group._id
           data: {test: "data"}
           user: "one@mockmyid.com"
@@ -179,7 +179,7 @@ describe "HTTP api", ->
     utils.post_data url, {
       event: JSON.stringify({
         application: "firestarter", entity: "one", type: "create",
-        entity_url: "/f/cheese/",
+        url: "/f/cheese/",
         user: "one@mockmyid.com"
       })
       api_key: 'invalid'
@@ -201,8 +201,8 @@ describe "HTTP api", ->
     post_with_timeout = (entity, timeout, cb) ->
       api_methods.post_event {
         application: "firestarter", entity: entity, type: "view"
-        entity_url: "/f/fabulous/",
-        user: "one@mockmyid.com"
+        url: "/f/fabulous/",
+        user: "one@mockmyid.com", anon_id: "some_anon_id"
       }, timeout, (err, event) ->
         expect(err).to.be(null)
         expect(event.entity).to.eql(entity)

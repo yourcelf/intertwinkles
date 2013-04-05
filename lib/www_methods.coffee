@@ -10,6 +10,7 @@ module.exports = (config) ->
   solr = require("./solr_helper")(config)
   api_methods = require("./api_methods")(config)
   render_notifications = require("./email_notices").load(config).render_notifications
+  events = require("./www_events")(config)
 
   www = {}
 
@@ -152,19 +153,16 @@ module.exports = (config) ->
       user_map,
       group_params,
       (err, event_data, group, clear_notices, new_notices) ->
-        api_methods.post_event {
-          type: "create"
-          application: "www"
-          entity: group.id
-          entity_url: "/groups/show/#{group.slug}"
-          user: session.auth.user_id
-          group: group.id
-          data: {
-            title: "group #{group.name}"
-            action: event_data
-          }
-        }, (err, event) ->
-          callback(err, group, event, [].concat(clear_notices or [], new_notices or []))
+        return callback(err) if err?
+        events.post_group_event(
+          session,
+          group,
+          "create",
+          {title: "group #{group.name}", action: event_data}
+          (err, event) ->
+            callback(err, group, event,
+              [].concat(clear_notices or [], new_notices or []))
+        )
     )
 
   # Create a new group with the given session's user as a method.
@@ -202,19 +200,15 @@ module.exports = (config) ->
         group_params,
         (err, event_data, group, clear_notices, new_notices) ->
           return callback(err) if err?
-          api_methods.post_event {
-            type: "update"
-            application: "www"
-            entity: group.id
-            entity_url: "/groups/show/#{group.slug}"
-            user: session.auth.user_id
-            group: group.id
-            data: {
-              title: "group #{group.name}"
-              action: event_data
-            }
-          }, (err, event) ->
-            callback(err, group, event, [].concat(clear_notices or [], new_notices or []))
+          events.post_group_event(
+            session,
+            group,
+            "update",
+            {title: "group #{group.name}", action: event_data},
+            (err, event) ->
+              callback(err, group, event,
+                [].concat(clear_notices or [], new_notices or []))
+          )
       )
 
   # Create an invitation object; creating the user if needed.  Calls back with:
@@ -487,21 +481,14 @@ module.exports = (config) ->
     # added.
     group.save (err, group) ->
       return callback(err) if err?
-      event = {
-        application: "www"
-        type: if accepted then "join" else "decline"
-        entity: group._id
-        entity_url: "/groups/show/#{group.slug}"
-        user: session.auth.user_id
-        group: group._id
-        data: {
-          title: group.name
-          action: invitation
-        }
-      }
       async.parallel [
         (done) ->
-          api_methods.post_event event, done
+          events.post_group_event(
+            session,
+            group,
+            if accepted then "join" else "decline",
+            {title: group.name, action: invitation},
+            done)
 
         (done) ->
           api_methods.clear_notifications {

@@ -421,7 +421,8 @@ module.exports = (config) ->
           done(null)
     ], (err, results) ->
       return callback(err) if err?
-      for key in ["application", "entity", "type", "entity_url", "date", "data"]
+      for key in ["application", "entity", "type", "url", "date",
+                  "anon_id", "data"]
         data[key] = params[key] if params[key]?
       event = new schema.Event(data)
       event.save(callback)

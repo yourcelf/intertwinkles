@@ -29,7 +29,7 @@ load = (config) ->
     for each entity.
     ###
     if config.apps[@application]?.url?
-      return config.apps[@application].url + (@url or @entity_url)
+      return config.apps[@application].url + @url
     return null
 
 
@@ -172,8 +172,10 @@ load = (config) ->
     application: String
     entity: String
     type: String
-    entity_url: String
+    url: String
     date: Date
+    # Identity: one of anon_id or user
+    anon_id: String
     user: {type: Schema.ObjectId, ref: 'User'}
     via_user: {type: Schema.ObjectId, ref: 'User'}
     group: {type: Schema.ObjectId, ref: 'Group'}

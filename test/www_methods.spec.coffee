@@ -35,8 +35,9 @@ describe "www methods", ->
       application: "www"
       entity: "123"
       type: "test"
-      entity_url: "/groups/hey"
+      url: "/groups/hey"
       user: @user.id
+      anon_id: "some_anon_id"
       group: _.keys(@session.groups)[0]
       date: new Date()
       data: {ok: "whatevs"}

@@ -24,7 +24,7 @@ block body
           else
             each doc in listed_pads.public
               div.search-result
-                a(href='#{doc.url}')= doc.title
+                a(href='#{doc.absolute_url}')= doc.title
                 &nbsp;
                 span.group-name.label(data-group-id=doc.sharing_group_id)
                 div.summary= doc.summary
@@ -41,7 +41,7 @@ block body
           else
             each doc in listed_pads.group
               div.search-result
-                a(href='#{doc.url}')= doc.title
+                a(href='#{doc.absolute_url}')= doc.title
                 &ensp;
                 span.group-name.label(data-group-id=doc.sharing_group_id)
                 &ensp;

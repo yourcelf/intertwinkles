@@ -51,6 +51,7 @@ describe "resolve", ->
           expect(doc.id).to.be(event.id)
           expect(doc.entity).to.be(event.entity)
           expect(doc.group).to.be(@proposal.sharing.group_id)
+          expect(doc.anon_id).to.be(@session.anon_id)
           done()
     }
 
@@ -152,7 +153,7 @@ describe "resolve", ->
       expect(proposal.resolved).to.be(null)
     , (err, proposal, event, si, notices) =>
       expect(event.group.toString()).to.be(@proposal_with_notices.sharing.group_id.toString())
-      expect(event.entity_url).to.be(proposal.url)
+      expect(event.url).to.be(proposal.url)
       expect(event.absolute_url).to.be(proposal.absolute_url)
       for notice in notices
         expect(notice.url).to.be(proposal.url)

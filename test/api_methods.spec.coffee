@@ -95,6 +95,7 @@ describe "api", ->
           entity: "1"
           type: "create"
           user: "one@mockmyid.com"
+          anon_id: "some anon id"
           data: "This is fun"
         }, done
 
@@ -140,6 +141,7 @@ describe "api", ->
           entity: "post event test"
           type: "visit"
           user: "one@mockmyid.com" # gets resolved to user id
+          anon_id: "someanonid"
           group: group.id.toString() # gets resolved to group id
           data: {yup: "fun"}
         }, (err, doc) ->
@@ -152,6 +154,7 @@ describe "api", ->
             expect(doc.user).to.eql(user._id)
             expect(doc.group).to.eql(group._id)
             expect(doc.data).to.eql({yup: "fun"})
+            expect(doc.anon_id).to.be("someanonid")
             done()
           
 
@@ -162,6 +165,7 @@ describe "api", ->
           entity: "timeouttest"
           type: "visit"
           user: "one@mockmyid.com"
+          anon_id: "someanonid"
           data: data
         }, 50, callback
 

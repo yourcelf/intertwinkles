@@ -12,7 +12,7 @@ module.exports = (config) ->
     event = _.extend {
       application: "clock"
       type: type
-      entity_url: clock.url
+      url: clock.url
       entity: clock.id
       user: session.auth?.user_id
       via_user: session.auth?.user_id

@@ -52,7 +52,7 @@ start = (config, app, sockrooms) ->
         type: "visit"
         application: "firestarter"
         entity: doc.id
-        entity_url: "/f/#{doc.slug}"
+        url: "/f/#{doc.slug}"
         user: req.session.auth?.email
         anon_id: req.session.anon_id
         group: doc.sharing.group_id
@@ -82,7 +82,7 @@ start = (config, app, sockrooms) ->
     event_data = _.extend({
       application: "firestarter"
       entity: firestarter.id
-      entity_url: "/f/#{firestarter.slug}"
+      url: "/f/#{firestarter.slug}"
       group: firestarter.sharing.group_id
     }, event_params)
 
