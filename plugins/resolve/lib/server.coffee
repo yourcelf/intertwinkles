@@ -75,7 +75,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on "resolve/post_twinkle", (socket, session, data) ->
     respond = (err, twinkle, proposal) ->
-      return socket.sendJSON "error", {error: err} if err?
+      return sockrooms.handleError(socket, err) if err?
       sockrooms.broadcast(
         "resolve/" + proposal.id,
         "twinkles",
@@ -87,7 +87,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on "resolve/remove_twinkle", (socket, session, data) ->
     respond = (err, twinkle, proposal) ->
-      return socket.sendJSON "error", {error: err} if err?
+      return sockrooms.handleError(socket, err) if err?
       sockrooms.broadcast(
         "resolve/" + proposal.id,
         "twinkles",
@@ -112,12 +112,12 @@ start = (config, app, sockrooms) ->
           }, done
 
     ], (err, twinkles) ->
-      return socket.sendJSON "error", {error: err} if err?
+      return sockerooms.handleError(err) if err?
       socket.sendJSON "twinkles", {twinkles: twinkles}
 
   sockrooms.on "resolve/get_proposal_list", (socket, session, data) ->
     if not data?.callback?
-      socket.sendJSON "error", {error: "Missing callback parameter."}
+      return sockrooms.handleError(socket, "Missing callback")
     else
       utils.list_accessible_documents(
         schema.Proposal, session, (err, proposals) ->
@@ -127,7 +127,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on "resolve/get_proposal", (socket, session, data) ->
     unless data.callback?
-      return socket.sendJSON "error", {error: "Missing 'callback' parameter"}
+      return sockrooms.handleError("Missing 'callback' parameter")
     schema.Proposal.findOne data.proposal, (err, proposal) ->
       response = {}
       unless utils.can_view(session, proposal)
@@ -140,7 +140,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on "resolve/get_proposal_events", (socket, session, data) ->
     respond = (err, events) ->
-      return socket.sendJSON "error", {error: err} if err?
+      return sockrooms.handleError(err) if err?
       return socket.sendJSON data.callback, {events: events}
 
     return respond("Missing proposal ID") unless data.proposal_id?
@@ -155,9 +155,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on "resolve/save_proposal", (socket, session, data) ->
     respond = (err, proposal, events, search_indices, notices) ->
-      if err?
-        return socket.sendJSON data.callback, {error: err} if data.callback?
-        return socket.sendJSON "error", {error: err}
+      return sockrooms.handleError(socket, err) if err?
       sockrooms.broadcast(
         "resolve/" + proposal.id,
         "proposal_change",
