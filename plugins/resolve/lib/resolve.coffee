@@ -227,49 +227,36 @@ module.exports = (config) ->
   #   "opinion": { ... opinion options, if any ... }
   # }
   #
-  # Two different callbacks -- use one or both:
-  #  - post_save_callback(err, proposal)
-  #         fired after the doc is saved, but before events /
-  #         search indices are updated.
-  #  - post_events_callback(err, proposal, events, search_indices, notices)
-  #         fired after everything is done.
-  #
-  #  On error, only the first non-null callback is fired.
-  #
 
   #
   # Create
   #
-  r.create_proposal = (session, data, post_save_callback, post_events_callback) ->
+  r.create_proposal = (session, data, callback) ->
     proposal = new schema.Proposal()
-    _update_proposal(session, proposal, data, "create",
-      post_save_callback, post_events_callback)
+    _update_proposal(session, proposal, data, "create", callback)
 
   #
   # Update
   #
-  r.update_proposal = (session, data, post_save_callback, post_events_callback) ->
+  r.update_proposal = (session, data, callback) ->
     schema.Proposal.findOne {_id: data.proposal?._id}, (err, proposal) ->
       return callback(err) if err?
-      _update_proposal(session, proposal, data, "update", post_save_callback, post_events_callback)
+      _update_proposal(session, proposal, data, "update", callback)
 
   # Create and update
-  _update_proposal = (session, proposal, data, action,
-                      post_save_callback, post_events_callback) ->
-    error_out = (err) ->
-      (post_save_callback or post_events_callback)(err)
+  _update_proposal = (session, proposal, data, action, callback) ->
 
     unless utils.can_edit(session, proposal)
-      return error_out("Permission denied.")
+      return callback("Permission denied.")
 
     event_data = {}
     # Update sharing
     if data.proposal?.sharing?
       unless utils.can_change_sharing(session, proposal)
-        return error_out("Not allowed to change sharing.")
+        return callback("Not allowed to change sharing.")
       if (data.proposal.sharing.group_id? and
           not session.groups[data.proposal.sharing.group_id]?)
-        return error_out("Unauthorized group")
+        return callback("Unauthorized group")
       proposal.sharing = data.proposal.sharing
       event_data.sharing = utils.clean_sharing({}, proposal)
 
@@ -280,7 +267,7 @@ module.exports = (config) ->
       else
         name = data.proposal.name
       unless name?
-        return error_out("Missing name for proposal revision.")
+        return callback("Missing name for proposal revision.")
       proposal.revisions.unshift({
         user_id: session.auth?.user_id
         name: name
@@ -299,25 +286,19 @@ module.exports = (config) ->
       event_data.reopened = true
 
     proposal.save (err, doc) ->
-      if err?
-        return error_out(err)
-      post_save_callback?(null, doc)
-      _send_proposal_events(session, doc, action, event_data,
-                            post_events_callback)
+      return callback(err) if err?
+      _send_proposal_events(session, doc, action, event_data, callback)
 
   #
   # Append
   #
-  r.add_opinion = (session, data, post_save_callback, post_events_callback) ->
-    error_out = (err) ->
-      (post_save_callback or post_events_callback)?(err)
-
-    return error_out("Missing proposal id") unless data?.proposal?._id?
+  r.add_opinion = (session, data, callback) ->
+    return callback("Missing proposal id") unless data?.proposal?._id?
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
       unless utils.can_edit(session, proposal)
-        return error_out("Permission denied.")
-      return error_out("Missing opinion text") unless data.opinion?.text
-      return error_out("Missing vote") unless data.opinion?.vote
+        return callback("Permission denied.")
+      return callback("Missing opinion text") unless data.opinion?.text
+      return callback("Missing vote") unless data.opinion?.vote
 
       event_data = {data: {}}
       if data.opinion?.user_id
@@ -325,7 +306,7 @@ module.exports = (config) ->
         # user's network. #XXX: Narrow this to the proposal's group?
         user_id = data.opinion.user_id
         user = session.users?[user_id]
-        return error_out("Unauthorized user id") unless user?
+        return callback("Unauthorized user id") unless user?
         name = user.name
         # find previous opinion by ID.
         opinion_set = _.find proposal.opinions, (o) ->
@@ -367,22 +348,17 @@ module.exports = (config) ->
         vote: data.opinion.vote
       }
       proposal.save (err, doc) ->
-        if err?
-          return error_out(err)
-        post_save_callback?(null, doc)
-        _send_proposal_events(session, proposal, "append", event_data,
-                              post_events_callback)
+        return callback(err) if err?
+        _send_proposal_events(session, proposal, "append", event_data, callback)
 
   #
   # Trim
   #
-  r.remove_opinion = (session, data, post_save_callback, post_events_callback) ->
-    error_out = (err) ->
-      (post_save_callback or post_events_callback)(err)
+  r.remove_opinion = (session, data, callback) ->
     event_data = {data: {}}
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
       unless utils.can_edit(session, proposal)
-        return error_out("Permission denied.")
+        return callback("Permission denied.")
       found = false
       for opinion, i in proposal.opinions
         if opinion._id.toString() == data.opinion._id.toString()
@@ -392,11 +368,8 @@ module.exports = (config) ->
       unless found
         return done("Opinion for `#{data.opinion._id}` not found.")
       proposal.save (err, doc) ->
-        if err?
-          return error_out(err)
-        post_save_callback(null, doc)
-        _send_proposal_events(session, doc, "trim", event_data,
-                              post_events_callback)
+        return callback(err) if err?
+        _send_proposal_events(session, doc, "trim", event_data, callback)
 
   _send_proposal_events = (session, proposal, action, event_data, callback) ->
     async.parallel [

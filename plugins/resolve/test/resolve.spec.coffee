@@ -94,7 +94,7 @@ describe "resolve", ->
         proposal: "This is my proposal."
         sharing: { group_id: group.id }
       }
-    }, (err, proposal) =>
+    }, (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
       expect(proposal).to.not.be(null)
       expect(proposal.revisions[0].text).to.be("This is my proposal.")
@@ -103,21 +103,13 @@ describe "resolve", ->
       expect(proposal.absolute_url).to.be(
         "http://localhost:#{config.port}/resolve/p/#{proposal.id}/"
       )
-      @proposal_with_notices = proposal
-
-    , (err, proposal, event, si, notices) =>
-      # If we don't have solr, any part of the notice creation may have failed.
-      expect(proposal).to.not.be(null)
       expect(event.type).to.be("create")
       expect(event.absolute_url).to.be(proposal.absolute_url)
       expect(event.application).to.be("resolve")
       expect(si.entity.toString()).to.be(proposal.id)
       expect(si.absolute_url).to.be(proposal.absolute_url)
       expect(notices.length).to.be(_.size(group.members))
-      expect(proposal.url).to.be("/p/#{proposal.id}/")
-      expect(proposal.absolute_url).to.be(
-        "http://localhost:#{config.port}/resolve/p/#{proposal.id}/"
-      )
+
       for notice in notices
         expect(notice.url).to.be(proposal.url)
         expect(notice.absolute_url).to.be(proposal.absolute_url)
@@ -146,15 +138,18 @@ describe "resolve", ->
     expect(@proposal_with_notices.sharing.group_id).to.not.be(null)
     resolve.update_proposal @session, {
       proposal: { reopened: true, _id: @proposal_with_notices.id }
-    }, (err, proposal) =>
+    }, (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
       expect(proposal).to.not.be(null)
       expect(proposal.id).to.be(@proposal_with_notices.id)
       expect(proposal.resolved).to.be(null)
-    , (err, proposal, event, si, notices) =>
-      expect(event.group.toString()).to.be(@proposal_with_notices.sharing.group_id.toString())
+
+      expect(event.group.toString()).to.be(
+        @proposal_with_notices.sharing.group_id.toString()
+      )
       expect(event.url).to.be(proposal.url)
       expect(event.absolute_url).to.be(proposal.absolute_url)
+
       for notice in notices
         expect(notice.url).to.be(proposal.url)
         expect(notice.absolute_url).to.be(proposal.absolute_url)
@@ -231,18 +226,15 @@ describe "resolve", ->
         text: "Super!!!"
         vote: "weak_yes"
       }
-    }, (err, proposal) =>
+    }, (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
+      expect(proposal).to.not.be(null)
       expect(proposal.opinions.length).to.be(start_length + 1)
       expect(proposal.opinions[start_length].user_id).to.be(@session.auth.user_id)
       expect(proposal.opinions[start_length].revisions[0].text).to.be("Super!!!")
       expect(proposal.opinions[start_length].revisions[0].vote).to.be("weak_yes")
-    , (err, proposal, event, si, notices) =>
-      expect(proposal).to.not.be(null)
+    
       expect(event?.type).to.be("append")
-      expect(si.text.indexOf("Super!!!")).to.not.be(-1)
-      expect(notices.length).to.be(0)
-      # TODO: Fix this data blob to be less silly.
       expect(event.data.action.data.name).to.eql("One")
       expect(event.data.action.data.opinion).to.eql({
         user_id: @session.auth.user_id
@@ -250,6 +242,10 @@ describe "resolve", ->
         text: "Super!!!"
         vote: "weak_yes"
       })
+
+      expect(si.text.indexOf("Super!!!")).to.not.be(-1)
+      expect(notices.length).to.be(0)
+      # TODO: Fix this data blob to be less silly.
       @proposal = proposal
       done()
 
@@ -267,10 +263,9 @@ describe "resolve", ->
           text: "Far out"
           vote: "no"
         }
-      }, (err, proposal) =>
+      }, (err, proposal, event, si, notices) =>
         expect(err).to.be(null)
         expect(proposal).to.not.be(null)
-      , (err, proposal, event, si, notices) =>
         expect(proposal.opinions.length).to.be(start_length + 1)
         expect(proposal.opinions[start_length].user_id).to.eql(user.id)
         expect(proposal.opinions[start_length].revisions[0].text).to.be("Far out")
@@ -289,10 +284,9 @@ describe "resolve", ->
         text: "Fur out"
         vote: "no"
       }
-    }, (err, proposal) =>
+    }, (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
       expect(proposal).to.not.be(null)
-    , (err, proposal, event, si, notices) =>
       expect(proposal.opinions.length).to.be(start_length + 1)
       expect(proposal.opinions[start_length].user_id).to.eql(null)
       expect(proposal.opinions[start_length].name).to.be("Anonymouse")
@@ -312,10 +306,9 @@ describe "resolve", ->
         text: "Four out"
         vote: "abstain"
       }
-    }, (err, proposal) =>
+    }, (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
       expect(proposal).to.not.be(null)
-    , (err, proposal, event, si, notices) =>
       expect(proposal.opinions.length).to.be(start_length + 1)
       expect(proposal.opinions[start_length].user_id).to.eql(null)
       expect(proposal.opinions[start_length].name).to.be("One")
@@ -335,10 +328,9 @@ describe "resolve", ->
         text: "On second thought..."
         vote: "abstain"
       }
-    }, (err, proposal) =>
+    }, (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
       expect(proposal).to.not.be(null)
-    , (err, proposal, event, si, notices) =>
       expect(proposal.opinions.length).to.be(start_length) # no increase
       op = _.find proposal.opinions, (o) => o.user_id == @session.auth.user_id
       expect(op?.revisions.length).to.be(2)
@@ -353,10 +345,9 @@ describe "resolve", ->
     resolve.remove_opinion @session, {
       proposal: {_id: @proposal._id}
       opinion: {_id: @opinion_to_remove._id}
-    }, (err, proposal) =>
+    }, (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
       expect(proposal).to.not.be(null)
-    , (err, proposal, event, si, notices) =>
       expect(err).to.be(null)
       expect(proposal).to.not.be(null)
       expect(proposal.opinions.length).to.be(start_length - 1)

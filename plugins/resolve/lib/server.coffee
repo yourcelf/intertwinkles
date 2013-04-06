@@ -71,9 +71,7 @@ start = (config, app, sockrooms) ->
       }, {
         proposal: doc
       })
-      resolve.post_event(
-        req.session, doc, "visit", {timeout: 60 * 5000}
-      )
+      resolve.post_event(req.session, doc, "visit", {timeout: 60 * 5000})
 
   sockrooms.on "resolve/post_twinkle", (socket, session, data) ->
     respond = (err, twinkle, proposal) ->
@@ -138,9 +136,7 @@ start = (config, app, sockrooms) ->
         proposal.sharing = utils.clean_sharing(session, proposal)
         response.proposal = proposal
       socket.sendJSON data.callback, response
-      resolve.post_event(
-        session, proposal, "visit", {timeout: 60 * 5000}
-      )
+      resolve.post_event(session, proposal, "visit", {timeout: 60 * 5000})
 
   sockrooms.on "resolve/get_proposal_events", (socket, session, data) ->
     respond = (err, events) ->
@@ -158,7 +154,7 @@ start = (config, app, sockrooms) ->
       }, respond
 
   sockrooms.on "resolve/save_proposal", (socket, session, data) ->
-    respond = (err, proposal) ->
+    respond = (err, proposal, events, search_indices, notices) ->
       if err?
         return socket.sendJSON data.callback, {error: err} if data.callback?
         return socket.sendJSON "error", {error: err}
@@ -169,10 +165,6 @@ start = (config, app, sockrooms) ->
         socket.sid)
       socket.sendJSON(data.callback, {proposal}) if data.callback?
 
-    broadcast_notices = (err, proposal, events, search_indices, notices) ->
-      if err?
-        return socket.sendJSON data.callback, {error: err} if data.callback?
-        return socket.sendJSON "error", {error: err}
       user_id = session.auth?.user_id
       for notice in notices
         payload = {notification: [notice]}
@@ -187,13 +179,13 @@ start = (config, app, sockrooms) ->
     # Fetch the proposal.
     switch data.action
       when "create"
-        resolve.create_proposal(session, data, respond, broadcast_notices)
+        resolve.create_proposal(session, data, respond)
       when "update"
-        resolve.update_proposal(session, data, respond, broadcast_notices)
+        resolve.update_proposal(session, data, respond)
       when "append"
-        resolve.add_opinion(session, data, respond, broadcast_notices)
+        resolve.add_opinion(session, data, respond)
       when "trim"
-        resolve.remove_opinion(session, data, respond, broadcast_notices)
+        resolve.remove_opinion(session, data, respond)
 
 
 module.exports = {start}
