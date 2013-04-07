@@ -273,7 +273,7 @@ route = (config, app, sockrooms) ->
     schema.Group.findOne({slug: req.params.slug}).populate('members.user').exec (err, doc) ->
       return www_methods.handle_error(req, res) if err?
       unless doc?
-        return not_found(req, res)
+        return www_methods.not_found(req, res)
 
       membership = _.find doc.members, (m) -> m.user.email == req.session.auth.email
       unless membership?
@@ -289,7 +289,7 @@ route = (config, app, sockrooms) ->
 
     schema.Group.findOne {slug: req.params.slug}, (err, group) ->
       return www_methods.handle_error(req, res) if err?
-      return not_found(req, res) unless group?
+      return www_methods.not_found(req, res) unless group?
 
       # Ensure that we are a member of this group.
       membership = _.find group.members, (m) -> m.user.toString() == req.session.auth.user_id
@@ -318,7 +318,7 @@ route = (config, app, sockrooms) ->
         user_ids.push(m.user)
       schema.User.find {_id: {$in: user_ids}}, (err, users) ->
         return www_methods.handle_error(req, res, err) if err?
-        return not_found(req, res) unless group?
+        return www_methods.not_found(req, res) unless group?
         return res.render 'home/groups/join', context(req, {
           title: "Join " + group.name
           group: group
@@ -328,7 +328,7 @@ route = (config, app, sockrooms) ->
   app.post '/groups/join/:slug/', (req, res) ->
     www_methods.verify_invitation req.session, req.params.slug, (err, group) ->
       return www_methods.handle_error(req, res, err) if err?
-      return not_found(req, res) unless group?
+      return www_methods.not_found(req, res) unless group?
 
       accepted = !!req.body.accept
 
@@ -348,7 +348,7 @@ route = (config, app, sockrooms) ->
       return www_methods.redirect_to_login(req, res)
     schema.Group.findOne {slug: req.params.slug}, (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
-      return not_found(req, res) unless doc?
+      return www_methods.not_found(req, res) unless doc?
       # Verify that the user is a member of the group.  Non-members can never
       # view a group's details, unlike other documents.
       unless _.find(doc.members, (m) -> m.user.toString() == req.session.auth.user_id)

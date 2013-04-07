@@ -10,7 +10,19 @@ module.exports = (config) ->
   solr = require("./solr_helper")(config)
   api_methods = require("./api_methods")(config)
   render_notifications = require("./email_notices").load(config).render_notifications
-  events = require("./www_events")(config)
+
+  _post_group_event = (session, group, type, data, callback) ->
+    api_methods.post_event({
+      type: type
+      application: "www"
+      entity: group.id
+      url: "/groups/show/#{group.slug}"
+      user: session.auth?.user_id
+      anon_id: session.anon_id
+      group: group.id
+      data: data
+    }, callback)
+
 
   www = {}
 
@@ -78,7 +90,11 @@ module.exports = (config) ->
   www.get_user_events = (session, callback) ->
     schema.Event.find({
         user: session.auth.user_id
-      }).sort('-date').limit(20).exec(callback)
+      }).sort('-date').limit(20).exec (err, events) ->
+        return callback(err) if err?
+        for event in events
+          event.grammar = api_methods.get_event_grammar(event)
+        return callback(null, events)
 
   #
   # Recent events for groups the given session is a member of, excluding those
@@ -89,7 +105,11 @@ module.exports = (config) ->
     schema.Event.find({
         group: {$in: _.keys(session.groups)},
         user: {$ne: session.auth.user_id},
-      }).sort('-date').limit(20).exec(callback)
+      }).sort('-date').limit(20).exec (err, events) ->
+        return callback(err) if err?
+        for event in events
+          event.grammar = api_methods.get_event_grammar(event)
+        return callback(null, events)
 
   #
   # Basic text search for indexed documents.
@@ -154,11 +174,11 @@ module.exports = (config) ->
       group_params,
       (err, event_data, group, clear_notices, new_notices) ->
         return callback(err) if err?
-        events.post_group_event(
+        _post_group_event(
           session,
           group,
           "create",
-          {title: "group #{group.name}", action: event_data}
+          event_data,
           (err, event) ->
             callback(err, group, event,
               [].concat(clear_notices or [], new_notices or []))
@@ -200,11 +220,11 @@ module.exports = (config) ->
         group_params,
         (err, event_data, group, clear_notices, new_notices) ->
           return callback(err) if err?
-          events.post_group_event(
+          _post_group_event(
             session,
             group,
             "update",
-            {title: "group #{group.name}", action: event_data},
+            event_data,
             (err, event) ->
               callback(err, group, event,
                 [].concat(clear_notices or [], new_notices or []))
@@ -319,7 +339,7 @@ module.exports = (config) ->
     thumbnails.upload file_path, "/group_logos", (err, paths) ->
       return callback(err) if err?
       group.logo = paths
-      return callback(null)
+      return callback(null, paths)
 
   # Remove group logo
   _remove_group_logo = (group, callback) ->
@@ -337,6 +357,7 @@ module.exports = (config) ->
       # Update plain group properties.
       (done) ->
         if group_update.name
+          event_data.old_name = group.name if group.name?
           group.name = group_update.name
           event_data.name = group_update.name
           # The URL slug. XXX: Should we allow this to change? Breaks URLs...
@@ -379,6 +400,7 @@ module.exports = (config) ->
           _remove_group_logo(group, done)
         else
           done()
+
     ], (err) ->
       return callback(err) if err?
       # Unpopulate user fields
@@ -444,6 +466,7 @@ module.exports = (config) ->
         ], (err, results) ->
           return callback(err) if err?
           [clear_notices, new_notices, none] = results
+          event_data.entity_name = group.name
           return callback(null, event_data, group, clear_notices, new_notices)
 
   #
@@ -462,12 +485,11 @@ module.exports = (config) ->
 
   www.process_invitation = (session, group, accepted, callback) ->
     invitation = null
-    for i in [0..group.invited_members.length]
+    for i in [0...group.invited_members.length]
       if group.invited_members[i].user.toString() == session.auth.user_id
         invitation = group.invited_members.splice(i, 1)[0].toObject()
         break
-    if not invitation?
-      callback(null)
+    return callback("Invitation not found") unless invitation?
 
     if accepted
       # Convert the invitation instance to a membership instance.
@@ -483,11 +505,11 @@ module.exports = (config) ->
       return callback(err) if err?
       async.parallel [
         (done) ->
-          events.post_group_event(
+          _post_group_event(
             session,
             group,
             if accepted then "join" else "decline",
-            {title: group.name, action: invitation},
+            {entity_name: group.name, user: session.users[invitation.user]?.email},
             done)
 
         (done) ->

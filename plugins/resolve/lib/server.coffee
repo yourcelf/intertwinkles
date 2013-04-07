@@ -19,18 +19,6 @@ start = (config, app, sockrooms) ->
   # Routes
   #
 
-  server_error = (req, res, err) ->
-    www_methods.handle_error(req, res, err)
-
-  not_found = (req, res) ->
-    www_methods.not_found(req, res)
-
-  bad_request = (req, res, err) ->
-    www_methods.bad_request(req, res, err)
-
-  permission_denied = (req, res) ->
-    www_methods.permission_denied(req, res)
-
   context = (req, obj, initial_data) ->
     return _.extend({
       initial_data: _.extend(
@@ -44,28 +32,25 @@ start = (config, app, sockrooms) ->
 
   index_res = (req, res, extra_context, initial_data) ->
     utils.list_accessible_documents schema.Proposal, req.session, (err, docs) ->
-      return server_error(req, res, err) if err?
+      return www_methods.server_error(req, res, err) if err?
       res.render 'resolve/index', context(req, extra_context or {}, _.extend(initial_data or {}, {
         listed_proposals: docs
       }))
 
   app.get /\/resolve$/, (req, res) -> res.redirect('/resolve/')
   app.get "/resolve/", (req, res) ->
-    index_res(req, res, {
-      title: "Resolve: Decide Something"
-    })
+    index_res(req, res, { title: "Resolve: Decide Something" })
 
   app.get "/resolve/new/", (req, res) ->
-    index_res(req, res, {
-      title: "New proposal"
-    })
+    index_res(req, res, { title: "New proposal" })
 
   utils.append_slash(app, "/resolve/p/([^/]+)")
   app.get "/resolve/p/:id/", (req, res) ->
     schema.Proposal.findOne {_id: req.params.id}, (err, doc) ->
-      return server_error(req, res, err) if err?
-      return not_found(req, res) unless doc?
-      return permission_denied(req, res) unless utils.can_view(req.session, doc)
+      return www_methods.server_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless doc?
+      unless utils.can_view(req.session, doc)
+        return www_methods.permission_denied(req, res)
       index_res(req, res, {
         title: "Resolve: " + doc.title
       }, {
@@ -121,13 +106,13 @@ start = (config, app, sockrooms) ->
     else
       utils.list_accessible_documents(
         schema.Proposal, session, (err, proposals) ->
-          if err? then return socket.sendJSON data.callback, {error: err}
+          return sockrooms.handleError(socket, err) if err?
           socket.sendJSON data.callback, {proposals}
       )
 
   sockrooms.on "resolve/get_proposal", (socket, session, data) ->
     unless data.callback?
-      return sockrooms.handleError("Missing 'callback' parameter")
+      return sockrooms.handleError(socket, "Missing 'callback' parameter")
     schema.Proposal.findOne data.proposal, (err, proposal) ->
       response = {}
       unless utils.can_view(session, proposal)
@@ -140,7 +125,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on "resolve/get_proposal_events", (socket, session, data) ->
     respond = (err, events) ->
-      return sockrooms.handleError(err) if err?
+      return sockrooms.handleError(socket, err) if err?
       return socket.sendJSON data.callback, {events: events}
 
     return respond("Missing proposal ID") unless data.proposal_id?
@@ -184,6 +169,5 @@ start = (config, app, sockrooms) ->
         resolve.add_opinion(session, data, respond)
       when "trim"
         resolve.remove_opinion(session, data, respond)
-
 
 module.exports = {start}

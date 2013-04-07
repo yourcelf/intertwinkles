@@ -9,6 +9,14 @@ persona       = require './persona_consumer'
 module.exports = (config) ->
   schema = require("./schema").load(config)
   solr = require('./solr_helper')(config)
+  grammar_getters = {
+    www: require("./www_events_grammar")
+  }
+  # Avoid putting 'key' in global namespace.
+  do ->
+    for key in _.keys(config.apps)
+      continue if key == "www"
+      #grammar_getters[key] = require("../plugins/#{key}/lib/events_grammar")
 
   # Private
   get_user = (query, callback) ->
@@ -22,7 +30,7 @@ module.exports = (config) ->
       return callback("User not specified")
 
   # Collector for public methods
-  m = {}
+  api = {}
   
   #
   # Authentication and group data access
@@ -31,7 +39,7 @@ module.exports = (config) ->
 
   # Retrieve a user that is authenticating. Create the user if it doesn't
   # exist, and process any email change requests the user might have.
-  m.get_authenticating_user = (email, callback) ->
+  api.get_authenticating_user = (email, callback) ->
     schema.User.findOne {$or: [{email: email}, {email_change_request: email}]}, (err, doc) ->
       if err? then return callback(err)
       if doc?
@@ -98,7 +106,7 @@ module.exports = (config) ->
 
   # Resolves the first argument into a user object, then gets the user's
   # associated groups.
-  m.get_groups = (email_or_id_or_user, callback) ->
+  api.get_groups = (email_or_id_or_user, callback) ->
     if _.isObject(email_or_id_or_user)
       _get_groups(email_or_id_or_user, callback)
     else if _.isString(email_or_id_or_user)
@@ -108,14 +116,14 @@ module.exports = (config) ->
     else
       callback("Unrecognized user, neither object nor string")
 
-  m.verify_assertion = (assertion, callback) ->
+  api.verify_assertion = (assertion, callback) ->
     audience = url.parse(config.api_url).host
     persona.verify assertion, audience, callback
 
-  m.authenticate = (session, assertion, callback) ->
-    m.verify_assertion assertion, (err, persona_response) ->
+  api.authenticate = (session, assertion, callback) ->
+    api.verify_assertion assertion, (err, persona_response) ->
       return callback(err) if err?
-      m.get_authenticating_user persona_response.email, (err, data) ->
+      api.get_authenticating_user persona_response.email, (err, data) ->
         return callback(err) if err?
         { user, message } = data
         _get_groups user, (err, data) ->
@@ -127,7 +135,7 @@ module.exports = (config) ->
           session.users = users
           callback(err, session, message)
 
-  m.clear_session_auth = (session, callback) ->
+  api.clear_session_auth = (session, callback) ->
     session.auth = null
     session.groups = null
     session.users = null
@@ -138,7 +146,7 @@ module.exports = (config) ->
   # Short URLs
   #
 
-  m.make_short_url = (user_url, application, callback) ->
+  api.make_short_url = (user_url, application, callback) ->
     app_url = config.apps[application]?.url
     unless app_url?
       return callback("Invalid application")
@@ -202,7 +210,7 @@ module.exports = (config) ->
         solr.post_search_index doc, (err) ->
           callback(err, doc)
 
-  m.add_search_index = (params, timeout, callback) ->
+  api.add_search_index = (params, timeout, callback) ->
     if timeout and isNaN(timeout)
       callback = timeout
       timeout = null
@@ -221,7 +229,7 @@ module.exports = (config) ->
     else
       _add_search_index(params, callback)
 
-  m.remove_search_index = (application, entity, type, callback=(->)) ->
+  api.remove_search_index = (application, entity, type, callback=(->)) ->
     schema.SearchIndex.findOneAndRemove {application, entity, type}, (err, doc) ->
       return callback(err) if err?
       solr.delete_search_index {entity}, (err) ->
@@ -232,7 +240,7 @@ module.exports = (config) ->
   # Notifications
   #
 
-  m.get_notifications = (email, callback) ->
+  api.get_notifications = (email, callback) ->
     get_user email, (err, user) ->
       return callback(err) if err?
       schema.Notification.find({
@@ -242,7 +250,7 @@ module.exports = (config) ->
         "formats.web": {$ne: null}
       }).sort('-date').limit(51).exec(callback)
 
-  m.clear_notifications = (params, callback=(->)) ->
+  api.clear_notifications = (params, callback=(->)) ->
     query = {}
     query._id = {$in: params.notification_id.split(",")} if params.notification_id?
     query.application = params.application if params.application?
@@ -271,7 +279,7 @@ module.exports = (config) ->
       [none, notifications] = results
       callback(null, notifications)
 
-  m.suppress_notifications = (email, notification_id, callback=(->)) ->
+  api.suppress_notifications = (email, notification_id, callback=(->)) ->
     get_user email, (err, user) ->
       return callback(err) if err?
       schema.Notification.findOneAndUpdate({
@@ -281,7 +289,7 @@ module.exports = (config) ->
         callback(err, doc)
       )
 
-  m.post_notifications = (notices, callback=(->)) ->
+  api.post_notifications = (notices, callback=(->)) ->
     # Ensure we have required params for every notice.
     for params in notices
       missing = []
@@ -343,7 +351,7 @@ module.exports = (config) ->
   # Profiles
   #
 
-  m.edit_profile = (params, callback=(->)) ->
+  api.edit_profile = (params, callback=(->)) ->
     unless params.name
       return callback("Invalid name")
     if isNaN(params.icon_id)
@@ -363,7 +371,7 @@ module.exports = (config) ->
   # Events
   #
 
-  m.get_events = (params, callback) ->
+  api.get_events = (params, callback) ->
     filter = {}
     async.parallel [
       (done) ->
@@ -391,7 +399,11 @@ module.exports = (config) ->
         filter.date = before
       for key in ["application", "entity", "type"]
         filter[key] = params[key] if params[key]?
-      schema.Event.find(filter, callback)
+      schema.Event.find filter, (err, events) ->
+        return callback(err) if err?
+        for event in events
+          event.grammar = api.get_event_grammar(event)
+        return callback(null, events)
 
   _event_timeout_queue = {}
   _post_event = (params, callback) ->
@@ -427,7 +439,7 @@ module.exports = (config) ->
       event = new schema.Event(data)
       event.save(callback)
 
-  m.post_event = (params, timeout, callback=(->)) ->
+  api.post_event = (params, timeout, callback=(->)) ->
     if timeout and isNaN(timeout)
       callback = timeout
       timeout = null
@@ -442,8 +454,9 @@ module.exports = (config) ->
         params.anon_id,
         params.group
       ].join(":")
-    if _event_timeout_queue[key]
-      return callback(null, _event_timeout_queue[key])
+
+      if _event_timeout_queue[key]
+        return callback(null, _event_timeout_queue[key])
 
     _post_event params, (err, event) ->
       if timeout? and not err?
@@ -451,17 +464,20 @@ module.exports = (config) ->
         setTimeout (-> delete _event_timeout_queue[key]), timeout
       return callback(err, event)
 
+  api.get_event_grammar = (event) ->
+    return grammar_getters[event.application]?.get_terms(event)
+
   #
   # Twinkles
   #
 
-  m.get_twinkles = (params, callback) ->
+  api.get_twinkles = (params, callback) ->
     filter = {}
     for key in ["application", "entity", "url", "sender", "recipient"]
       filter[key] = params[key] if params[key]?
     schema.Twinkle.find(filter, callback)
 
-  m.post_twinkle = (params, callback) ->
+  api.post_twinkle = (params, callback) ->
     conditions = {
       sender: params.sender or null
       sender_anon_id: params.sender_anon_id or null
@@ -478,7 +494,7 @@ module.exports = (config) ->
     options = {upsert: true, 'new': true}
     schema.Twinkle.findOneAndUpdate conditions, update, options, callback
 
-  m.delete_twinkle = (params, callback) ->
+  api.delete_twinkle = (params, callback) ->
     unless params.twinkle_id?
       return callback("Missing twinkle_id")
     conditions = {_id: params.twinkle_id}
@@ -492,4 +508,4 @@ module.exports = (config) ->
       return callback("Missing one of sender or sender_anon_id.")
     schema.Twinkle.findOneAndRemove conditions, callback
     
-  return m
+  return api
