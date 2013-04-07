@@ -284,6 +284,7 @@ footer_template = _.template("""
         <ul>
           <li><a href='#{INTERTWINKLES_APPS.www.url}/about/'>About</a></li>
           <li><a href='#{INTERTWINKLES_APPS.www.url}/about/starting/'>Getting Started</a></li>
+          <li><a href='http://blog.intertwinkles.org'>Blog</a></li>
           <li style='margin-left: -0.5em; font-size: smaller;'>Legal:</li>
           <li><a href='#{INTERTWINKLES_APPS.www.url}/about/terms/'>Terms of Use</a></li>
           <li><a href='#{INTERTWINKLES_APPS.www.url}/about/privacy/'>Privacy Policy</a></li>
