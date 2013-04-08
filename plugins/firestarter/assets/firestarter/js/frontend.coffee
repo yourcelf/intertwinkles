@@ -19,17 +19,16 @@ class SplashView extends Backbone.View
     "click .listed-firestarter a": "softNav"
 
   initialize: ->
-    intertwinkles.user.on "change", @getFirestarterList
+    @listenTo intertwinkles.user, "change", @getFirestarterList
     @dateWidgets = []
 
   remove: =>
-    intertwinkles.user.off "change", @getFirestarterList
     for view in @dateWidgets
       view.remove()
     super()
 
   getFirestarterList: =>
-    fire.socket.on "list_firestarters", (data) =>
+    @listenTo fire.socket, "list_firestarters", (data) =>
       if data.error?
         flash "error", "OH my, a server kablooie."
         console.info(data.error)
@@ -173,14 +172,14 @@ class ShowFirestarter extends Backbone.View
       room: "firestarter/" + options.slug
     })
 
-    fire.socket.on "firestarter", (data) =>
+    @listenTo fire.socket, "firestarter", (data) =>
       console.info "on firestarter", data
       if data.model?
         load_firestarter_data(data.model)
         @sharingButton?.read_only = not intertwinkles.can_change_sharing(fire.model)
         @sharingButton?.render()
 
-    fire.socket.on "response", (data) =>
+    @listenTo fire.socket, "response", (data) =>
       response = fire.responses.get(data.model._id)
       if not response?
         response = new Response(data.model)
@@ -188,18 +187,18 @@ class ShowFirestarter extends Backbone.View
       else
         response.set(data.model)
 
-    fire.socket.on "delete_response", (data) =>
+    @listenTo fire.socket, "delete_response", (data) =>
       fire.responses.remove(fire.responses.get(data.model._id))
 
-    fire.model.on "change", @updateFirestarter, this
-    fire.responses.on "add", @addResponseView, this
-    fire.responses.on "remove", @removeResponseView, this
+    @listenTo fire.model, "change", @updateFirestarter
+    @listenTo fire.responses, "add", @addResponseView
+    @listenTo fire.responses, "remove", @removeResponseView
 
     unless fire.model.get("slug") == options.slug
       fire.socket.send "firestarter/get_firestarter", {slug: options.slug}
 
     # Reload sharing settings
-    intertwinkles.user.on "change", @refreshFirestarter, this
+    @listenTo intertwinkles.user, "change", @refreshFirestarter
 
   remove: =>
     @roomUsersMenu?.remove()
@@ -207,11 +206,6 @@ class ShowFirestarter extends Backbone.View
     @editor?.remove()
     for view in @responseViews
       view.remove()
-    fire.socket.stopListening("firestarter")
-    fire.socket.stopListening("response")
-    fire.socket.stopListening("delete_response")
-    fire.model.off null, null, this
-    intertwinkles.user.off null, null, this
     delete fire.model
     if fire.responses?
       delete fire.responses
@@ -344,8 +338,8 @@ class ShowFirestarter extends Backbone.View
     buildWithTimeout = =>
       clearTimeout(build_timeline_timeout) if build_timeline_timeout?
       build_timeline_timeout = setTimeout @buildTimeline, 1000
-    fire.model.on "change", buildWithTimeout, null
-    fire.responses.on "change add remove", buildWithTimeout, this
+    @listenTo fire.model, "change", buildWithTimeout
+    @listenTo fire.responses, "change add remove", buildWithTimeout
 
   buildTimeline: =>
     if fire.model.id
@@ -447,12 +441,10 @@ class ShowResponseView extends Backbone.View
 
   initialize: (options={}) ->
     @response = options.response
-    @response.on "change", @render
-    intertwinkles.user.on "change", @render, this
+    @listenTo @response, "change", @render
+    @listenTo intertwinkles.user, "change", @render
 
   remove: =>
-    @response.off "change", @render
-    intertwinkles.user.off "change", @render
     @date?.remove()
     super()
 

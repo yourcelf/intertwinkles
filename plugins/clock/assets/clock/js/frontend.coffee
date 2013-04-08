@@ -10,8 +10,8 @@ class ClockModel extends Backbone.Model
     super(options)
 
   setHandlers: =>
-    intertwinkles.socket.on "clock", @_load
-    intertwinkles.socket.on "clock:time", @_setTime
+    @listenTo intertwinkles.socket, "clock", @_load
+    @listenTo intertwinkles.socket, "clock:time", @_setTime
 
   _load: (data) =>
     console.log "load", data
@@ -163,11 +163,7 @@ class SplashView extends ClockBaseView
   itemTemplate: _.template $("#splashItemTemplate").html()
   initialize: (options) ->
     @set_clock_list(options.clock_list, false)
-    intertwinkles.user.on "change", @fetch_clock_list, this
-
-  remove: =>
-    super()
-    intertwinkles.user.off "change", @fetch_clock_list, this
+    @listenTo intertwinkles.user, "change", @fetch_clock_list
 
   fetch_clock_list: =>
     fetch_clock_list (list) =>
@@ -351,14 +347,13 @@ class ClockView extends ClockBaseView
   initialize: (options) ->
     super()
     @model = options.model
-    @model.on "change", @render, this
+    @listenTo @model, "change", @render
 
   remove: =>
-    @model.off null, null, this
-    super()
     for view in @catviews or []
       view?.remove()
     @current_time?.remove()
+    super()
 
   settings: (event) =>
     event.preventDefault()
@@ -416,11 +411,10 @@ class CategoryTimerView extends ClockBaseView
     super()
     @model = options.model
     @category = options.category
-    @model.on "change", @render, this
-    @model.on "change:categories:#{@category.name}", @render, this
+    @listenTo @model, "change", @render
+    @listenTo @model, "change:categories:#{@category.name}", @render
 
   remove: =>
-    @model.off null, null, this
     clearInterval(@goer) if @goer?
     super()
 
@@ -509,13 +503,8 @@ class ClockFooterView extends ClockBaseView
   initialize: (options) ->
     @current = options.current
     @model = options.model
-    @model.on "change", @render, this
-    intertwinkles.user.on("change", @render, this)
-
-  remove: =>
-    super()
-    intertwinkles.user.off("change", @render, this)
-    @model.off "change", @render, this
+    @listenTo @model, "change", @render
+    @listenTo intertwinkles.user, "change", @render
 
   render: =>
     links = []

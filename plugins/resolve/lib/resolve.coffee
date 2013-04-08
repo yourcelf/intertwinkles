@@ -135,7 +135,9 @@ module.exports = (config) ->
 
       # 2. Now render new notifications for all people that still need them.
       (done) ->
-        if (not proposal.sharing.group_id) or proposal.resolved?
+        if ((not proposal.sharing.group_id) or
+            (proposal.resolved?) or
+            (not session.groups?[proposal.sharing.group_id]))
           return done(null, [])
 
         # Identify who needs notices, of what type -- either "stale", or "new".

@@ -25,11 +25,7 @@ class SplashView extends intertwinkles.BaseView
   }, intertwinkles.BaseEvents
   
   initialize: ->
-    intertwinkles.user.on "change", @getProposalList
-    super()
-
-  remove: =>
-    intertwinkles.user.off "change", @getProposalList
+    @listenTo intertwinkles.user, "change", @getProposalList
     super()
 
   render: =>
@@ -55,7 +51,7 @@ class SplashView extends intertwinkles.BaseView
 
 
   getProposalList: =>
-    resolve.socket.on "list_proposals", (data) =>
+    @listenTo resolve.socket, "list_proposals", (data) =>
       if data.error?
         flash "error", "The server. It has got confused."
       else
@@ -72,11 +68,7 @@ class AddProposalView extends intertwinkles.BaseView
   }, intertwinkles.BaseEvents
 
   initialize: ->
-    intertwinkles.user.on("change", @onUserChange)
-    super()
-
-  remove: =>
-    intertwinkles.user.off("change", @onUserChange)
+    @listenTo intertwinkles.user, "change", @onUserChange
     super()
 
   onUserChange: =>
@@ -147,6 +139,10 @@ class EditOpinionDialog extends intertwinkles.BaseModalFormView
 class DeleteOpinionDialog extends intertwinkles.BaseModalFormView
   template: _.template $("#deleteOpinionDialogTemplate").html()
 
+#class ProposalHistoryView extends intertwinkles.BaseModalFormView
+#  template: _.template $("#proposalHistoryViewTemplate").html()
+#  initialize: (options) ->
+
 class ShowProposalView extends intertwinkles.BaseView
   template: _.template($("#showProposalTemplate").html())
   opinionTemplate: _.template($("#opinionTemplate").html())
@@ -176,18 +172,9 @@ class ShowProposalView extends intertwinkles.BaseView
       [v, @votes[v]] for v in ["yes", "weak_yes", "discuss", "no", "block", "abstain"]
     )
 
-    resolve.model.on "change", @proposalChanged, this
-    intertwinkles.user.on "change", =>
-      @postRender()
-    , this
-    resolve.socket.on "proposal_change", @onProposalData
-
-  remove: =>
-    resolve.socket.stopListening("proposal_change")
-    resolve.model.off(null, null, this)
-    intertwinkles.user.off(null, null, this)
-    (view.remove() for key,view of @twinkle_map or {})
-    super()
+    @listenTo resolve.model, "change", @proposalChanged
+    @listenTo intertwinkles.user, "change", @postRender
+    @listenTo resolve.socket, "proposal_change", @onProposalData
 
   onProposalData: (data) =>
     resolve.model.set(data.proposal)
@@ -226,7 +213,7 @@ class ShowProposalView extends intertwinkles.BaseView
     buildWithTimeout = =>
       clearTimeout(_timeline_timeout) if _timeline_timeout?
       _timeline_timeout = setTimeout @buildTimeline, 1000
-    resolve.model.on "change", buildWithTimeout, this
+    @listenTo resolve.model, "change", buildWithTimeout
 
   postRender: =>
     @renderProposal()

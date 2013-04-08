@@ -8,18 +8,13 @@ class ds.VoteWidget extends Backbone.View
     'mousedown  .downvote': 'downVote'
   initialize: (options) ->
     @idea = options.idea
-    @idea.on "change:votes", @update
+    @listenTo @idea, "change:votes", @update
     @readOnly = options.readOnly
     @hideOnZero = options.hideOnZero
     if @readOnly
       @undelegateEvents()
-    intertwinkles.user.on "change", @render
-    ds.model.on "change:sharing", @render
-
-  remove: =>
-    intertwinkles.user.off "change", @render
-    ds.model.off "change:sharing", @render
-    super()
+    @listenTo intertwinkles.user, "change", @render
+    @listenTo ds.model, "change:sharing", @render
 
   render: =>
     #console.debug "render votewidget", @idea.id

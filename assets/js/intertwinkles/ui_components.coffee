@@ -31,11 +31,7 @@ class intertwinkles.UserMenu extends Backbone.View
     'click .sign-out': 'signOut'
 
   initialize: ->
-    intertwinkles.user.on "change", @render
-
-  remove: =>
-    intertwinkles.user.off "change", @render
-    super()
+    @listenTo intertwinkles.user, "change", @render
 
   render: =>
     @$el.addClass("dropdown")
@@ -85,7 +81,7 @@ class intertwinkles.RoomUsersMenu extends Backbone.View
 
   initialize: (options={}) ->
     @room = options.room
-    intertwinkles.socket.on "room_users", @roomList
+    @listenTo intertwinkles.socket, "room_users", @roomList
     @list = []
     @connect()
 
@@ -93,7 +89,6 @@ class intertwinkles.RoomUsersMenu extends Backbone.View
     intertwinkles.socket.send "join", {room: @room}
 
   remove: =>
-    intertwinkles.socket.off "room_users", @roomList
     intertwinkles.socket.send "leave", {room: @room}
     super()
 
@@ -345,11 +340,7 @@ class intertwinkles.UserChoice extends Backbone.View
 
   initialize: (options={}) ->
     @model = options.model or {}
-    intertwinkles.user.on "change", @render
-
-  remove: =>
-    intertwinkles.user.off "change", @render
-    super()
+    @listenTo intertwinkles.user, "change", @render
 
   set: (user_id, name) =>
     @model = { user_id: user_id, name: name }

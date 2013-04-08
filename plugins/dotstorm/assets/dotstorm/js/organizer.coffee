@@ -48,30 +48,26 @@ class ds.Organizer extends Backbone.View
     @ideas = options.ideas
     @smallIdeaViews = {}
 
-    @dotstorm.on "change:topic", =>
+    @listenTo @dotstorm, "change:topic", =>
       #console.debug "Dotstorm: topic changed"
       @renderTopic()
-    @dotstorm.on "change:name", =>
+    @listenTo @dotstorm, "change:name", =>
       #console.debug "Dotstorm: topic changed"
       @renderTopic()
-    @dotstorm.on "change:groups", =>
+    @listenTo @dotstorm, "change:groups", =>
       #console.debug "Dotstorm: grouping changed"
       # This double-calls... but ok!
       if @dragState? then @abortDrag()
       @renderGroups()
       @renderTrash()
-    @ideas.on "add", =>
+    @listenTo @ideas, "add", =>
       #console.debug "Dotstorm: idea added"
       @renderGroups()
-    @ideas.on "change:tags", =>
+    @listenTo @ideas, "change:tags", =>
       @renderTagCloud()
 
-    @dotstorm.on "change:sharing", @setAddVisibility
-    intertwinkles.user.on "change", @setAddVisibility
-
-  remove: (event) =>
-    intertwinkles.user.off "change", @setAddVisibility
-    super()
+    @listenTo @dotstorm, "change:sharing",  @setAddVisibility
+    @listenTo intertwinkles.user, "change", @setAddVisibility
 
   setAddVisibility: (event) =>
     @$(".add-link-block").toggle(intertwinkles.can_edit(@dotstorm))

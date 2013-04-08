@@ -43,16 +43,14 @@ class intertwinkles.NotificationMenu extends Backbone.View
     @open = false
     interval = setInterval =>
       if intertwinkles.socket?
-        intertwinkles.socket.on "notifications", @handleNotifications
+        @listenTo intertwinkles.socket, "notifications", @handleNotifications
         @fetchNotifications()
         clearInterval(interval)
     , 100
-    intertwinkles.user.on "login", @fetchNotifications
-    intertwinkles.user.on "logout", @fetchNotifications
+    @listenTo intertwinkles.user, "login", @fetchNotifications
+    @listenTo intertwinkles.user, "logout", @fetchNotifications
 
   remove: =>
-    intertwinkles.socket.off "notifications", @handleNotifications
-    intertwinkles.user.off "change", @fetchNotifications
     view.remove() for view in @dateViews
     super()
 
