@@ -16,7 +16,7 @@ notification_menu_template = _.template("""
             <% } %>
           </div>
           <div class='message'>
-            <div class='body'><%- notice.formats.web %></div>
+            <div class='body'><%= notice.formats.web %></div>
             <div class='byline'><span class='date' data-date='<%- notice.date %>'></span></div>
           </div>
         </a>
