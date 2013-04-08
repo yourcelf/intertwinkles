@@ -58,27 +58,6 @@
           background-color: #f00
           outline: 6px solid #f00
 
-  .vote
-    text-align: center
-    font-style: italic
-    &.yes
-      color: #090
-    &.weak_yes
-      color: #393
-    &.discuss
-      background-color: #ffd
-    &.no
-      color: #900
-    &.block
-      background-color: #f00
-      color: white
-    &.non-voting
-      background-color: #999
-      color: white
-    &.half-width
-      width: 50%
-      float: left
-    width: 100%
   .non-voting-warning
     font-style: normal
 
@@ -125,6 +104,59 @@
       font-weight: normal
       white-space: nowrap
       text-align: right
+
+.vote
+  text-align: center
+  font-style: italic
+  &.yes
+    color: #090
+  &.weak_yes
+    color: #393
+  &.discuss
+    background-color: #ffd
+  &.no
+    color: #900
+  &.block
+    background-color: #f00
+    color: white
+  &.non-voting
+    background-color: #999
+    color: white
+  &.half-width
+    width: 50%
+    float: left
+  width: 100%
+
+.proposal-history
+  margin-top: 2em
+  .byline
+    .editor
+      opacity: 0.8
+    
+  .revision
+    background-color: rgba(200, 200, 200, 0.1)
+    margin-top: 1em
+    padding: 1em
+    border-radius: 5px
+  .text
+    padding: 0.5em
+    margin: 0.5em
+    border-left: 6px solid #eee
+  .supporters
+    font-size: smaller
+    display: table
+    .row
+      display: table-row
+      .vote
+        text-align: right;
+        display: table-cell
+        width: auto
+      .people
+        padding-left: 1em
+        text-align: left;
+        display: table-cell
+
+
 
 li.listed-proposal
   list-style-type: none

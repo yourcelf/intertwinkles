@@ -139,9 +139,52 @@ class EditOpinionDialog extends intertwinkles.BaseModalFormView
 class DeleteOpinionDialog extends intertwinkles.BaseModalFormView
   template: _.template $("#deleteOpinionDialogTemplate").html()
 
-#class ProposalHistoryView extends intertwinkles.BaseModalFormView
-#  template: _.template $("#proposalHistoryViewTemplate").html()
-#  initialize: (options) ->
+class ProposalHistoryView extends intertwinkles.BaseModalFormView
+  template: _.template $("#proposalHistoryViewTemplate").html()
+
+  initialize: (options) ->
+    @model = options.model
+    @vote_map = options.vote_map
+
+  render: =>
+    # Get a listing of the revisions, and the latest opinion by each author for
+    # that revision.
+    revs = _.map @model.get("revisions"), (rev) =>
+      return { revision: rev, opinions: {} }
+    _.each revs, (cur, i) ->
+      next = revs[i + 1]
+      if next
+        dmp = new diff_match_patch()
+        dmp.Diff_EditCost = 4
+        diff = dmp.diff_main(next.revision.text, cur.revision.text)
+        dmp.diff_cleanupSemantic(diff)
+        cur.diff = dmp.diff_prettyHtml(diff)
+      else
+        cur.diff = cur.revision.text
+
+    for i in [(revs.length - 1)..0]
+      cur = revs[i]
+      cur_date = intertwinkles.parse_date(cur.revision.date)
+      next = revs[i - 1]
+      if next?
+        next_date = intertwinkles.parse_date(next.revision.date)
+      else
+        next_date = undefined
+      _.each @model.get("opinions"), (op) =>
+        for j in [0...op.revisions.length]
+          rev = op.revisions[j]
+          rev_date = intertwinkles.parse_date(rev.date)
+          if rev_date > cur_date and ((not next_date?) or rev_date < next_date)
+            cur.opinions[rev.vote] ?= []
+            cur.opinions[rev.vote].push({
+              opinion: op
+              revision: rev
+            })
+            break
+    @context = {revs: revs, vote_map: @vote_map}
+    super()
+    intertwinkles.sub_vars(@$el)
+    @$("[rel=popover]").popover()
 
 class ShowProposalView extends intertwinkles.BaseView
   template: _.template($("#showProposalTemplate").html())
@@ -155,6 +198,7 @@ class ShowProposalView extends intertwinkles.BaseView
     'click        .edit-opinion': 'editOpinion'
     'click     a.delete-opinion': 'deleteOpinion'
     'click     .confirm-my-vote': 'confirmMyVote'
+    'click             .history': 'showHistory'
   }, intertwinkles.BaseEvents
 
   votes: {
@@ -165,13 +209,11 @@ class ShowProposalView extends intertwinkles.BaseView
     block: "Block"
     abstain: "I have a conflict of interest"
   }
+  vote_order: ["yes", "weak_yes", "discuss", "no", "block", "abstain"]
 
   initialize: (options) ->
     super()
-    @vote_order = (
-      [v, @votes[v]] for v in ["yes", "weak_yes", "discuss", "no", "block", "abstain"]
-    )
-
+    @vote_map = ([v, @votes[v]] for v in @vote_order)
     @listenTo resolve.model, "change", @proposalChanged
     @listenTo intertwinkles.user, "change", @postRender
     @listenTo resolve.socket, "proposal_change", @onProposalData
@@ -189,7 +231,7 @@ class ShowProposalView extends intertwinkles.BaseView
   render: =>
     if not resolve.model.id?
       return @$el.html("<img src='/static/img/spinner.gif' /> Loading...")
-    @$el.html @template({ vote_order: @vote_order })
+    @$el.html @template({ vote_map: @vote_map })
     @roomUsersMenu =  new intertwinkles.RoomUsersMenu({
       room: "resolve/" + resolve.model.id
     })
@@ -360,7 +402,7 @@ class ShowProposalView extends intertwinkles.BaseView
 
     group = intertwinkles.groups?[resolve.model.get("sharing")?.group_id]
     tallies = []
-    for [vote_value, vote_display] in @vote_order
+    for [vote_value, vote_display] in @vote_map
       votes = by_vote[vote_value] or []
       non_voting = []
       stale = []
@@ -524,7 +566,7 @@ class ShowProposalView extends intertwinkles.BaseView
 
     form = new EditOpinionDialog({
       context: {
-        vote_order: @vote_order
+        vote_map: @vote_map
         vote: opinion?.revisions[0].vote
         text: opinion?.revisions[0].text
         user_id: if opinion? then opinion?.user_id else intertwinkles.user.id
@@ -611,6 +653,10 @@ class ShowProposalView extends intertwinkles.BaseView
         callback: callback
         proposal_id: resolve.model.id
       }
+
+  showHistory: (event) =>
+    event.preventDefault()
+    new ProposalHistoryView({model: resolve.model, vote_map: @vote_map}).render()
 
 class Router extends Backbone.Router
   routes:

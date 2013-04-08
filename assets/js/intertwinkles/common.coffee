@@ -86,7 +86,6 @@ class intertwinkles.BaseModalFormView extends intertwinkles.BaseView
     @$el.html @template(@context)
     @$el.modal('show')
     @$el.on "hidden", =>
-      console.log "render on hidden"
       @trigger "hidden", this
 
 intertwinkles.BaseEvents = {
