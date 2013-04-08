@@ -275,7 +275,7 @@ class ShowProposalView extends intertwinkles.BaseView
               data-application='resolve'
               data-entity='#{resolve.model.id}'
               data-subentity='#{rev._id}'
-              data-recipient='#{rev.user_id}'
+              data-recipient='#{rev.user_id or ""}'
               data-url='#{resolve.model.get("url")}'></span>")
 
       @addView ".proposal .date-auto", new intertwinkles.AutoUpdatingDate(date: rev.date)
