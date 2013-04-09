@@ -62,7 +62,6 @@ run = (config, callback) ->
       doc.pad_id = doc.etherpad_group_id + "$" + doc.pad_name
       doc.read_only_pad_id = null
       return doc.save (err, doc) ->
-        console.log "WAI"
         if err?
           logger.error(err)
         else

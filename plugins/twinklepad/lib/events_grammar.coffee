@@ -24,8 +24,8 @@ module.exports = {
         return [{
           entity: event.data.entity_name
           aspect: "pad"
-          collective: "viewed pads"
-          verbed: "viewed"
+          collective: "visited pads"
+          verbed: "visited"
           manner: ""
         }]
     return null

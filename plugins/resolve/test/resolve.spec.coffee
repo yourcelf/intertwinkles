@@ -41,19 +41,26 @@ describe "resolve", ->
     common.shutDown(@server, done)
 
   it "Posts events", (done) ->
-    resolve.post_event @session, @proposal, "create", {
-      callback: (err, event) =>
+    resolve.post_event @session, @proposal, "visit", {}, 0, (err, event) =>
+      expect(err).to.be(null)
+      expect(event.application).to.be("resolve")
+      expect(event.entity).to.be(@proposal.id)
+      www_schema.Event.findOne {entity: @proposal.id}, (err, doc) =>
         expect(err).to.be(null)
-        expect(event.application).to.be("resolve")
-        expect(event.entity).to.be(@proposal.id)
-        www_schema.Event.findOne {entity: @proposal.id}, (err, doc) =>
-          expect(err).to.be(null)
-          expect(doc.id).to.be(event.id)
-          expect(doc.entity).to.be(event.entity)
-          expect(doc.group).to.be(@proposal.sharing.group_id)
-          expect(doc.anon_id).to.be(@session.anon_id)
-          done()
-    }
+        expect(doc.id).to.be(event.id)
+        expect(doc.entity).to.be(event.entity)
+        expect(doc.group).to.be(@proposal.sharing.group_id)
+        expect(doc.anon_id).to.be(@session.anon_id)
+        
+        terms = api_methods.get_event_grammar(doc)
+        expect(terms.length).to.be(1)
+        expect(terms[0].entity).to.be(@proposal.title)
+        expect(terms[0].aspect).to.be("proposal")
+        expect(terms[0].collective).to.be("visited proposals")
+        expect(terms[0].verbed).to.be("visited")
+        expect(terms[0].manner).to.be("")
+
+        done()
 
   it "Posts search indices", (done) ->
     resolve.post_search_index @proposal, (err, si) =>
@@ -113,6 +120,17 @@ describe "resolve", ->
       for notice in notices
         expect(notice.url).to.be(proposal.url)
         expect(notice.absolute_url).to.be(proposal.absolute_url)
+
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Proposal"
+        aspect: "\"#{proposal.title}\""
+        collective: 'created proposals'
+        verbed: 'created'
+        manner: ""
+      })
+
       @proposal_with_notices = proposal
       www_schema.Notification.find {entity: @proposal_with_notices.id}, (err, docs) =>
         expect(err).to.be(null)
@@ -156,6 +174,17 @@ describe "resolve", ->
 
       expect(err).to.be(null)
       @proposal_with_notices = proposal
+
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: proposal.title
+        aspect: "proposal"
+        collective: 'changed proposals'
+        verbed: 'reopened'
+        manner: ""
+      })
+
       done()
 
   it "Updates notifications based on votes", (done) ->
@@ -235,12 +264,14 @@ describe "resolve", ->
       expect(proposal.opinions[start_length].revisions[0].vote).to.be("weak_yes")
     
       expect(event?.type).to.be("append")
-      expect(event.data.action.data.name).to.eql("One")
-      expect(event.data.action.data.opinion).to.eql({
-        user_id: @session.auth.user_id
-        name: @session.users[@session.auth.user_id].name
-        text: "Super!!!"
-        vote: "weak_yes"
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: proposal.title
+        aspect: "opinion"
+        collective: 'proposal responses'
+        verbed: 'added'
+        manner: "Approve with reservations"
       })
 
       expect(si.text.indexOf("Super!!!")).to.not.be(-1)
@@ -269,7 +300,17 @@ describe "resolve", ->
         expect(proposal.opinions.length).to.be(start_length + 1)
         expect(proposal.opinions[start_length].user_id).to.eql(user.id)
         expect(proposal.opinions[start_length].revisions[0].text).to.be("Far out")
-        expect(event.data.action.data.name).to.eql("Two")
+
+        terms = api_methods.get_event_grammar(event)
+        expect(terms.length).to.be(1)
+        expect(terms[0]).to.eql({
+          entity: proposal.title
+          aspect: "opinion"
+          collective: 'proposal responses'
+          verbed: 'added'
+          manner: "Have concerns"
+        })
+
         @proposal = proposal
         done()
 
@@ -291,7 +332,15 @@ describe "resolve", ->
       expect(proposal.opinions[start_length].user_id).to.eql(null)
       expect(proposal.opinions[start_length].name).to.be("Anonymouse")
       expect(proposal.opinions[start_length].revisions[0].text).to.be("Fur out")
-      expect(event.data.action.data.name).to.eql("Anonymouse")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: proposal.title
+        aspect: "opinion"
+        collective: 'proposal responses'
+        verbed: 'added'
+        manner: "Have concerns"
+      })
       @proposal = proposal
       done()
 
@@ -313,7 +362,15 @@ describe "resolve", ->
       expect(proposal.opinions[start_length].user_id).to.eql(null)
       expect(proposal.opinions[start_length].name).to.be("One")
       expect(proposal.opinions[start_length].revisions[0].text).to.be("Four out")
-      expect(event.data.action.data.name).to.eql("One")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: proposal.title
+        aspect: "opinion"
+        collective: 'proposal responses'
+        verbed: 'added'
+        manner: "I have a conflict of interest"
+      })
       @proposal = proposal
       done()
 
@@ -354,5 +411,16 @@ describe "resolve", ->
       expect(_.find proposal.opinions, (o) =>
         o.user_id == @opinion_to_remove.user_id
       ).to.be(undefined)
+
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: proposal.title
+        aspect: "opinion"
+        collective: 'proposal responses'
+        verbed: 'removed'
+        manner: "(was \"I have a conflict of interest\")"
+      })
+
       done()
 

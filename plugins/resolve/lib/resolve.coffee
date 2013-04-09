@@ -14,22 +14,19 @@ module.exports = (config) ->
   #
   # Post an event for the given proposal.
   #
-  r.post_event = (session, proposal, type, opts) ->
-    event = _.extend {
-        application: "resolve"
-        type: type
-        url: proposal.url
-        entity: proposal._id
-        user: session.auth?.user_id
-        via_user: session.auth?.user_id
-        anon_id: session.anon_id
-        group: proposal.sharing.group_id
-        data: {
-          title: proposal.title
-          action: opts.data
-        }
-      }, opts.overrides or {}
-    api_methods.post_event(event, opts.timeout or 0, opts.callback or (->))
+  r.post_event = (session, proposal, type, event_data, timeout, callback) ->
+    event_data.entity_name = proposal.title
+    api_methods.post_event({
+      application: "resolve"
+      type: type
+      url: proposal.url
+      entity: proposal._id
+      user: session.auth?.user_id
+      via_user: session.auth?.user_id
+      anon_id: session.anon_id
+      group: proposal.sharing.group_id
+      data: event_data
+    }, timeout, callback)
 
   #
   # Post a search index for the given proposal
@@ -275,7 +272,7 @@ module.exports = (config) ->
         name: name
         text: data.proposal.proposal
       })
-      event_data.proposal = proposal.revisions[0]
+      event_data.revision = proposal.revisions[0]
 
     # Finalize the proposal
     if data.proposal?.passed?
@@ -302,7 +299,7 @@ module.exports = (config) ->
       return callback("Missing opinion text") unless data.opinion?.text
       return callback("Missing vote") unless data.opinion?.vote
 
-      event_data = {data: {}}
+      event_data = {}
       if data.opinion?.user_id
         # Authenticated.  Verify that the given ID is in the session
         # user's network. #XXX: Narrow this to the proposal's group?
@@ -320,8 +317,7 @@ module.exports = (config) ->
         opinion_set = _.find proposal.opinions, (o) ->
           (not o.user_id?) and o.name == name
 
-      event_data.user = user_id
-      event_data.data.name = name
+      event_data.user = {name}
 
       if not opinion_set
         opinion_set = {
@@ -343,12 +339,10 @@ module.exports = (config) ->
             text: data.opinion.text
             vote: data.opinion.vote
           })
-      event_data.data.opinion = {
-        user_id: opinion_set.user_id
-        name: opinion_set.name
-        text: data.opinion.text
-        vote: data.opinion.vote
-      }
+
+      event_data.text = data.opinion.text
+      event_data.vote = data.opinion.vote
+
       proposal.save (err, doc) ->
         return callback(err) if err?
         _send_proposal_events(session, proposal, "append", event_data, callback)
@@ -357,14 +351,15 @@ module.exports = (config) ->
   # Trim
   #
   r.remove_opinion = (session, data, callback) ->
-    event_data = {data: {}}
+    event_data = {}
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
       unless utils.can_edit(session, proposal)
         return callback("Permission denied.")
       found = false
       for opinion, i in proposal.opinions
         if opinion._id.toString() == data.opinion._id.toString()
-          event_data.data.deleted_opinion = proposal.opinions.splice(i, 1)[0]
+          op = proposal.opinions.splice(i, 1)[0]
+          event_data.vote = op.revisions[0].vote
           found = true
           break
       unless found
@@ -374,13 +369,11 @@ module.exports = (config) ->
         _send_proposal_events(session, doc, "trim", event_data, callback)
 
   _send_proposal_events = (session, proposal, action, event_data, callback) ->
+    event_data.entity_name = proposal.title
     async.parallel [
       # Post events.
       (done) ->
-        r.post_event(session, proposal, action, {
-          data: event_data
-          callback: done
-        })
+        r.post_event(session, proposal, action, event_data, 0, done)
 
       # Post search index.
       (done) ->
