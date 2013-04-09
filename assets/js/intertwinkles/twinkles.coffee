@@ -72,15 +72,11 @@ class TwinkleView extends intertwinkles.BaseView
       recipient: options.recipient or null
       url: options.url or window.location.pathname
     }
-    intertwinkles.socket.on "twinkles", @parseTwinkles
+    @listenTo intertwinkles.socket, "twinkles", @parseTwinkles
     super()
 
   fetch: =>
     intertwinkles.socket.send "#{@prefix}/get_twinkles", @attrs
-
-  remove: =>
-    intertwinkles.socket.off "twinkles", @parseTwinkles
-    super()
 
   render: =>
     @loading = false

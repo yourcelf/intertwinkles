@@ -83,6 +83,10 @@ start = (config, app, sockrooms) ->
           done(null, [])
     ], (err, results) ->
       return www_methods.handle_error(req, res, err) if err?
+      for result in results[0]
+        result.absolute_url = config.apps.twinklepad.url + result.url
+      for result in results[1]
+        result.absolute_url = config.apps.twinklepad.url + result.url
       res.render 'twinklepad/index', context(req, {
         title: "#{config.apps.twinklepad.name}"
         is_authenticated: utils.is_authenticated(req.session)

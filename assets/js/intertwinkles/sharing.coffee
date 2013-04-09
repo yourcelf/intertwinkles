@@ -135,13 +135,8 @@ class intertwinkles.SharingFormControl extends Backbone.View
     @sharing = intertwinkles.normalize_sharing(@sharing)
     # Show the group control at first even if we have a group set already.
     @force_show_group = options.force_show_group or false
-    intertwinkles.user.on "change", @render
+    @listenTo intertwinkles.user, "change", @render
   
-  remove: =>
-    intertwinkles.user.off "change", @render
-    @group_choice?.remove()
-    super()
-
   render: =>
     @$el.addClass("sharing-controls")
     @$el.html(@template({sharing: @sharing}))
@@ -434,13 +429,8 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
 
   initialize: (options={}) ->
     @model = options.model
-    @model.on "change:sharing", @render, this
-    intertwinkles.user.on "change", @render, this
-
-  remove: =>
-    intertwinkles.user.off null, null, this
-    @model.off null, null, this
-    super()
+    @listenTo @model, "change:sharing", @render
+    @listenTo intertwinkles.user, "change", @render
 
   render: =>
     @read_only = not intertwinkles.can_change_sharing(@model)

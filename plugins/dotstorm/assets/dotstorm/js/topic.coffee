@@ -20,12 +20,8 @@ class ds.Topic extends Backbone.View
 
   initialize: (options) ->
     @model = options.model
-    @model.on "change", @render
-    intertwinkles.user.on "change", @render
-
-  remove: =>
-    intertwinkles.user.off "change", @render
-    super()
+    @listenTo @model, "change", @render
+    @listenTo intertwinkles.user, "change", @render
 
   render: =>
     #console.debug "render topic"

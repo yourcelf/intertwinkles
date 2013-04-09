@@ -6,20 +6,20 @@ class PointsModel extends Backbone.Model
   idAttribute: "_id"
 
   addHandlers: =>
-    intertwinkles.socket.on "points:pointset", @_load
-    intertwinkles.socket.on "points:point", @_pointSet
-    intertwinkles.socket.on "points:support", @_supportSet
-    intertwinkles.socket.on "points:editing", @_editingSet
-    intertwinkles.socket.on "points:approved", @_approvedSet
-    intertwinkles.socket.on "points:move", @_pointMoved
+    @listenTo intertwinkles.socket, "points:pointset", @_load
+    @listenTo intertwinkles.socket, "points:point", @_pointSet
+    @listenTo intertwinkles.socket, "points:support", @_supportSet
+    @listenTo intertwinkles.socket, "points:editing", @_editingSet
+    @listenTo intertwinkles.socket, "points:approved", @_approvedSet
+    @listenTo intertwinkles.socket, "points:move", @_pointMoved
 
   removeHandlers: =>
-    intertwinkles.socket.off "points:pointset", @_load
-    intertwinkles.socket.off "points:point", @_pointSet
-    intertwinkles.socket.off "points:support", @_supportSet
-    intertwinkles.socket.off "points:editing", @_editingSet
-    intertwinkles.socket.off "points:approved", @_approvedSet
-    intertwinkles.socket.off "points:move", @_pointMoved
+    @stopListening intertwinkles.socket, "points:pointset", @_load
+    @stopListening intertwinkles.socket, "points:point", @_pointSet
+    @stopListening intertwinkles.socket, "points:support", @_supportSet
+    @stopListening intertwinkles.socket, "points:editing", @_editingSet
+    @stopListening intertwinkles.socket, "points:approved", @_approvedSet
+    @stopListening intertwinkles.socket, "points:move", @_pointMoved
 
   _load: (data) => @set data.model
 

@@ -112,6 +112,8 @@ block body
             span.date.pull-right
               | Last modified:&nbsp;
               span.date-auto
+            br
+            a.pull-right.history(href='#') history
 
         div.span6
           h4 Vote Tallies
@@ -135,6 +137,46 @@ block body
       div.timeline-holder-holder(style='clear: both; padding-top: 4em;')
         h3 Events
         div.timeline-holder
+
+  script(type='text/template', id='proposalHistoryViewTemplate')
+    div.modal-body
+      button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+      div.proposal-history.
+        <% _.each(revs, function(rev) { %>
+          <div class='revision'>
+            <div class='byline'>
+              <span class='date varsub' data-date='<%- rev.revision.date %>'></span>
+              <span class='editor'>
+                <%= intertwinkles.inline_user(rev.revision.user_id, rev.revision.name) %>
+              </span>
+            </div>
+            <div class='text'>
+              <%= rev.diff %>
+            </div>
+            <div class='supporters'>
+              <% _.each(vote_map, function(votedef) { %>
+                <% var vote_key = votedef[0]; %>
+                <% var vote_name = votedef[1]; %>
+                <% if (rev.opinions[vote_key]) { %>
+                  <div class='row'>
+                    <span class='vote <%- vote_key %>'><%- vote_name %></span>
+                    <div class='people'>
+                    <% _.each(rev.opinions[vote_key], function(op) { %>
+                      <span rel='popover'
+                            data-title='<%- vote_name %>'
+                            data-content='<%- op.revision.text %>'
+                            data-trigger='hover'
+                            data-placement='top'>
+                        <%= intertwinkles.inline_user(op.opinion.user_id, op.opinion.name) %>
+                      </span>
+                    <% }); %>
+                    </div>
+                  </div>
+                <% } %>
+              <% }); %>
+            </div>
+          </div>
+        <% }); %>
 
   script(type='text/template', id='editProposalDialogTemplate')
     form.edit-proposal.form-horizontal
@@ -203,8 +245,8 @@ block body
           div.controls
             select#id_vote(name='vote')
               option(value='') ----
-              <% for (var i = 0; i < vote_order.length; i++) { %>
-              <option value='<%- vote_order[i][0] %>' <%- vote_order[i][0] == vote ? "selected" : "" %>><%- vote_order[i][1] %></option>
+              <% for (var i = 0; i < vote_map.length; i++) { %>
+              <option value='<%- vote_map[i][0] %>' <%- vote_map[i][0] == vote ? "selected" : "" %>><%- vote_map[i][1] %></option>
               <% } %>
         div.control-group
           label.control-label(for="id_text") Please explain:

@@ -62,10 +62,10 @@ class ds.ShowIdeaSmall extends Backbone.View
   initialize: (options) ->
     @model = options.model
     @size = options.size or "medium"
-    @model.on "change:tags", @render
-    @model.on "change:imageVersion", @render
-    @model.on "change:description", @render
-    @model.on "change:photo", @render
+    @listenTo @model, "change:tags", @render
+    @listenTo @model, "change:imageVersion", @render
+    @listenTo @model, "change:description", @render
+    @listenTo @model, "change:photo", @render
 
   render: =>
     args = _.extend
@@ -111,17 +111,13 @@ class ds.ShowIdeaBig extends Backbone.View
 
   initialize: (options) ->
     @model = options.model
-    @model.on "change:description", @render
-    @model.on "change:tags", @render
-    @model.on "change:background", @render
-    @model.on "change:drawing", @render
-    @model.on "change:photo", @render
-    @model.on "change:sharing", @render
-    intertwinkles.user.on "change", @render
-
-  remove: =>
-    intertwinkles.user.off "change", @render
-    super()
+    @listenTo @model, "change:description", @render
+    @listenTo @model, "change:tags", @render
+    @listenTo @model, "change:background", @render
+    @listenTo @model, "change:drawing", @render
+    @listenTo @model, "change:photo", @render
+    @listenTo @model, "change:sharing", @render
+    @listenTo intertwinkles.user, "change", @render
 
   render: =>
     #console.debug "render big", @model.get "imageVersion"
