@@ -52,7 +52,7 @@ run = (config, callback) ->
         return done(err) if err?
         pad_name_to_group[doc.pad_name] = doc.etherpad_group_id
         group_to_pad_name[doc.etherpad_group_id] = doc.pad_name
-        done(null, doc)
+        return done(null, doc)
     else if not doc.pad_id
       # This twinklepad wasn't saved right; it doesn't have a pad ID, but we
       # have an entry for its name. Correct the groupID and padID using
@@ -61,7 +61,13 @@ run = (config, callback) ->
       doc.etherpad_group_id = pad_name_to_group[doc.pad_name]
       doc.pad_id = doc.etherpad_group_id + "$" + doc.pad_name
       doc.read_only_pad_id = null
-      return doc.save(done)
+      return doc.save (err, doc) ->
+        console.log "WAI"
+        if err?
+          logger.error(err)
+        else
+          logger.info("done")
+        done(err, doc)
     else if (group_to_pad_name[doc.etherpad_group_id] != doc.pad_name or
         pad_name_to_group[doc.pad_name] != doc.etherpad_group_id)
       # We have a padID, groupID, and padName, but they don't match.
@@ -73,7 +79,8 @@ run = (config, callback) ->
       doc.pad_id = doc.etherpad_group_id + "$" + doc.pad_name
       doc.read_only_pad_id = null
       return doc.save(done)
-    return done(null, doc)
+    else
+      return done(null, doc)
 
 
   async.waterfall [
@@ -92,16 +99,17 @@ run = (config, callback) ->
           if data.padIDs.length != 1
             logger.error("Unexpectedly got #{data.padIDs.length} pad IDs for one group.")
             logger.error("Group ID", groupID)
-            logger.error("Pad IDs", group_to_pad_id[groupID])
-            logger.error("Ignoring pads beyond first.")
-          
-          [group, name] = data.padIDs[0].split("$")
-          group_to_pad_name[group] = name
-          if pad_name_to_group[name]?
-            logger.error("Unexpectedly found more than one pad named #{name}:")
-            logger.error(pad_name_to_group[name], group)
-          pad_name_to_group[name] = group
-          logger.debug("found etherpad:", name, group)
+            logger.error("Pad Names", group_to_pad_name[groupID])
+            if data.padIDs.length > 0
+              logger.error("Ignoring pads beyond first.")
+          if data.padIDs.length > 0
+            [group, name] = data.padIDs[0].split("$")
+            group_to_pad_name[group] = name
+            if pad_name_to_group[name]?
+              logger.error("Unexpectedly found more than one pad named #{name}:")
+              logger.error(pad_name_to_group[name], group)
+            pad_name_to_group[name] = group
+            logger.debug("found etherpad:", name, group)
           done()
       , done)
 

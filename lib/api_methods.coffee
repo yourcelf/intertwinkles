@@ -16,7 +16,10 @@ module.exports = (config) ->
   do ->
     for key in _.keys(config.apps)
       continue if key == "www"
-      #grammar_getters[key] = require("../plugins/#{key}/lib/events_grammar")
+      try
+        grammar_getters[key] = require("../plugins/#{key}/lib/events_grammar")
+      catch e
+        continue
 
   # Private
   get_user = (query, callback) ->

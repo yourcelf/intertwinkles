@@ -1,15 +1,15 @@
 utils          = require '../../../lib/utils'
 _              = require 'underscore'
 url            = require 'url'
-etherpadClient = require 'etherpad-lite-client'
 async          = require 'async'
 logger         = require('log4js').getLogger()
 
 start = (config, app, sockrooms) ->
   schema = require('./schema').load(config)
-  api_methods = require('../../../lib/api_methods')(config)
+  padlib = require("./padlib")(config)
   www_methods = require("../../../lib/www_methods")(config)
   solr = require("../../../lib/solr_helper")(config)
+
   #
   # Sockets
   #
@@ -28,65 +28,24 @@ start = (config, app, sockrooms) ->
   # etherpad session id.
   sockrooms.on "leave", (data) ->
     {socket, session, room, last} = data
-    [channel, name] = room.split("/")
+    [channel, pad_id] = room.split("/")
     unless last and session.etherpad_session_id? and channel == "twinklepad"
       return
-    # Update the search index.
-    schema.TwinklePad.findOne {pad_id: name}, (err, doc) ->
-      return logger.error(err) if err?
-      post_search_index(doc)
-    # Remove the session's etherpad_session_id.
-    etherpad.deleteSession {
-      sessionID: session.etherpad_session_id
-    }, (err, data) ->
+    padlib.leave_pad socket, session, pad_id, (err) ->
       logger.error(err) if err?
-      delete session.etherpad_session_id
-      sockrooms.saveSession session, (err) -> logger.error(err) if err?
-
-  post_search_index = (doc, timeout=15000) ->
-    etherpad.getText {padID: doc.pad_id}, (err, data) ->
-      return logger.error(err) if err?
-      text = data.text
-      summary = text.substring(0, 200)
-      if summary.length < text.length
-        summary += "..."
-      api_methods.add_search_index {
-        application: "twinklepad"
-        entity: doc._id
-        type: "etherpad"
-        url: "/p/#{doc.pad_name}"
-        title: "#{doc.pad_name}"
-        summary: summary
-        text: text
-        sharing: doc.sharing
-      }, timeout
+      if session.etherpad_session_id?
+        delete session.etherpad_session_id
+        sockrooms.saveSession session, (err) ->
+          logger.error(err) if err?
 
   sockrooms.on "twinklepad/save_twinklepad", (socket, session, data) ->
-    respond = (err, doc) ->
-      return socket.sendJSON "error", {error: err} if err?
+    padlib.save_pad session, data, (err, doc) ->
+      return socketrooms.handleError(socket, err) if err?
       doc.sharing = utils.clean_sharing(session, doc)
       sockrooms.broadcast "twinklepad/" + doc.pad_id, "twinklepad", {twinklepad: doc}
 
-    unless data.twinklepad?._id? and data.twinklepad?.sharing?
-      return respond("Missing twinklepad params")
-
-    schema.TwinklePad.findOne {_id: data.twinklepad._id}, (err, doc) ->
-      return respond(err) if err?
-      return respond("Twinklepad not found for #{data.twinklepad.pad_id}") unless doc?
-      return respond("Permission denied") unless utils.can_change_sharing(
-        session, doc
-      )
-      doc.sharing = data.twinklepad.sharing
-      return respond("Permission denied") unless utils.can_change_sharing(
-        session, doc
-      )
-      doc.save(respond)
-      # Re-index immediately, so that search permissions are updated.
-      post_search_index(doc, 0)
-
-
   #
-  # Routes
+  # HTTP Routes
   #
   
   context = (req, obj, initial_data) ->
@@ -99,14 +58,6 @@ start = (config, app, sockrooms) ->
       conf: utils.clean_conf(config)
       flash: req.flash()
     }, obj)
-
-
-  pad_url_parts = url.parse(config.apps.twinklepad.etherpad.url)
-  etherpad = etherpadClient.connect({
-    apikey: config.apps.twinklepad.etherpad.api_key
-    host: pad_url_parts.hostname
-    port: pad_url_parts.port
-  })
 
   app.get /\/twinklepad$/, (req, res) -> res.redirect('/twinklepad/')
   app.get '/twinklepad/', (req, res) ->
@@ -154,14 +105,15 @@ start = (config, app, sockrooms) ->
       # Retrieve and maybe create the pad.
       (done) ->
         schema.TwinklePad.findOne {pad_name: req.params.pad_name}, (err, doc) ->
-          return www_methods.handle_error(req, res, err) if err?
+          return done(err) if err?
           if not doc?
             doc = new schema.TwinklePad {pad_name: req.params.pad_name}
-            doc.save(done)
+            doc.save (err, doc) ->
+              done(err, doc, "create")
           else
-            done(null, doc)
+            done(null, doc, "visit")
 
-    ], (err, doc) ->
+    ], (err, doc, event_type) ->
       return www_methods.handle_error(req, res, err) if err?
 
       # Check that we can view this pad.
@@ -174,90 +126,64 @@ start = (config, app, sockrooms) ->
       else
         return www_methods.redirect_to_login(req, res)
 
-      # Post a view event to intertwinkles.
-      api_methods.post_event {
-        application: "twinklepad"
-        type: "visit"
-        url: "/p/#{doc.pad_name}"
-        entity: doc._id
-        user: req.session.auth?.user_id
-        anon_id: req.session.anon_id
-        group: doc.sharing?.group_id
-        data: {
-          title: doc.pad_name
-          action: read_only
-        }
-      }, 1000 * 60 * 5, (->)
+      # Post event to intertwinkles.
+      async.parallel [
+        (done) ->
+          timeout = if event_type == "visit" then 1000 * 60 * 5 else 0
+          padlib.post_twinklepad_event(req.session, doc, event_type, {}, timeout, done)
 
-      doc.sharing = utils.clean_sharing(req.session, doc)
-      title = "#{req.params.pad_name} | #{config.apps.twinklepad.name}"
+        (done) ->
+          doc.sharing = utils.clean_sharing(req.session, doc)
+          title = "#{req.params.pad_name} | #{config.apps.twinklepad.name}"
 
-      #
-      # Display read only.
-      #
-      if read_only
-        etherpad.getHTML {padID: doc.pad_id}, (err, data) ->
-          res.render "twinklepad/pad", context(req, {
-            title: title
-            embed_url: null
-            text: data.html
-          }, {
-            read_only: read_only
-            twinklepad: doc
-          })
-        return
-      
-      #
-      # Display editable. Establish an etherpad auth session.
-      #
-      
-      # Get the author mapper / author name
-      etherpad.createAuthorIfNotExistsFor {
-        authorMapper: req.session.auth?.user_id or req.session.anon_id
-        name: req.session.users?[req.session.auth.user_id]?.name
-      }, (err, data) ->
+          if read_only
+            # Display read only.
+            padlib.get_read_only_html doc, (err, html)->
+              return done(err) if err?
+              res.render "twinklepad/pad", context(req, {
+                title: title
+                embed_url: null
+                text: html
+              }, {
+                read_only: read_only
+                twinklepad: doc
+              })
+              return done()
+          else
+            # Display editable. Establish an etherpad auth session.
+            # Get the author mapper / author name
+            maxAge = 24 * 60 * 60
+            padlib.create_pad_session req.session, doc, maxAge, (err, pad_session_id) ->
+              return done(err) if err?
+              req.session.etherpad_session_id = pad_session_id
+              cookie_params = {
+                path: "/"
+                maxAge: maxAge
+                domain: config.apps.twinklepad.etherpad.cookie_domain
+              }
+              # HACK: Chromium 20 seems to fail to set the cookie when domains are
+              # the same (at least for localhost) -- so remove the domain param if
+              # it isn't needed.
+              if (url.parse(config.apps.twinklepad.url).hostname ==
+                  url.parse(config.apps.twinklepad.etherpad.url).hostname)
+                delete cookie_params.domain
+              res.cookie("sessionID", pad_session_id, cookie_params)
+              embed_url = doc.url
+              if utils.is_authenticated(req.session)
+                author_color = req.session.users[req.session.auth.user_id].icon?.color
+                author_name = req.session.users[req.session.auth.user_id].name
+                embed_url += "?userName=#{author_name}&userColor=%23#{author_color}"
+              res.render "twinklepad/pad", context(req, {
+                title: "#{req.params.pad_name} | #{config.apps.twinklepad.name}"
+                embed_url: embed_url
+                text: null
+              }, {
+                read_only: read_only
+                twinklepad: doc
+              })
+              return done()
+
+      ], (err) ->
         return www_methods.handle_error(req, res, err) if err?
-        author_id = data.authorID
-
-        # Set an arbitrary session length of 1 day; though that only matters if
-        # the user leaves a tab open and connected for that long.
-        maxAge = 24 * 60 * 60
-        valid_until = (new Date().getTime()) + maxAge
-        if doc.public_edit_until? or doc.public_view_until?
-          valid_until = Math.min(valid_until,
-            new Date(doc.public_edit_until or doc.public_view_until).getTime())
-
-        etherpad.createSession {
-          groupID: doc.etherpad_group_id
-          authorID: author_id
-          validUntil: valid_until
-        }, (err, data) ->
-          return www_methods.handle_error(req, res, err) if err?
-          req.session.etherpad_session_id = data.sessionID
-          cookie_params = {
-            path: "/"
-            maxAge: maxAge
-            domain: config.apps.twinklepad.etherpad.cookie_domain
-          }
-          # HACK: Chromium 20 seems to fail to set the cookie when domains are
-          # the same (at least for localhost) -- so remove the domain param if
-          # it isn't needed.
-          if (url.parse(config.apps.twinklepad.url).hostname ==
-              url.parse(config.apps.twinklepad.etherpad.url).hostname)
-            delete cookie_params.domain
-          res.cookie("sessionID", data.sessionID, cookie_params)
-          embed_url = doc.url
-          if utils.is_authenticated(req.session)
-            author_color = req.session.users[req.session.auth.user_id].icon?.color
-            author_name = req.session.users[req.session.auth.user_id].name
-            embed_url += "?userName=#{author_name}&userColor=%23#{author_color}"
-          res.render "twinklepad/pad", context(req, {
-            title: "#{req.params.pad_name} | #{config.apps.twinklepad.name}"
-            embed_url: embed_url
-            text: null
-          }, {
-            read_only: read_only
-            twinklepad: doc
-          })
 
 module.exports = {start}
