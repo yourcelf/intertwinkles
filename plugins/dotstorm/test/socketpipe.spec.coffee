@@ -1,12 +1,16 @@
 expect     = require 'expect.js'
+async      = require 'async'
 _          = require 'underscore'
 Browser    = require 'zombie'
 mongoose   = require 'mongoose'
 fs         = require 'fs'
 
-config     = require '../../../test/test_config'
-models     = require('../lib/schema').load(config)
 common     = require '../../../test/common'
+config     = require '../../../test/test_config'
+
+schema      = require('../lib/schema').load(config)
+www_schema  = require('../../../lib/schema').load(config)
+api_methods = require('../../../lib/api_methods')(config)
 
 #
 # Test CRUD for ideas and dotstorms for the whole socket pipeline.
@@ -39,7 +43,24 @@ describe "Dotstorm socket pipeline", ->
     @browser.fill("#id_join", "test").pressButton "OK", =>
       await =>
         if @browser.evaluate("window.location.pathname") == "/dotstorm/d/test/"
-          done()
+          schema.Dotstorm.findOne {slug: "test"}, (err, doc) ->
+            expect(err).to.be(null)
+            expect(doc).to.not.be(null)
+            expect(doc.name).to.be("test")
+            www_schema.Event.find {entity: doc._id}, (err, events) ->
+              expect(events.length).to.be(1)
+              expect(events[0].type).to.be("create")
+              terms = api_methods.get_event_grammar(events[0])
+              expect(terms.length).to.be(1)
+              expect(terms[0]).to.eql({
+                entity: "Dotstorm"
+                aspect: "\"test\""
+                collective: "created dotstorms"
+                verbed: "created"
+                manner: ""
+              })
+              # Clear events for de-comlecting of tests
+              async.map(events, ((e, done) -> e.remove(done)), done)
           return true
 
   it "creates an idea", (done) ->
@@ -58,12 +79,26 @@ describe "Dotstorm socket pipeline", ->
     await =>
       backboneIdea = @browser.evaluate("window.testIdea")
       if backboneIdea != undefined
-        models.Idea.findOne {_id: backboneIdea.id}, (err, doc) =>
+        schema.Idea.findOne {_id: backboneIdea.id}, (err, doc) =>
           @idea = doc
           expect("" + doc.dotstorm_id).to.eql @dotstorm_id
           expect(fs.existsSync @idea.getDrawingPath('small')).to.be true
           expect(doc.background).to.be '#ff9033'
-          done()
+          www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
+            expect(events.length).to.be(1)
+            expect(events[0].type).to.be("append")
+            terms = api_methods.get_event_grammar(events[0])
+            expect(terms.length).to.be(1)
+            expect(terms[0]).to.eql({
+              entity: "test"
+              aspect: "idea"
+              collective: "added ideas"
+              verbed: "added"
+              manner: "first run"
+              image: doc.drawingURLs.small
+            })
+            # Clear events for de-comlecting of tests
+            async.map(events, ((e, done) -> e.remove(done)), done)
         return true
 
   it "updates an idea", (done) ->
@@ -77,12 +112,26 @@ describe "Dotstorm socket pipeline", ->
     await =>
       if @browser.evaluate("window.ideaUpdateSuccess")
         startingVersion = @idea.imageVersion
-        models.Idea.findOne {_id: @idea._id}, (err, doc) =>
+        schema.Idea.findOne {_id: @idea._id}, (err, doc) =>
           @idea = doc
           expect(doc.description).to.be 'updated'
           expect(fs.existsSync @idea.getDrawingPath('small')).to.be true
           expect(parseInt(@idea.imageVersion) > startingVersion).to.be true
-          done()
+          www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
+            expect(events.length).to.be(1)
+            expect(events[0].type).to.be("append")
+            terms = api_methods.get_event_grammar(events[0])
+            expect(terms.length).to.be(1)
+            expect(terms[0]).to.eql({
+              entity: "test"
+              aspect: "idea"
+              collective: "edited ideas"
+              verbed: "edited"
+              manner: ""
+              image: doc.drawingURLs.small
+            })
+            # Clear events for de-comlecting of tests
+            async.map(events, ((e, done) -> e.remove(done)), done)
         return true
 
   it "uploads a photo", (done) ->
@@ -98,11 +147,25 @@ describe "Dotstorm socket pipeline", ->
     await =>
       model = @browser.evaluate("window.ideaWithPhoto")
       if model?
-        models.Idea.findOne {_id: @idea.id}, (err, doc) =>
+        schema.Idea.findOne {_id: @idea.id}, (err, doc) =>
           expect(fs.existsSync doc.getPhotoPath('small')).to.be true
           expect(doc.photoVersion > 0).to.be true
           expect(doc.photoData).to.be undefined
-          done()
+          www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
+            expect(events.length).to.be(1)
+            expect(events[0].type).to.be("append")
+            terms = api_methods.get_event_grammar(events[0])
+            expect(terms.length).to.be(1)
+            expect(terms[0]).to.eql({
+              entity: "test"
+              aspect: "idea"
+              collective: "edited ideas"
+              verbed: "edited"
+              manner: ""
+              image: doc.drawingURLs.small
+            })
+            # Clear events for de-comlecting of tests
+            async.map(events, ((e, done) -> e.remove(done)), done)
         return true
       
   it "saves tags", (done) ->
@@ -120,9 +183,23 @@ describe "Dotstorm socket pipeline", ->
       model = @browser.evaluate("window.taggedModel")
       if model?
         expect(model.get("tags")).to.eql ["one", "two", "three"]
-        models.Idea.findOne {_id: @idea.id}, (err, doc) =>
+        schema.Idea.findOne {_id: @idea.id}, (err, doc) =>
           expect(_.isEqual doc.tags, ["one", "two", "three"]).to.be true
-        done()
+          www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
+            expect(events.length).to.be(1)
+            expect(events[0].type).to.be("append")
+            terms = api_methods.get_event_grammar(events[0])
+            expect(terms.length).to.be(1)
+            expect(terms[0]).to.eql({
+              entity: "test"
+              aspect: "idea"
+              collective: "edited ideas"
+              verbed: "edited"
+              manner: ""
+              image: doc.drawingURLs.small
+            })
+            # Clear events for de-comlecting of tests
+            async.map(events, ((e, done) -> e.remove(done)), done)
         return true
 
   it "reads an idea", (done) ->
@@ -191,7 +268,7 @@ describe "Dotstorm socket pipeline", ->
 #    });")
 #    await =>
 #      if @browser.evaluate("window.ideaDeleteSuccess")
-#        models.Idea.findOne {_id: @idea._id}, (err, doc) =>
+#        schema.Idea.findOne {_id: @idea._id}, (err, doc) =>
 #          expect(doc).to.be null
 #          expect(fs.existsSync @idea.getDrawingPath('small')).to.be false
 #          done()
@@ -212,7 +289,12 @@ describe "Dotstorm socket pipeline", ->
       dotstorm = @browser.evaluate("window.createdDotstorm")
       if dotstorm?
         expect(dotstorm.get "slug").to.be 'crazyslug'
-        done()
+        www_schema.Event.find {entity: dotstorm.id}, (err, events) ->
+          expect(events.length).to.be(1)
+          expect(events[0].type).to.be("create")
+          expect(events[0].data.entity_name).to.be("Untitled")
+          # Clear events for de-comlecting of tests
+          async.map(events, ((e, done) -> e.remove(done)), done)
         return true
 
   it "reads a dotstorm coll", (done) ->
@@ -278,7 +360,20 @@ describe "Dotstorm socket pipeline", ->
       dotstorm = @browser.evaluate("window.readDotstorm")
       if dotstorm?
         expect(dotstorm.id).to.be @dotstorm_id
-        done()
+        www_schema.Event.find {entity: dotstorm.id}, (err, events) ->
+          expect(events.length).to.be(1)
+          expect(events[0].type).to.be("visit")
+          terms = api_methods.get_event_grammar(events[0])
+          expect(terms.length).to.be(1)
+          expect(terms[0]).to.eql({
+            entity: "test"
+            aspect: "dotstorm"
+            collective: "visited dotstorms"
+            verbed: "visited"
+            manner: ''
+          })
+          # Clear events for de-comlecting of tests
+          async.map(events, ((e, done) -> e.remove(done)), done)
         return true
 
   it "reads a single empty dotstorm", (done) ->
@@ -309,9 +404,23 @@ describe "Dotstorm socket pipeline", ->
       });")
     await =>
       if @browser.evaluate("window.dotstormUpdated")
-        models.Dotstorm.findOne {slug: 'test'}, (err, doc) =>
+        schema.Dotstorm.findOne {slug: 'test'}, (err, doc) =>
           expect(doc.name).to.be 'new name'
-          done()
+          www_schema.Event.find {entity: doc._id}, (err, events) ->
+            expect(events.length).to.be(1)
+            expect(events[0].type).to.be("update")
+            terms = api_methods.get_event_grammar(events[0])
+            expect(terms.length).to.be(1)
+            expect(terms[0]).to.eql({
+              entity: "new name"
+              aspect: "name"
+              collective: "changed dotstorms"
+              verbed: "changed"
+              manner: 'from "test" to "new name"'
+            })
+            # Clear events for de-comlecting of tests
+            async.map(events, ((e, done) -> e.remove(done)), done)
+
         return true
 
 # Delete method removed.
@@ -324,7 +433,7 @@ describe "Dotstorm socket pipeline", ->
 #      });")
 #    await =>
 #      if @browser.evaluate("window.dotstormDestroyed")
-#        models.Dotstorm.findOne {slug: 'test'}, (err, doc) =>
+#        schema.Dotstorm.findOne {slug: 'test'}, (err, doc) =>
 #          expect(doc).to.be null
 #          done()
 #        return true

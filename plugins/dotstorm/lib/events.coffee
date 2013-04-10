@@ -6,9 +6,9 @@ module.exports = (config) ->
   schema = require('./schema').load(config)
 
   return {
-    post_event: (session, dotstorm, type, opts) =>
-      opts or= {}
-      event = _.extend {
+    post_event: (session, dotstorm, type, data={}, timeout=0, callback=(->)) =>
+      data.entity_name = dotstorm.name or "Untitled"
+      api_methods.post_event({
           application: "dotstorm"
           type: type
           url: "/d/#{dotstorm.slug}/"
@@ -17,11 +17,8 @@ module.exports = (config) ->
           via_user: session.auth?.user_id
           anon_id: session.anon_id
           group: dotstorm.sharing?.group_id
-          data: _.extend {
-            title: dotstorm.name or "Untitled"
-          }, opts.data or {}
-        }, opts.overrides or {}
-      api_methods.post_event(event, opts.timeout, opts.callback or (->))
+          data: data
+        }, timeout, callback)
 
     post_search_index: (doc, callback) =>
       unless doc?

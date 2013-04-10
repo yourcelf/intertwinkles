@@ -1,3 +1,4 @@
+_             = require 'underscore'
 logger        = require './logging'
 thumbnails    = require './thumbnails'
 utils         = require '../../../lib/utils'
@@ -29,14 +30,14 @@ attach = (config, sockrooms) ->
           model: model
         }, socket.sid)
 
-    saveIdeaAndRespond = (idea) ->
+    saveIdeaAndRespond = (idea, operation) ->
       for key in ["dotstorm_id", "description", "background", "tags",
                   "drawing", "votes", "photoData"]
         if data.model[key]?
           idea[key] = data.model[key]
       if not data.model.tags? and data.model.taglist?
         idea.taglist = data.model.taglist
-      models.Dotstorm.findOne {_id: idea.dotstorm_id}, 'sharing', (err, dotstorm) ->
+      models.Dotstorm.findOne {_id: idea.dotstorm_id}, 'name sharing', (err, dotstorm) ->
         return errorOut(err) if err?
         return errorOut("Unknown dotstorm", "warn") unless dotstorm?
         return errorOut("Permission denied", "warn") unless utils.can_edit(session, dotstorm)
@@ -46,25 +47,41 @@ attach = (config, sockrooms) ->
           delete json.drawing
           respond(json)
           rebroadcast("dotstorm/" + idea.dotstorm_id.toString(), json)
-          events.post_event(session, dotstorm, "append", {data: json})
+          event_data = {
+            is_new: operation == "create"
+            description: idea.description
+            image: idea.drawingURLs.small
+          }
+          events.post_event(session, dotstorm, "append", event_data)
           events.post_search_index(dotstorm)
 
-    saveDotstormAndRespond = (doc) ->
+    saveDotstormAndRespond = (doc, event_type) ->
       return errorOut("Permission denied", "warn") unless utils.can_edit(session, doc)
-      event_type = if doc._id then "update" else "create"
+      # Log the event.
+      event_data = {}
+      for key in ["name", "topic"]
+        if data.model[key]? and data.model[key] != doc[key]
+          event_data["old_" + key] = doc[key]
+          event_data[key] = data.model[key]
+      if data.model.groups? and not _.isEqual(data.model.groups, doc.groups)
+        event_data.rearranged = true
+
+      # Set the changes to the model
       for key in ["slug", "name", "topic", "groups", "trash"]
         if data.model[key]?
           doc.set key, data.model[key]
       # Sharing has special permissions
       if utils.can_change_sharing(session, doc) and data.model.sharing?
+        event_data.sharing = utils.clean_sharing({}, data.model.sharing)
         doc.sharing = data.model.sharing
         # Make sure we can still edit.
         return errorOut("Permission denied", "warn") unless utils.can_edit(session, doc)
+
       doc.save (err) ->
         if err? then return errorOut(err)
         respond(doc.serialize())
         rebroadcast("dotstorm/" + doc.id, doc)
-        events.post_event(session, doc, event_type)
+        events.post_event(session, doc, event_type, event_data)
         events.post_search_index(doc)
 
     switch data.signature.collectionName
@@ -72,11 +89,11 @@ attach = (config, sockrooms) ->
         switch data.signature.method
           when "create"
             doc = new models.Idea()
-            saveIdeaAndRespond(doc)
+            saveIdeaAndRespond(doc, "create")
           when "update"
             models.Idea.findOne {_id: data.model._id}, (err, doc) ->
               if err? then return errorOut(err)
-              saveIdeaAndRespond(doc)
+              saveIdeaAndRespond(doc, "update")
           when "delete"
             return errorOut("Unsupported method `delete`")
           when "read"
@@ -106,7 +123,7 @@ attach = (config, sockrooms) ->
                 dotstorm_query = {_id: data.model.dotstorm_id}
               else
                 return errorOut("Unknown dotstorm_id", "warn")
-              models.Dotstorm.findOne dotstorm_query, 'sharing', (err, dotstorm) ->
+              models.Dotstorm.findOne dotstorm_query, 'name sharing', (err, dotstorm) ->
                 return errorOut("Dotstorm not found", "warn") unless dotstorm?
                 unless utils.can_view(session, dotstorm)?
                   return errorOut("Permission denied", "warn")
@@ -119,10 +136,10 @@ attach = (config, sockrooms) ->
         switch data.signature.method
           when "create"
             dotstorm = new models.Dotstorm()
-            saveDotstormAndRespond(dotstorm)
+            saveDotstormAndRespond(dotstorm, "create")
           when "update"
             models.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->
-              saveDotstormAndRespond(doc)
+              saveDotstormAndRespond(doc, "update")
           when "delete"
             return errorOut("Unsupported method `delete`", "warn")
           when "read"
@@ -136,6 +153,6 @@ attach = (config, sockrooms) ->
               else
                 respond(docs?[0] or {})
               if docs?.length > 0
-                events.post_event(session, docs[0], "view", {timeout: 60 * 1000 * 5})
+                events.post_event(session, docs[0], "visit", {}, 60 * 1000 * 5)
 
 module.exports = { attach }

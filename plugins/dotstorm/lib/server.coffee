@@ -80,7 +80,7 @@ start = (config, app, sockrooms) ->
             dotstorm: doc
             ideas: (idea.serialize() for idea in ideas)
           })
-          events.post_event(req.session, doc, "visit", {timeout: 60 * 1000 * 5})
+          events.post_event(req.session, doc, "visit")
           return
 
   utils.append_slash(app, "/dotstorm/i/[^/]+/json")
