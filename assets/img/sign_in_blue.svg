@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="450"
+   height="125"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="sign_in_blue.svg"
+   inkscape:export-filename=""
+   inkscape:export-xdpi="39.09"
+   inkscape:export-ydpi="39.09">
+  <defs
+     id="defs4">
+    <filter
+       id="filter3207"
+       inkscape:label="Drop Shadow"
+       color-interpolation-filters="sRGB">
+      <feFlood
+         id="feFlood3209"
+         flood-opacity="0.512"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite3211"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur3213"
+         stdDeviation="0.3"
+         result="blur" />
+      <feOffset
+         id="feOffset3215"
+         dx="0"
+         dy="0.8"
+         result="offset" />
+      <feComposite
+         id="feComposite3217"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       id="filter3313"
+       inkscape:label="Drop Shadow"
+       color-interpolation-filters="sRGB">
+      <feFlood
+         id="feFlood3315"
+         flood-opacity="0.59"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite3317"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur3319"
+         stdDeviation="5.5"
+         result="blur" />
+      <feOffset
+         id="feOffset3321"
+         dx="0"
+         dy="0.8"
+         result="offset" />
+      <feComposite
+         id="feComposite3323"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       id="filter4539"
+       inkscape:label="Darken edges"
+       inkscape:menu="Shadows and Glows"
+       inkscape:menu-tooltip="Darken the edges with an inner blur"
+       color-interpolation-filters="sRGB">
+      <feGaussianBlur
+         id="feGaussianBlur4541"
+         result="result6"
+         stdDeviation="1.5" />
+      <feComposite
+         id="feComposite4543"
+         in2="result6"
+         operator="atop"
+         in="SourceGraphic"
+         result="result8" />
+      <feComposite
+         id="feComposite4545"
+         in2="SourceAlpha"
+         in="result8"
+         operator="atop"
+         result="result9" />
+    </filter>
+    <filter
+       id="filter4745"
+       inkscape:label="Drop Shadow"
+       color-interpolation-filters="sRGB">
+      <feFlood
+         id="feFlood4747"
+         flood-opacity="0.558"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite4749"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur4751"
+         stdDeviation="0.5"
+         result="blur" />
+      <feOffset
+         id="feOffset4753"
+         dx="0"
+         dy="0.5"
+         result="offset" />
+      <feComposite
+         id="feComposite4755"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       id="filter4805"
+       inkscape:label="Drop Shadow"
+       color-interpolation-filters="sRGB">
+      <feFlood
+         id="feFlood4807"
+         flood-opacity="0.887"
+         flood-color="rgb(255,255,255)"
+         result="flood" />
+      <feComposite
+         id="feComposite4809"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur4811"
+         stdDeviation="1.6"
+         result="blur" />
+      <feOffset
+         id="feOffset4813"
+         dx="0"
+         dy="0"
+         result="offset" />
+      <feComposite
+         id="feComposite4815"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.58205364"
+     inkscape:cx="345.4447"
+     inkscape:cy="160.26873"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="2560"
+     inkscape:window-height="1416"
+     inkscape:window-x="0"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid3692"
+       empspacing="5"
+       visible="true"
+       enabled="true"
+       snapvisiblegridlinesonly="true" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-927.36218)">
+    <g
+       id="g3000"
+       transform="matrix(5.6268657,0,0,5.6268657,-741.53732,-685.89094)">
+      <rect
+         style="fill:#8b8b8b;fill-opacity:0;stroke:none"
+         id="rect3090"
+         width="79.042892"
+         height="22.214878"
+         x="131.57825"
+         y="286.47357"
+         ry="0.32931513"
+         inkscape:export-filename="sign_in_blue.png"
+         inkscape:export-xdpi="15.84"
+         inkscape:export-ydpi="15.84" />
+      <path
+         sodipodi:nodetypes="sssscccccccs"
+         inkscape:connector-curvature="0"
+         id="rect4468"
+         d="m 135,287.36218 c -1.108,0 -2,0.892 -2,2 l 0,16 c 0,1.108 0.892,2 2,2 l 62,0 1,0 2,0 10,-10.01282 -10,-9.98718 -2,0 -1,0 z"
+         style="fill:#007fff;fill-opacity:1;stroke:none;filter:url(#filter4745)" />
+      <g
+         id="g2997"
+         style="filter:url(#filter4805)">
+        <path
+           style="fill:#d8d8d8;fill-opacity:1;stroke:none"
+           d="m 135,287.36218 c -1.108,0 -2,0.89257 -2,2.00128 l 0,16.01026 c 0,1.10871 0.892,2.00128 2,2.00128 l 7,0 1,0 2,0 9,-10.00641 -9,-10.00641 -2,0 -1,0 -7,0 z"
+           id="rect4473"
+           inkscape:connector-curvature="0" />
+      </g>
+    </g>
+    <path
+       style="fill:#8b8b8b;fill-opacity:0.74345548;stroke:none;filter:url(#filter4539)"
+       d="m 23.716404,1015.4604 50.641788,0 c 0,-11.2537 0,-28.13434 -16.880598,-28.13434 l 0,-5.62687 c 11.253728,-11.25373 5.626868,-28.13433 -5.62686,-28.13433 l -5.62687,0 c -11.25373,0 -16.8806,16.8806 -5.62687,28.13433 l 0,5.62687 c -16.88059,0 -17.71517,16.99404 -16.88059,28.13434 z"
+       id="path3698"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccccccc" />
+    <text
+       xml:space="preserve"
+       style="font-size:360.11941528px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;filter:url(#filter3313);font-family:Impact;-inkscape-font-specification:Impact Bold"
+       x="147.29703"
+       y="1008.1401"
+       id="text4478"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4480"
+         x="147.29703"
+         y="1008.1401"
+         style="font-size:73.14925385px;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;fill:#ffffff;fill-opacity:1;font-family:Cabin;-inkscape-font-specification:Cabin">Sign in</tspan></text>
+  </g>
+</svg>
