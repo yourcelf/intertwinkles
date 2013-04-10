@@ -1,4 +1,4 @@
-_ = require("underscore")
+logger = require("log4js").getLogger()
 
 module.exports = {
   get_terms: (event) ->
@@ -28,5 +28,6 @@ module.exports = {
           verbed: "visited"
           manner: ""
         }]
+    logger.error("Unknown event type \"#{event.type}\"")
     return null
 }

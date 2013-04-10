@@ -1,4 +1,4 @@
-_ = require("underscore")
+logger = require("log4js").getLogger()
 
 votes = {
   yes: "Strongly approve"
@@ -80,6 +80,6 @@ module.exports = {
           verbed: "removed"
           manner: "(was \"#{votes[event.data.vote]}\")"
         }]
-    console.error("Unknown event type \"#{event.type}\"")
+    logger.error("Unknown event type \"#{event.type}\"")
     return null
 }

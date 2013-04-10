@@ -2,6 +2,12 @@ _     = require "underscore"
 async = require "async"
 utils = require "../../../lib/utils"
 
+_ellipse = (string, length=30) ->
+  if string.length > length
+    return string.substring(0, length - 3) + "..."
+  return string
+
+
 module.exports = (config) ->
   schema = require("./schema").load(config)
   api_methods = require("../../../lib/api_methods")(config)
@@ -12,29 +18,35 @@ module.exports = (config) ->
     return callback("Missing model param") unless data?.model
     schema.PointSet.findOne {_id: data.model._id}, (err, doc) ->
       return callback(err) if err?
+      event_opts = {data: {}}
       if not doc
         doc = new schema.PointSet()
-        event_type = "create"
+        event_opts.type = "create"
       else
-        event_type = "update"
+        event_opts.type = "update"
       return callback("Permission denied") unless utils.can_edit(session, doc)
       delete data.model.sharing unless utils.can_change_sharing(session, doc)
 
       # Set fields
       for key in ["name", "slug"]
+        if event_opts.type == "update" and doc[key] != data.model[key]
+          event_opts.data["old_" + key] = doc[key]
+          event_opts.data[key] = data.model[key]
         doc[key] = data.model[key] if data.model[key]?
       if data.model.sharing?
+        if event_opts.type == "update"
+          event_opts.data.sharing = utils.clean_sharing({}, data.model.sharing)
         _.extend(doc.sharing, data.model.sharing)
       
       # Save
       doc.save (err, doc) ->
         return callback(err) if err?
         return callback("null doc") unless doc?
-        pl.post_event_and_search session, doc, {type: event_type}, 0, (err, event, si) ->
+        pl.post_event_and_search session, doc, event_opts, 0, (err, event, si) ->
           return callback(err) if err?
           return callback(null, doc, event, si)
 
-  pl.post_event = (session, pointset, opts, timeout, callback) ->
+  pl.post_event = (session, pointset, opts={}, timeout=0, callback=(->)) ->
     event = _.extend {
       application: "points"
       url: pointset.url
@@ -43,11 +55,9 @@ module.exports = (config) ->
       anon_id: session.anon_id
       via_user: session.auth?.user_id
       group: pointset.sharing?.group_id
-      data: {
-        title: pointset.name
-        slug: pointset.slug
-      }
+      data: {}
     }, opts
+    event.data.entity_name = pointset.name unless opts.data?.entity_name
     api_methods.post_event(event, timeout, callback)
 
   pl.post_search_index = (pointset, callback=(->)) ->
@@ -86,7 +96,8 @@ module.exports = (config) ->
       return callback(err) if err?
       return callback("PointSet #{slug} Not found") unless doc?
       return callback("Permission denied") unless utils.can_view(session, doc)
-      return callback(null, doc)
+      pl.post_event session, doc, {type: "visit"}, 1000 * 60 * 5, (err, event) ->
+        return callback(null, doc, event)
 
   get_point = (session, data, required, callback) ->
     for key in required
@@ -109,10 +120,14 @@ module.exports = (config) ->
     unless user_id or data.name?
       return callback("Missing user_id or name.")
     get_point session, data, ["_id", "text"], (err, doc, point) ->
+      event_opts = {type: "append", data: {}}
       return callback(err) if err?
       if not point?
+        event_opts.data.is_new = true
         doc.drafts.unshift({ revisions: []})
         point = doc.drafts[0]
+      else
+        event_opts.data.is_new = false
 
       point.revisions.unshift({})
       rev = point.revisions[0]
@@ -122,10 +137,11 @@ module.exports = (config) ->
         user_id: user_id
         name: data.name
       })
+      event_opts.data.text = _ellipse(rev.text, 30)
       doc.save (err, doc) ->
         return callback(err) if err?
         return callback("null doc") unless doc?
-        pl.post_event_and_search session, doc, {type: "update"}, 0, (err, event, si) ->
+        pl.post_event_and_search session, doc, event_opts, 0, (err, event, si) ->
           return callback(err) if err?
           return callback(null, doc, point, event, si)
 
@@ -142,11 +158,14 @@ module.exports = (config) ->
             s.name? and data.name?  and s.name == data.name)
         )
 
-      if data.vote
-        unless _.find(rev.supporters, supporter_matches)
-          rev.supporters.push({user_id: data.user_id, name: data.name})
-      else
+      found = _.find(rev.supporters, supporter_matches)
+      if data.vote and not found
+        rev.supporters.push({user_id: data.user_id, name: data.name})
+      else if (not data.vote) and found
         rev.supporters = _.reject(rev.supporters, supporter_matches)
+      else
+        # No change.
+        return callback("No change")
 
       doc.save (err, doc) ->
         return callback(err) if err?
@@ -156,13 +175,10 @@ module.exports = (config) ->
           user: data.user_id
           via_user: session.auth?.user_id
           data: {
-            title: doc.name
-            action: {
-              support: data.vote
-              point_id: point._id
-              user_id: data.user_id
-              name: data.name
-            }
+            text: _ellipse(point.revisions[0].text, 30)
+            support: data.vote
+            point_id: point._id
+            user: {name: data.name}
           }
         }, 0, (err, event) ->
           return callback(err) if err?
@@ -185,6 +201,13 @@ module.exports = (config) ->
         # No change -- must be out of sync.
         return callback("No change")
       else
+        event_opts = {
+          type: "approve"
+          data: {
+            approve: data.approved
+            text: _ellipse(point.revisions[0].text, 30)
+          }
+        }
         if data.approved
           # Move from drafts to points.
           doc.drafts = _.reject(doc.drafts, (p) -> p._id == point._id)
@@ -193,7 +216,10 @@ module.exports = (config) ->
           # Move from points to drafts.
           doc.points = _.reject(doc.points, (p) -> p._id == point._id)
           doc.drafts.unshift(point)
-        doc.save (err, doc) -> callback(err, doc, point)
+        doc.save (err, doc) ->
+          return callback(err) if err?
+          pl.post_event session, doc, event_opts, 0, (err, event) ->
+            callback(err, doc, point, event)
   
   pl.move_point = (session, data, callback) ->
     get_point session, data, ["_id", "point_id", "position"], (err, doc, point) ->
@@ -218,6 +244,7 @@ module.exports = (config) ->
       list.splice(start_pos, 1)
       # Insert it to the revised destination.
       list.splice(data.position, 0, point)
+      # No rearrangement "event" for now.
       doc.save (err, doc) -> callback(err, doc, point)
 
   pl.get_events = (session, data, callback) ->

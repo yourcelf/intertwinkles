@@ -70,7 +70,16 @@ describe "pointslib", ->
       expect(event.user.toString()).to.be(@all_users['one@mockmyid.com'].id)
       expect(event.via_user.toString()).to.be(event.user.toString())
       expect(event.group.toString()).to.eql(@all_groups['two-members'].id)
-      expect(event.data).to.eql({title: "My Ten Point", slug: "my-ten-point"})
+
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Points of Unity"
+        aspect: "\"My Ten Point\""
+        collective: "created points of unity"
+        verbed: "created"
+        manner: ""
+      })
 
       expect(si.application).to.be("points")
       expect(si.entity).to.eql(doc.id)
@@ -107,6 +116,16 @@ describe "pointslib", ->
       expect(event.type).to.be("update")
       expect(si.text).to.be("Your Ten Point")
 
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Points of Unity"
+        aspect: "name"
+        collective: "changed points of unity"
+        verbed: "changed"
+        manner: "from \"My Ten Point\" to \"Your Ten Point\""
+      })
+
       @pointset = doc
 
       tp_schema.PointSet.find {}, (err, docs) ->
@@ -130,6 +149,7 @@ describe "pointslib", ->
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(event).to.not.be(null)
+
       expect(doc.drafts.length).to.be(1)
       p = doc.drafts[0]
       expect(p.revisions.length).to.be(1)
@@ -137,6 +157,18 @@ describe "pointslib", ->
       expect(p.revisions[0].supporters.length).to.be(1)
       expect(p.revisions[0].supporters[0].user_id.toString()).to.eql(
         @all_users['one@mockmyid.com'].id)
+  
+      expect(event.type).to.be("append")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Your Ten Point"
+        aspect: "point"
+        collective: "added points"
+        verbed: "added"
+        manner: "Be excellent to each other."
+      })
+
       @pointset = doc
       done()
 
@@ -160,6 +192,18 @@ describe "pointslib", ->
       expect(p.revisions[0].supporters[0].user_id.toString()).to.eql(
         @all_users['two@mockmyid.com'].id
       )
+
+      expect(event.type).to.be("append")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Your Ten Point"
+        aspect: "point"
+        collective: "edited points"
+        verbed: "edited"
+        manner: "Party on, dude."
+      })
+
       done()
 
   it "supports a point", (done) ->
@@ -184,12 +228,17 @@ describe "pointslib", ->
       expect(event.type).to.be("vote")
       expect(event.user.toString()).to.be(@session.auth.user_id)
       expect(event.via_user.toString()).to.be(@session.auth.user_id)
-      expect(event.data.title).to.be("Your Ten Point")
-      expect(event.data.action.support).to.be(true)
-      expect(event.data.action.point_id.toString()).to.be(
-        @pointset.drafts[0]._id.toString())
-      expect(event.data.action.user_id.toString()).to.be(@session.auth.user_id)
-      expect(event.data.action.name).to.be(undefined)
+
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Your Ten Point"
+        aspect: "vote"
+        collective: "votes"
+        verbed: "added"
+        manner: "Party on, dude."
+      })
+
       done()
 
   it "unsupports a point", (done) ->
@@ -208,7 +257,17 @@ describe "pointslib", ->
       expect(p.revisions[0].supporters.length).to.be(1)
       expect(p.revisions[0].supporters[0].user_id.toString()).to.be(
         @session.auth.user_id)
-      expect(event.data.action.support).to.be(false)
+
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Your Ten Point"
+        aspect: "vote"
+        collective: "votes"
+        verbed: "removed"
+        manner: "Party on, dude."
+      })
+
       done()
 
   it "supports a point anonymously", (done) ->
@@ -241,6 +300,7 @@ describe "pointslib", ->
         expect(doc.drafts[0].revisions[0].supporters.length).to.be(2)
         expect(doc.drafts[0].revisions[0].supporters[1].name).to.be("George")
         expect(doc.drafts[0].revisions[0].supporters[1].user_id).to.be(null)
+        expect(event.data.user.name).to.be("George")
 
         pointslib.change_support {}, {
           _id: @pointset.id
@@ -251,6 +311,8 @@ describe "pointslib", ->
         }, (err, doc, point, event) =>
           expect(err).to.be(null)
           expect(doc).to.not.be(null)
+          expect(event).to.not.be(null)
+
           expect(point._id).to.eql(doc.drafts[0]._id)
           expect(doc.drafts[0].revisions[0].supporters.length).to.be(1)
           expect(doc.drafts[0].revisions[0].supporters[0].name).to.be(undefined)
@@ -259,13 +321,25 @@ describe "pointslib", ->
           ).to.be(
             @session.auth.user_id
           )
+          expect(event.data.user.name).to.be("George")
           done()
 
   it "fetches a pointset", (done) ->
-    pointslib.fetch_pointset "my-ten-point", {}, (err, doc) =>
+    pointslib.fetch_pointset "my-ten-point", {}, (err, doc, event) =>
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
       expect(doc.id).to.be(@pointset.id)
+      expect(event).to.not.be(null)
+      expect(event.type).to.be("visit")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Your Ten Point"
+        aspect: "point set"
+        collective: "visited points of unity"
+        verbed: "visited"
+        manner: ""
+      })
       done()
 
   it "fetches a pointset list", (done) ->
@@ -327,8 +401,12 @@ describe "pointslib", ->
       _id: @pointset.id
       point_id: @pointset.drafts[0]._id
       approved: true
-    }, (err, doc, point) =>
+    }, (err, doc, point, event) =>
       expect(err).to.be(null)
+      expect(doc).to.not.be(null)
+      expect(point).to.not.be(null)
+      expect(event).to.not.be(null)
+
       expect(doc.points.length).to.be(1)
       expect(doc.drafts.length).to.be(2)
       expect(doc.points[0]._id.toString()).to.be(
@@ -339,13 +417,28 @@ describe "pointslib", ->
         p._id.toString() == @pointset.drafts[0]._id.toString()
       )).to.be(undefined)
 
+      expect(event.type).to.be("approve")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Your Ten Point"
+        aspect: "point"
+        collective: "adopted points"
+        verbed: "adopted"
+        manner: "G'day, mate."
+      })
+
       @pointset = doc
       pointslib.set_approved @session, {
         _id: @pointset.id
         point_id: @pointset.drafts[0]._id
         approved: true
-      }, (err, doc, point) =>
+      }, (err, doc, point, event) =>
         expect(err).to.be(null)
+        expect(doc).to.not.be(null)
+        expect(point).to.not.be(null)
+        expect(event).to.not.be(null)
+
         expect(doc.points.length).to.be(2)
         expect(doc.drafts.length).to.be(1)
         expect(doc.points[1]._id.toString()).to.be(
@@ -355,6 +448,18 @@ describe "pointslib", ->
         expect(doc.drafts[0]._id.toString()).to.not.be(
           point._id.toString()
         )
+
+        expect(event.type).to.be("approve")
+        terms = api_methods.get_event_grammar(event)
+        expect(terms.length).to.be(1)
+        expect(terms[0]).to.eql({
+          entity: "Your Ten Point"
+          aspect: "point"
+          collective: "adopted points"
+          verbed: "adopted"
+          manner: "Whoa."
+        })
+
         @pointset = doc
         done()
 
@@ -363,7 +468,7 @@ describe "pointslib", ->
       _id: @pointset.id
       point_id: @pointset.points[0]._id
       approved: false
-    }, (err, doc, point) =>
+    }, (err, doc, point, event) =>
       expect(err).to.be(null)
       expect(doc.points.length).to.be(1)
       expect(doc.drafts.length).to.be(2)
@@ -373,14 +478,37 @@ describe "pointslib", ->
 
       @pointset = doc
 
+      expect(event.type).to.be("approve")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Your Ten Point"
+        aspect: "point"
+        collective: "adopted points"
+        verbed: "retired"
+        manner: "G'day, mate."
+      })
+
       pointslib.set_approved @session, {
         _id: @pointset.id
         point_id: @pointset.points[0]._id
         approved: false
-      }, (err, doc, point) =>
+      }, (err, doc, point, event) =>
         expect(err).to.be(null)
         expect(doc.points.length).to.be(0)
         expect(doc.drafts.length).to.be(3)
+
+        expect(event.type).to.be("approve")
+        terms = api_methods.get_event_grammar(event)
+        expect(terms.length).to.be(1)
+        expect(terms[0]).to.eql({
+          entity: "Your Ten Point"
+          aspect: "point"
+          collective: "adopted points"
+          verbed: "retired"
+          manner: "Whoa."
+        })
+
         @pointset = doc
         done()
 

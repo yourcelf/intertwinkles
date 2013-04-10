@@ -53,7 +53,7 @@ start = (config, app, sockrooms) ->
           return www_methods.redirect_to_login(req, res)
 
       pointslib.post_event(req.session, doc, {type: "visit"}, 5 * 1000 * 60,
-        (err, timeout) ->
+        (err) ->
           doc.sharing = utils.clean_sharing(req.session, doc)
           index_res(req, res, { pointset: doc.toJSON() })
       )

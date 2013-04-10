@@ -1,33 +1,32 @@
 logger = require("log4js").getLogger()
-
 module.exports = {
   get_terms: (event) ->
-    return null unless event.application == "dotstorm"
+    return null unless event.application == "points"
     switch event.type
       when "create"
         return [{
-          entity: "Dotstorm"
+          entity: "Points of Unity"
           aspect: "\"#{event.data.entity_name}\""
-          collective: "created dotstorms"
+          collective: "created points of unity"
           verbed: "created"
           manner: ""
         }]
       when "visit"
         return [{
           entity: event.data.entity_name
-          aspect: "dotstorm"
-          collective: "visited dotstorms"
+          aspect: "point set"
+          collective: "visited points of unity"
           verbed: "visited"
           manner: ""
         }]
       when "update"
         attributes = []
-        for key in ["name", "topic"]
+        for key in ["name", "slug"]
           if event.data[key]?
             attributes.push({
-              entity: event.data.entity_name
+              entity: if key == "name" then "Points of Unity" else event.data.entity_name
               aspect: key
-              collective: "changed dotstorms"
+              collective: "changed points of unity"
               verbed: "changed"
               manner: "from \"#{event.data["old_" + key]}\" to \"#{event.data[key]}\""
             })
@@ -35,16 +34,8 @@ module.exports = {
           attributes.push({
             entity: event.data.entity_name
             aspect: "sharing settings"
-            collective: "changed dotstorms"
+            collective: "changed points of unity"
             verbed: "changed"
-            manner: ""
-          })
-        if event.data.rearranged?
-          attributes.push({
-            entity: event.data.entity_name
-            aspect: "ideas"
-            collective: "changed dotstorms"
-            verbed: "rearranged"
             manner: ""
           })
         return attributes
@@ -52,21 +43,35 @@ module.exports = {
         if event.data.is_new
           return [{
             entity: event.data.entity_name
-            aspect: "idea"
-            collective: "added ideas"
+            aspect: "point"
+            collective: "added points"
             verbed: "added"
-            manner: event.data.description
-            image: event.data.image
+            manner: event.data.text
           }]
         else
           return [{
             entity: event.data.entity_name
-            aspect: "idea"
-            collective: "edited ideas"
+            aspect: "point"
+            collective: "edited points"
             verbed: "edited"
-            manner: ""
-            image: event.data.image
+            manner: event.data.text
           }]
+      when "vote"
+        return [{
+          entity: event.data.entity_name
+          aspect: "vote"
+          collective: "votes"
+          verbed: if event.data.support then "added" else "removed"
+          manner: event.data.text
+        }]
+      when "approve"
+        return [{
+          entity: event.data.entity_name
+          aspect: "point"
+          collective: "adopted points"
+          verbed: if event.data.approve then "adopted" else "retired"
+          manner: event.data.text
+        }]
     logger.error("Unknown event type \"#{event.type}\"")
     return null
 }
