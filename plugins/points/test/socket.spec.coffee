@@ -6,6 +6,7 @@ config        = require '../../../test/test_config'
 api_methods   = require('../../../lib/api_methods')(config)
 
 describe "Socket pointsets", ->
+  @timeout(20000)
   before (done) ->
     common.startUp (server) =>
       @server = server
@@ -30,6 +31,8 @@ describe "Socket pointsets", ->
       ], done
 
   after (done) ->
+    @client.close()
+    @client2.close()
     common.shutDown(@server, done)
 
   pointset = null

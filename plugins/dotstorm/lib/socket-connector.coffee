@@ -72,10 +72,11 @@ attach = (config, sockrooms) ->
           doc.set key, data.model[key]
       # Sharing has special permissions
       if utils.can_change_sharing(session, doc) and data.model.sharing?
-        event_data.sharing = utils.clean_sharing({}, data.model.sharing)
+        event_data.sharing = utils.clean_sharing({}, data.model)
         doc.sharing = data.model.sharing
         # Make sure we can still edit.
-        return errorOut("Permission denied", "warn") unless utils.can_edit(session, doc)
+        unless utils.can_change_sharing(session, doc)
+          return errorOut("Permission denied", "warn")
 
       doc.save (err) ->
         if err? then return errorOut(err)

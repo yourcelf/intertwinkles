@@ -218,7 +218,7 @@ describe "clock", ->
       _id: @clock._id
       name: "New name"
       about: "New about that is rather long, longer than 30 chars I should think"
-      sharing: {group_id: @all_groups["not-one-members"]._id}
+      sharing: {group_id: @all_groups["three-members"]._id}
       categories: cats
     }}, (err, clock, event, si) ->
       expect(err).to.be(null)

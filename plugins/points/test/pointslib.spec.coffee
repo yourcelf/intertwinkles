@@ -27,15 +27,13 @@ describe "pointslib", ->
           common.stubBrowserID({email: "one@mockmyid.com"})
           api_methods.authenticate @session, "mock assertion", =>
             @session.anon_id = "anon_id_1"
-            @client = common.buildSockjsClient =>
-              done()
+            done()
         (done) =>
           @session2 = {}
           common.stubBrowserID({email: "two@mockmyid.com"})
           api_methods.authenticate @session2, "mock assertion", =>
             @session2.anon_id = "anon_id_2"
-            @client2 = common.buildSockjsClient =>
-              done()
+            done()
 
       ], done
 

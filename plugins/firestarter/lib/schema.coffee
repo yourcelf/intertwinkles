@@ -29,11 +29,15 @@ load = (config) ->
     name: {type: String, required: true}
     prompt: {type: String, required: true}
     responses: [{type: Schema.ObjectId, ref: 'Response'}]
-    public: Boolean
+
   FirestarterSchema.pre 'save', (next) ->
     @set('created', new Date().getTime()) unless @created
     @set('modified', new Date().getTime())
     next()
+  FirestarterSchema.virtual('url').get ->
+    return "/f/#{@slug}"
+  FirestarterSchema.virtual('absolute_url').get ->
+    return config.apps.firestarter.url + @url
 
   schemas = {}
   for name, schema of {Firestarter: FirestarterSchema, Response: ResponseSchema}

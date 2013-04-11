@@ -251,6 +251,13 @@ utils.clean_sharing = (session, model) ->
     cleaned.extra_viewers = (e for e in model.sharing.extra_viewers or [])
   return cleaned
 
+utils.update_sharing = (model, sharing) ->
+  model.sharing ?= {}
+  for key in ["public_edit_until", "public_view_until", "advertise", "group_id"]
+    model.sharing[key] = sharing[key]
+  model.sharing.extra_editors = sharing.extra_editors or []
+  model.sharing.extra_viewers = sharing.extra_viewers or []
+
 # List all the documents in `schema` (a Mongo/Mongoose collection) which are
 # currently public.  Use for providing a dashboard listing of documents.
 utils.list_public_documents = (schema, session, cb, condition={}, sort="modified", skip=0, limit=20, clean=true) ->

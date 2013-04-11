@@ -103,6 +103,7 @@ class intertwinkles.SocketClient
     return @state == @CLOSING or @state == @CLOSED
 
   send: (route, data) =>
+    console.log "send", route, data
     data ?= {}
     @sock.send JSON.stringify({
       route: route
@@ -118,6 +119,7 @@ class intertwinkles.SocketClient
   _onMessage: (event) =>
     data = JSON.parse(event.data)
     { route, body } = data
+    console.log "receive", route, body
 
     if route == "error"
       console.log "socket message: error", body

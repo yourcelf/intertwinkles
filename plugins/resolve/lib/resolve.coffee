@@ -253,10 +253,10 @@ module.exports = (config) ->
     if data.proposal?.sharing?
       unless utils.can_change_sharing(session, proposal)
         return callback("Not allowed to change sharing.")
-      if (data.proposal.sharing.group_id? and
-          not session.groups[data.proposal.sharing.group_id]?)
-        return callback("Unauthorized group")
-      proposal.sharing = data.proposal.sharing
+      utils.update_sharing(proposal, data.proposal.sharing)
+      # Make sure they can still change sharing.
+      unless utils.can_change_sharing(session, proposal)
+        return callback("Permission denied")
       event_data.sharing = utils.clean_sharing({}, proposal)
 
     # Add a revision.

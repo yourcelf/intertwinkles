@@ -84,10 +84,10 @@ module.exports = (config) ->
       return callback("Permission denied") unless utils.can_change_sharing(
         session, doc
       )
-      doc.sharing = data.twinklepad.sharing
-      return callback("Permission denied") unless utils.can_change_sharing(
-        session, doc
-      )
+      utils.update_sharing(doc, data.twinklepad.sharing)
+      # Make sure they can still change sharing.
+      unless utils.can_change_sharing(session, doc)
+        return callback("Permission denied")
       async.parallel [
         (done) ->
           doc.save(done)

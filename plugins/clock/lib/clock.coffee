@@ -80,9 +80,12 @@ module.exports = (config) ->
       # Sharing changes
       delete data.model.sharing unless utils.can_change_sharing(session, doc)
       if data.model.sharing?
-        _.extend(doc.sharing, data.model.sharing)
+        utils.update_sharing(doc, data.model.sharing)
+        # Make sure they can still change sharing.
+        unless utils.can_change_sharing(session, doc)
+          return callback("Permission denied")
         if event_opts.type == "update"
-          event_opts.data.sharing = utils.clean_sharing({}, data.model.sharing)
+          event_opts.data.sharing = utils.clean_sharing({}, data.model)
 
       doc.save (err, doc) ->
         return callback(err) if err?
