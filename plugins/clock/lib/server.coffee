@@ -54,7 +54,7 @@ start = (config, app, sockrooms) ->
         else
           return www_methods.redirect_to_login(req, res)
 
-      clock.post_event req.session, doc, "visit", callback: ->
+      clock.post_event req.session, doc, {type: "visit"}, 5 * 60 * 1000, ->
         doc.sharing = utils.clean_sharing(req.session, doc)
         index_res(req, res, { clock: doc.toJSON() })
 

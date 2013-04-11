@@ -7,23 +7,19 @@ module.exports = (config) ->
   api_methods = require("../../../lib/api_methods")(config)
   c = {}
 
-  c.post_event = (session, clock, type, opts) ->
-    opts ?= {}
+  c.post_event = (session, clock, event_opts={}, timeout=0, callback=(->)) ->
     event = _.extend {
       application: "clock"
-      type: type
       url: clock.url
       entity: clock.id
       user: session.auth?.user_id
       via_user: session.auth?.user_id
       anon_id: session.anon_id
       group: clock.sharing?.group_id
-      data: {
-        name: clock.name
-        action: opts.data
-      }
-    }, opts.overrides or {}
-    api_methods.post_event(event, opts.timeout or 0, opts.callback or (->))
+      data: {}
+    }, event_opts
+    event.data.entity_name = clock.name unless event.data.entity_name?
+    api_methods.post_event(event, timeout, callback)
 
   c.post_search_index = (clock, callback=(->)) ->
     search_data = {
@@ -57,24 +53,43 @@ module.exports = (config) ->
     return callback("Missing model param") unless data?.model
     schema.Clock.findOne {_id: data.model?._id}, (err, doc) ->
       return callback(err) if err?
+      event_opts = {data: {}}
       if not doc
         doc = new schema.Clock()
-        type = "create"
+        event_opts.type = "create"
       else
-        type = "update"
+        event_opts.type = "update"
       return callback("Permission denied") unless utils.can_edit(session, doc)
-      delete data.model.sharing unless utils.can_change_sharing(session, doc)
-      for key in ["name", "about", "present", "categories"]
+      # Name and about changes
+      for key in ["name", "about"]
         if data.model[key]?
+          if event_opts.type == "update"
+            event_opts.data["old_" + key] = doc[key]
+            event_opts.data[key] = data.model[key]
           doc[key] = data.model[key]
+      # Category changes
+      if data.model.categories
+        if event_opts.type == "update"
+          old_cats = _.map(doc.categories, (c) -> c.name).join(", ")
+          new_cats = _.map(data.model.categories, (c) -> c.name).join(", ")
+          if old_cats != new_cats
+            event_opts.data.old_categories = old_cats
+            event_opts.data.categories = new_cats
+        doc.categories = data.model.categories
+
+      # Sharing changes
+      delete data.model.sharing unless utils.can_change_sharing(session, doc)
       if data.model.sharing?
         _.extend(doc.sharing, data.model.sharing)
+        if event_opts.type == "update"
+          event_opts.data.sharing = utils.clean_sharing({}, data.model.sharing)
+
       doc.save (err, doc) ->
         return callback(err) if err?
         return callback("null doc") unless doc?
         async.parallel [
           (done) ->
-            c.post_event session, doc, type, {callback: done}
+            c.post_event session, doc, event_opts, 0, done
           (done) ->
             c.post_search_index doc, done
         ], (err, results) ->

@@ -64,7 +64,6 @@ class ClockModel extends Backbone.Model
       name: @get("name")
       about: @get("about")
       categories: @get("categories")
-      present: @get("present")
       sharing: @get("sharing")
     }}
     if options.success? or options.error?
@@ -325,12 +324,6 @@ class ItemsListView extends ClockBaseView
         index: i
         last: @items.length == 1
       }))
-
-# Form widget for marking who is present.
-class PresentControlsView extends ClockBaseView
-  template: _.template $("#presentControlsTemplate").html()
-  events:
-    'click .softnav': 'softNav'
 
 #
 # Detail view

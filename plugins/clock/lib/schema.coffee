@@ -14,10 +14,6 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
-    present: [{
-      user_id: {type: Schema.ObjectId, ref: 'User'}
-      name: String
-    }]
     categories: [{
       name: String
       times: [{

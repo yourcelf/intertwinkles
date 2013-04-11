@@ -52,8 +52,7 @@ describe "clock", ->
     done()
 
   it "posts events [lib]", (done) ->
-    clock.post_event @session, @clock, "create", {
-      callback: (err, event) =>
+    clock.post_event @session, @clock, {type: "create"}, 0, (err, event) =>
         expect(err).to.be(null)
         expect(event.application).to.be("clock")
         expect(event.type).to.be("create")
@@ -65,7 +64,6 @@ describe "clock", ->
           expect("#{doc.group}").to.be(@clock.sharing.group_id)
           expect(doc.url).to.be(@clock.url)
           done()
-    }
 
   it "fetches a clock [lib]", (done) ->
     clock.fetch_clock @clock.id, @session, (err, doc) =>
@@ -102,6 +100,17 @@ describe "clock", ->
       expect(event.type).to.be("update")
       expect(event.entity).to.eql(doc.id)
       expect(event.url).to.be(doc.url)
+
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Clock"
+        aspect: "name"
+        collective: "changed clocks"
+        verbed: "changed"
+        manner: "from \"Meeting\" to \"Duh Best\""
+      })
+
       expect(si).to.not.be(null)
       expect(si.url).to.be(doc.url)
       done()
@@ -115,6 +124,18 @@ describe "clock", ->
       expect(event).to.not.be(null)
       expect(si).to.not.be(null)
       expect(si.sharing.group_id).to.eql(group_id)
+
+      expect(event.type).to.be("update")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Duh Best"
+        aspect: "sharing"
+        collective: "changed clocks"
+        verbed: "changed"
+        manner: ""
+      })
+
       clock_schema.Clock.findOne {_id: @clock.id}, (err, doc) =>
         expect(err).to.be(null)
         expect(doc).to.not.be(null)
@@ -154,7 +175,7 @@ describe "clock", ->
       expect(err).to.be("Bad time")
       done()
 
-  it "allows cojent end times", (done) ->
+  it "allows cojent end times [lib]", (done) ->
     stop = new Date()
     _set_time_with @start, stop, (err, doc) =>
       expect(err).to.be(null)
@@ -162,6 +183,82 @@ describe "clock", ->
       expect(cat.times[0].start).to.eql(@start)
       expect(cat.times[0].stop).to.eql(stop)
       done()
+
+  it "creates new clocks [lib]", (done) ->
+    clock.save_clock @session, {model: {
+        name: "Good times"
+        about: "For sure"
+    }}, (err, clock, event, si) ->
+      expect(err).to.be(null)
+      expect(clock).to.not.be(null)
+      expect(event).to.not.be(null)
+      expect(si).to.not.be(null)
+
+      expect(clock.name).to.be("Good times")
+      expect(event.type).to.be("create")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: "Progressive Clock"
+        aspect: "\"Good times\""
+        collective: "new clocks"
+        verbed: "created"
+        manner: ""
+      })
+      done()
+
+  it "updates multiple params at once [lib]", (done) ->
+    json = @clock.toJSON()
+    cats = (_.extend({}, cat) for cat in json.categories)
+    cats = cats.slice(0, 3)
+    cats[0].name = "One"
+    cats[1].name = "Two"
+    cats[2].name = "Three"
+    clock.save_clock @session, {model: {
+      _id: @clock._id
+      name: "New name"
+      about: "New about that is rather long, longer than 30 chars I should think"
+      sharing: {group_id: @all_groups["not-one-members"]._id}
+      categories: cats
+    }}, (err, clock, event, si) ->
+      expect(err).to.be(null)
+      expect(clock).to.not.be(null)
+      expect(event).to.not.be(null)
+      expect(si).to.not.be(null)
+
+      expect(event.type).to.be("update")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(4)
+      expect(terms[0]).to.eql({
+        entity: "Clock"
+        aspect: "name"
+        collective: "changed clocks"
+        verbed: "changed"
+        manner: "from \"Duh Best\" to \"New name\""
+      })
+      expect(terms[1]).to.eql({
+        entity: "New name"
+        aspect: "about text"
+        collective: "changed clocks"
+        verbed: "changed"
+        manner: "to \"New about that is rather lo...\""
+      })
+      expect(terms[2]).to.eql({
+        entity: "New name"
+        aspect: "categories"
+        collective: "changed clocks"
+        verbed: "changed"
+        manner: "to One, Two, Three"
+      })
+      expect(terms[3]).to.eql({
+        entity: "New name"
+        aspect: "sharing"
+        collective: "changed clocks"
+        verbed: "changed"
+        manner: ""
+      })
+      done()
+
 
   it "about link [live]", (done) ->
     this.timeout(20000)
