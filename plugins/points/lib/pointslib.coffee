@@ -14,6 +14,19 @@ module.exports = (config) ->
 
   pl = {}
 
+  pl.post_event = (session, pointset, opts={}, timeout=0, callback=(->)) ->
+    event = _.extend {
+      application: "points"
+      url: pointset.url
+      entity: pointset.id
+      user: session.auth?.user_id
+      anon_id: session.anon_id
+      group: pointset.sharing?.group_id
+      data: {}
+    }, opts
+    event.data.entity_name = pointset.name unless opts.data?.entity_name
+    api_methods.post_event(event, timeout, callback)
+
   pl.save_pointset = (session, data, callback) ->
     return callback("Missing model param") unless data?.model
     schema.PointSet.findOne {_id: data.model._id}, (err, doc) ->
@@ -48,20 +61,6 @@ module.exports = (config) ->
         pl.post_event_and_search session, doc, event_opts, 0, (err, event, si) ->
           return callback(err) if err?
           return callback(null, doc, event, si)
-
-  pl.post_event = (session, pointset, opts={}, timeout=0, callback=(->)) ->
-    event = _.extend {
-      application: "points"
-      url: pointset.url
-      entity: pointset.id
-      user: session.auth?.user_id
-      anon_id: session.anon_id
-      via_user: session.auth?.user_id
-      group: pointset.sharing?.group_id
-      data: {}
-    }, opts
-    event.data.entity_name = pointset.name unless opts.data?.entity_name
-    api_methods.post_event(event, timeout, callback)
 
   pl.post_search_index = (pointset, callback=(->)) ->
     search_data = {
@@ -123,8 +122,10 @@ module.exports = (config) ->
     unless user_id or data.name?
       return callback("Missing user_id or name.")
     get_point session, data, ["_id", "text"], (err, doc, point) ->
-      event_opts = {type: "append", data: {}}
       return callback(err) if err?
+      event_opts = {type: "append", data: {}}
+      if session.auth?.user_id != data.user_id
+        event_opts.via_user = session.auth?.user_id
       if not point?
         event_opts.data.is_new = true
         doc.drafts.unshift({ revisions: []})
@@ -170,20 +171,23 @@ module.exports = (config) ->
         # No change.
         return callback("No change")
 
+
       doc.save (err, doc) ->
         return callback(err) if err?
         return callback("null doc") unless doc?
-        pl.post_event session, doc, {
+        event_opts = {
           type: "vote"
           user: data.user_id
-          via_user: session.auth?.user_id
           data: {
             text: _ellipse(point.revisions[0].text, 30)
             support: data.vote
             point_id: point._id
             user: {name: data.name}
           }
-        }, 0, (err, event) ->
+        }
+        if session.auth?.user_id != data.user_id
+          event_opts.via_user = session.auth?.user_id
+        pl.post_event session, doc, event_opts, 0, (err, event) ->
           return callback(err) if err?
           return callback(null, doc, point, event)
 

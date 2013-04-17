@@ -66,7 +66,7 @@ describe "pointslib", ->
       expect(event.absolute_url).to.be(doc.absolute_url)
       expect(event.type).to.be("create")
       expect(event.user.toString()).to.be(@all_users['one@mockmyid.com'].id)
-      expect(event.via_user.toString()).to.be(event.user.toString())
+      expect(event.via_user).to.be(undefined)
       expect(event.group.toString()).to.eql(@all_groups['two-members'].id)
 
       terms = api_methods.get_event_grammar(event)
@@ -112,6 +112,8 @@ describe "pointslib", ->
       expect(doc.name).to.be("Your Ten Point")
       expect(doc.slug).to.be("my-ten-point")
       expect(event.type).to.be("update")
+      expect(event.user.toString()).to.be(@session.auth.user_id)
+      expect(event.via_user).to.be(undefined)
       expect(si.text).to.be("Your Ten Point")
 
       terms = api_methods.get_event_grammar(event)
@@ -157,6 +159,8 @@ describe "pointslib", ->
         @all_users['one@mockmyid.com'].id)
   
       expect(event.type).to.be("append")
+      expect(event.user.toString()).to.be(@session.auth.user_id)
+      expect(event.via_user).to.be(undefined)
       terms = api_methods.get_event_grammar(event)
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
@@ -192,6 +196,8 @@ describe "pointslib", ->
       )
 
       expect(event.type).to.be("append")
+      expect(event.user.toString()).to.be(@session2.auth.user_id)
+      expect(event.via_user).to.be(undefined)
       terms = api_methods.get_event_grammar(event)
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
@@ -225,7 +231,7 @@ describe "pointslib", ->
       ])
       expect(event.type).to.be("vote")
       expect(event.user.toString()).to.be(@session.auth.user_id)
-      expect(event.via_user.toString()).to.be(@session.auth.user_id)
+      expect(event.via_user).to.be(undefined)
 
       terms = api_methods.get_event_grammar(event)
       expect(terms.length).to.be(1)
@@ -255,6 +261,9 @@ describe "pointslib", ->
       expect(p.revisions[0].supporters.length).to.be(1)
       expect(p.revisions[0].supporters[0].user_id.toString()).to.be(
         @session.auth.user_id)
+
+      expect(event.user.toString()).to.be(@session2.auth.user_id)
+      expect(event.via_user.toString()).to.be(@session.auth.user_id)
 
       terms = api_methods.get_event_grammar(event)
       expect(terms.length).to.be(1)
@@ -299,6 +308,8 @@ describe "pointslib", ->
         expect(doc.drafts[0].revisions[0].supporters[1].name).to.be("George")
         expect(doc.drafts[0].revisions[0].supporters[1].user_id).to.be(null)
         expect(event.data.user.name).to.be("George")
+        expect(event.user).to.be(undefined)
+        expect(event.via_user).to.be(undefined)
 
         pointslib.change_support {}, {
           _id: @pointset.id
@@ -310,6 +321,8 @@ describe "pointslib", ->
           expect(err).to.be(null)
           expect(doc).to.not.be(null)
           expect(event).to.not.be(null)
+          expect(event.user).to.be(undefined)
+          expect(event.via_user).to.be(undefined)
 
           expect(point._id).to.eql(doc.drafts[0]._id)
           expect(doc.drafts[0].revisions[0].supporters.length).to.be(1)
