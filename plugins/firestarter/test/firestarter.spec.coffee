@@ -104,7 +104,7 @@ describe "firestarter", ->
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
         entity: "Test"
-        aspect: "firestarter"
+        aspect: "the firestarter"
         collective: "visited firestarters"
         verbed: "visited"
         manner: ""
@@ -137,21 +137,21 @@ describe "firestarter", ->
         expect(terms.length).to.be(3)
         expect(terms[0]).to.eql({
           entity: "Firestarter"
-          aspect: "name"
+          aspect: "the name"
           collective: "changed firestarters"
           verbed: "changed"
           manner: "from \"Test\" to \"New name\""
         })
         expect(terms[1]).to.eql({
           entity: "New name"
-          aspect: "prompt"
+          aspect: "the prompt"
           collective: "changed firestarters"
           verbed: "changed"
           manner: "to \"And this is my prompty\""
         })
         expect(terms[2]).to.eql({
           entity: "New name"
-          aspect: "sharing"
+          aspect: "the sharing settings"
           collective: "changed firestarters"
           verbed: "changed"
           manner: ""
@@ -193,7 +193,7 @@ describe "firestarter", ->
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
           entity: "New name"
-          aspect: "response"
+          aspect: "a response"
           collective: "added responses"
           verbed: "added"
           manner: "This is my response"
@@ -287,7 +287,7 @@ describe "firestarter", ->
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
           entity: "New name"
-          aspect: "response"
+          aspect: "a response"
           collective: "removed responses"
           verbed: "removed"
           manner: "This is my response"

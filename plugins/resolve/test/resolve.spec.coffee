@@ -41,7 +41,7 @@ describe "resolve", ->
     common.shutDown(@server, done)
 
   it "Posts events", (done) ->
-    resolve.post_event @session, @proposal, "visit", {}, 0, (err, event) =>
+    resolve.post_event @session, @proposal, {type: "visit"}, 0, (err, event) =>
       expect(err).to.be(null)
       expect(event.application).to.be("resolve")
       expect(event.entity).to.be(@proposal.id)
@@ -167,6 +167,15 @@ describe "resolve", ->
       )
       expect(event.url).to.be(proposal.url)
       expect(event.absolute_url).to.be(proposal.absolute_url)
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: @proposal_with_notices.title
+        aspect: "proposal"
+        collective: "changed proposals"
+        verbed: "reopened"
+        manner: ""
+      })
 
       for notice in notices
         expect(notice.url).to.be(proposal.url)
@@ -264,6 +273,8 @@ describe "resolve", ->
       expect(proposal.opinions[start_length].revisions[0].vote).to.be("weak_yes")
     
       expect(event?.type).to.be("append")
+      expect(event.user.toString()).to.be(@session.auth.user_id)
+      expect(event.via_user).to.be(undefined)
       terms = api_methods.get_event_grammar(event)
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
@@ -301,6 +312,8 @@ describe "resolve", ->
         expect(proposal.opinions[start_length].user_id).to.eql(user.id)
         expect(proposal.opinions[start_length].revisions[0].text).to.be("Far out")
 
+        expect(event.user.toString()).to.be(user.id)
+        expect(event.via_user.toString()).to.be(@session.auth.user_id)
         terms = api_methods.get_event_grammar(event)
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
@@ -332,6 +345,9 @@ describe "resolve", ->
       expect(proposal.opinions[start_length].user_id).to.eql(null)
       expect(proposal.opinions[start_length].name).to.be("Anonymouse")
       expect(proposal.opinions[start_length].revisions[0].text).to.be("Fur out")
+
+      expect(event.user).to.be(undefined)
+      expect(event.via_user.toString()).to.be(@session.auth.user_id)
       terms = api_methods.get_event_grammar(event)
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
@@ -362,6 +378,11 @@ describe "resolve", ->
       expect(proposal.opinions[start_length].user_id).to.eql(null)
       expect(proposal.opinions[start_length].name).to.be("One")
       expect(proposal.opinions[start_length].revisions[0].text).to.be("Four out")
+
+      expect(event.user).to.be(undefined)
+      expect(event.via_user).to.be(undefined)
+      expect(event.data.user.name).to.be("One")
+
       terms = api_methods.get_event_grammar(event)
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({

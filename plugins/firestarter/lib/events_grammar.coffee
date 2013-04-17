@@ -23,7 +23,7 @@ module.exports = {
         if data.name?
           attributes.push {
             entity: "Firestarter"
-            aspect: "name"
+            aspect: "the name"
             collective: "changed firestarters"
             verbed: "changed"
             manner: "from \"#{data.old_name}\" to \"#{data.name}\""
@@ -31,7 +31,7 @@ module.exports = {
         if data.prompt?
           attributes.push {
             entity: data.entity_name
-            aspect: "prompt"
+            aspect: "the prompt"
             collective: "changed firestarters"
             verbed: "changed"
             manner: "to \"#{_ellipse(data.prompt or "")}\""
@@ -39,7 +39,7 @@ module.exports = {
         if data.sharing?
           attributes.push {
             entity: data.entity_name
-            aspect: "sharing"
+            aspect: "the sharing settings"
             collective: "changed firestarters"
             verbed: "changed"
             manner: ""
@@ -49,7 +49,7 @@ module.exports = {
         if data.is_new
           return [{
             entity: data.entity_name
-            aspect: "response"
+            aspect: "a response"
             collective: "added responses"
             verbed: "added"
             manner: _ellipse(data.text)
@@ -57,7 +57,7 @@ module.exports = {
         else
           return [{
             entity: data.entity_name
-            aspect: "response"
+            aspect: "a response"
             collective: "edited responses"
             verbed: "edited"
             manner: _ellipse(data.text or "")
@@ -65,7 +65,7 @@ module.exports = {
       when "trim"
         return [{
             entity: data.entity_name
-            aspect: "response"
+            aspect: "a response"
             collective: "removed responses"
             verbed: "removed"
             manner: _ellipse(data.text or "")
@@ -73,7 +73,7 @@ module.exports = {
       when "visit"
         return [{
           entity: data.entity_name
-          aspect: "firestarter"
+          aspect: "the firestarter"
           collective: "visited firestarters"
           verbed: "visited"
           manner: ""

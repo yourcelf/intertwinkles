@@ -266,7 +266,7 @@ ul.sharing-online-group
       border-radius: 0px 4px 4px 0px
 
 /*
-  Timeline
+  Timeline / events
 */
 
 .timeline
@@ -280,6 +280,60 @@ ul.sharing-online-group
     position: absolute
     white-space: nowrap
 
+.events-summary
+  text-align: left
+  border-radius: 10px
+  box-shadow: 1px 1px 2px #666
+  background-color: rgba(255, 255, 255, 0.5)
+  display: inline-block
+  padding: 1em
+  cursor: pointer
+  &:hover
+    box-shadow: 1px 1px 2px #993
+  .more
+    text-align: center
+    font-style: italic
+  h4
+    font-size: 18px
+    font-style: italic
+    text-align: center
+    font-weight: normal
+    margin-top: 0
+
+.event-history
+  display: table
+  .event
+    display: table-row
+    padding-bottom: 0.5em
+    &.visit
+      opacity: 0.5
+    &.header
+      .date
+        color: #000
+        font-family: inherit
+        font-size: inherit
+      span
+        background-color: #eee
+        border-left: 2px solid white
+        border-right: 2px solid white
+      text-align: center
+      font-style: italic
+      font-size: smaller
+  .attrib
+    padding-right: 0.5em
+    img
+      max-width: 16px
+      max-height: 16px
+    .via
+      font-size: smaller
+      white-space: nowrap
+  .manner
+    font-size: smaller
+    color: #aaa
+
+  .date, .attrib, .about
+    display: table-cell
+  
 /*
   Notifications
 */

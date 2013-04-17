@@ -31,7 +31,7 @@ module.exports = {
         }]
       when "update"
         attributes = []
-        if event.data.proposal?
+        if event.data.revision?
           attributes.push({
             entity: event.data.entity_name
             aspect: "proposal"
@@ -69,7 +69,7 @@ module.exports = {
           entity: event.data.entity_name
           aspect: "opinion"
           collective: "proposal responses"
-          verbed: "added"
+          verbed: if event.data.is_new then "added" else "updated"
           manner: "#{votes[event.data.vote]}"
         }]
       when "trim"

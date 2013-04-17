@@ -14,6 +14,9 @@ default_options =
   logger:
     debug: (->)
 
+canonicalize = (email) ->
+  return email.toLowerCase()
+
 verify = (assertion, audience, callback, options) ->
   # Without the assertion, skip.
   options = _.extend {}, default_options, options
@@ -47,6 +50,7 @@ verify = (assertion, audience, callback, options) ->
       answer = JSON.parse(verification_str)
       if answer.status == 'okay' and answer.audience == audience
         options.logger.debug("browserid success: #{answer}")
+        answer.email = canonicalize(answer.email)
         callback(null, answer)
       else
         options.logger.debug("browserid fail: #{answer}")
@@ -59,4 +63,4 @@ verify = (assertion, audience, callback, options) ->
   auth_req.write(post_data)
   auth_req.end()
 
-module.exports = { verify }
+module.exports = { verify, canonicalize }

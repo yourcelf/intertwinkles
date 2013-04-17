@@ -16,6 +16,7 @@ class intertwinkles.AutoUpdatingDate extends Backbone.View
 
   render: =>
     clearTimeout(@timeout) if @timeout?
+    #N.B. Duplicates logic below in simple_date
     now = new Date()
     date = @date
     if now.getFullYear() != date.getFullYear()
@@ -46,11 +47,33 @@ intertwinkles.user_icon = (user_id, name, size="small") ->
     return "<span style='width: 32px;'><i class='icon icon-user' title='#{name}'></i></span>"
 
 intertwinkles.inline_user = (user_id, name) ->
+  name ?= "Anonymous"
   user = intertwinkles.users?[user_id]
   if user?
     return "<img src='#{_.escape(user.icon.small)}' /> #{_.escape(user.name)}"
   else
     return "<span style='width: 32px;'><i class='icon icon-user'></i></span> #{name}"
+
+intertwinkles.simple_date = (date) ->
+  #N.B. duplicates logic above in AutoUpdatingDate
+  date = intertwinkles.parse_date(date)
+  now = new Date()
+  if now.getFullYear() != date.getFullYear()
+    str = date.toString("MMM d, YYYY")
+  else if now.getMonth() != date.getMonth() or now.getDate() != date.getDate()
+    str = date.toString("MMM d")
+  else
+    diff = now.getTime() - date.getTime()
+    seconds = diff / 1000
+    if seconds > (60 * 60)
+      str = parseInt(seconds / 60 / 60) + "h"
+    else if seconds > 60
+      str = parseInt(seconds / 60) + "m"
+    else
+      str = parseInt(seconds) + "s"
+  return """<span class='date' title='#{date.toString("dddd, MMMM dd, yyyy h:mm:ss tt")}'>
+      #{str}
+    </span>"""
 
 intertwinkles.markup = (text) ->
   if text

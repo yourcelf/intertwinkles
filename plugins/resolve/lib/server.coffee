@@ -56,7 +56,7 @@ start = (config, app, sockrooms) ->
       }, {
         proposal: doc
       })
-      resolve.post_event(req.session, doc, "visit", {}, 60 * 5000, (->))
+      resolve.post_event(req.session, doc, {type: "visit"}, 60 * 5000, (->))
 
   sockrooms.on "resolve/post_twinkle", (socket, session, data) ->
     respond = (err, twinkle, proposal) ->
@@ -121,7 +121,7 @@ start = (config, app, sockrooms) ->
         proposal.sharing = utils.clean_sharing(session, proposal)
         response.proposal = proposal
       socket.sendJSON data.callback, response
-      resolve.post_event(session, proposal, "visit", {}, 60 * 5000, (->))
+      resolve.post_event(session, proposal, {type: "visit"}, 60 * 5000, (->))
 
   sockrooms.on "resolve/get_proposal_events", (socket, session, data) ->
     respond = (err, events) ->

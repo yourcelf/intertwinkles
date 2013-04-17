@@ -198,7 +198,7 @@ class ShowProposalView extends intertwinkles.BaseView
     'click        .edit-opinion': 'editOpinion'
     'click     a.delete-opinion': 'deleteOpinion'
     'click     .confirm-my-vote': 'confirmMyVote'
-    'click             .history': 'showHistory'
+    'click             .history': 'showProposalHistory'
   }, intertwinkles.BaseEvents
 
   votes: {
@@ -250,11 +250,11 @@ class ShowProposalView extends intertwinkles.BaseView
       }
     @addView ".sharing", sharingButton
     @postRender()
-    @buildTimeline()
-    _timeline_timeout = null
+    @showEvents()
+    _events_timeout = null
     buildWithTimeout = =>
       clearTimeout(_timeline_timeout) if _timeline_timeout?
-      _timeline_timeout = setTimeout @buildTimeline, 1000
+      _events_timeout = setTimeout @showEvents, 1000
     @listenTo resolve.model, "change", buildWithTimeout
 
   postRender: =>
@@ -608,6 +608,22 @@ class ShowProposalView extends intertwinkles.BaseView
     $(event.currentTarget).attr("data-id", ownOpinion._id)
     @editOpinion(event)
 
+  showEvents: =>
+    if resolve.model.id
+      callback = "resolve_events_#{resolve.model.id}"
+      resolve.socket.once callback, (data) =>
+        collection = intertwinkles.buildEventCollection(data)
+        summary = new intertwinkles.EventsSummary({
+          collection: collection.deduplicate(),
+          modificationWhitelist: ["visit", "append", "trim"]
+        })
+        @$(".events-holder").html(summary.el)
+        summary.render()
+      resolve.socket.send "resolve/get_proposal_events", {
+        callback: callback
+        proposal_id: resolve.model.id
+      }
+
   buildTimeline: =>
     if resolve.model.id
       callback = "resolve_events_#{resolve.model.id}"
@@ -654,7 +670,7 @@ class ShowProposalView extends intertwinkles.BaseView
         proposal_id: resolve.model.id
       }
 
-  showHistory: (event) =>
+  showProposalHistory: (event) =>
     event.preventDefault()
     new ProposalHistoryView({model: resolve.model, vote_map: @vote_map}).render()
 

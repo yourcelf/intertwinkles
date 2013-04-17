@@ -21,7 +21,7 @@ module.exports = (config) ->
   # Private
   get_user = (query, callback) ->
     if query?
-      if query.indexOf('@') != -1
+      if query.toString().indexOf('@') != -1
         filter = {email: query}
       else
         filter = {_id: query}
@@ -401,9 +401,10 @@ module.exports = (config) ->
         filter[key] = params[key] if params[key]?
       schema.Event.find filter, (err, events) ->
         return callback(err) if err?
-        for event in events
+        event_json = (event.toJSON() for event in events)
+        for event in event_json
           event.grammar = api.get_event_grammar(event)
-        return callback(null, events)
+        return callback(null, event_json)
 
   _event_timeout_queue = {}
   _post_event = (params, callback) ->

@@ -113,7 +113,7 @@ block body
               | Last modified:&nbsp;
               span.date-auto
             br
-            a.pull-right.history(href='#') history
+            a.pull-right.history(href='#') show proposal changes
 
         div.span6
           h4 Vote Tallies
@@ -134,13 +134,13 @@ block body
 
       div.opinions
 
-      div.timeline-holder-holder(style='clear: both; padding-top: 4em;')
-        h3 Events
-        div.timeline-holder
+      
+    div.row-fluid(style='clear: both; text-align: right;')
+      div.events-holder
 
   script(type='text/template', id='proposalHistoryViewTemplate')
     div.modal-body
-      button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+      button.close(type='button', data-dismiss='modal') &times;
       div.proposal-history.
         <% _.each(revs, function(rev) { %>
           <div class='revision'>
@@ -159,7 +159,9 @@ block body
                 <% var vote_name = votedef[1]; %>
                 <% if (rev.opinions[vote_key]) { %>
                   <div class='row'>
-                    <span class='vote <%- vote_key %>'><%- vote_name %></span>
+                    <span class='vote-cell'>
+                      <span class='vote <%- vote_key %>'><%- vote_name %></span>
+                    </span>
                     <div class='people'>
                     <% _.each(rev.opinions[vote_key], function(op) { %>
                       <span rel='popover'
