@@ -170,7 +170,7 @@
 
 		removeModal: function (modal) {
 			modal.$element.off('.modalmanager');
-			if (modal.$backdrop) this.removeBackdrop.call(modal);
+			if (modal.$backdrop) this.removeBackdrop(modal);
 			this.stack.splice(this.getIndexOfModal(modal), 1);
 		},
 
@@ -222,7 +222,7 @@
 				this.isLoading && this.removeSpinner();
 			}
 
-			return $backdrop
+			return $backdrop;
 		},
 
 		removeContainer: function (modal) {
