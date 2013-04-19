@@ -1,11 +1,5 @@
 #= require ../vendor/d3.v3.js
 
-intertwinkles.build_timeline = (selector, collection, formatter) ->
-  timeline = new TimelineView({ collection: collection, formatter: formatter })
-  $(selector).html(timeline.el)
-  timeline.render()
-  return timeline
-
 class intertwinkles.Event extends Backbone.Model
   # Return an object containing one of:
   #   'user': a user id
@@ -20,7 +14,7 @@ class intertwinkles.Event extends Backbone.Model
 
 class intertwinkles.EventCollection extends Backbone.Collection
   model: Event
-  comparator: (r) -> return intertwinkles.parse_date(r.get("date")).getTime()
+  comparator: (r) -> return -intertwinkles.parse_date(r.get("date")).getTime()
 
   # Return a new collection which contains only those events which are not
   # duplicates (e.g. repeat visits) within the given timespan.
@@ -46,11 +40,12 @@ class intertwinkles.EventCollection extends Backbone.Collection
     attrsB = eventB.attributes
     return (
       attrsA.application == attrsB.application and
-      attrsA.type == attrsB.type and
+      attrsA.type == attrsB.type == "visit" and #XXX only dedupe visits??
       attrsA.entity == attrsB.entity and
       attrsA.user == attrsB.user and
       attrsA.via_user == attrsB.via_user and
       attrsA.group == attrsB.group and
+      attrsA.manner == attrsB.manner and
       attrsA.data?.user?.name == attrsB.data?.user?.name and
       _.isEqual(_.keys(attrsA.data or {}), _.keys(attrsB.data or {})) and
       Math.abs(attrsA.date.getTime() - attrsB.date.getTime()) < (1000 * 60 * 60 * 6)
@@ -116,21 +111,23 @@ class intertwinkles.EventCollection extends Backbone.Collection
     out.start = @at(0)?.get("date") or new Date()
     return out
 
-intertwinkles.buildEventCollection = (data) ->
+intertwinkles.buildEventCollection = (events) ->
   collection = new intertwinkles.EventCollection()
-  for event in data.events
+  for event in events
     event.date = intertwinkles.parse_date(event.date)
-  collection.add(new intertwinkles.Event(event) for event in data.events)
+  collection.add(new intertwinkles.Event(event) for event in events)
   return collection
 
 
 events_summary_template = """
   <div class='events-summary'>
-    <h4>History</h4>
     <div class='counts'>
       <%- stats.numVisits %> visits,
       <%- stats.numEdits %> edits over
       <%- days %> day<%- days == 1 ? "" : "s" %>.
+      <span class='more'>
+        <a href='#' class='history'>details</a>
+      </span>
     </div>
     <div class='current'>
       <% if (stats.current.length > 0) { %>
@@ -143,9 +140,6 @@ events_summary_template = """
           <%= intertwinkles.user_icon(ident.user, ident.name, "tiny") %>
         <% }); %>
       <% } %>
-    </div>
-    <div class='more'>
-      <a href='#' class='history'>more</a>
     </div>
   </div>
 """
@@ -177,11 +171,56 @@ class intertwinkles.EventsSummary extends Backbone.View
         (new Date().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
       )
     @$el.html(@template({stats: stats, days: days, groupCount: @groupCount}))
+    this
 
   showHistory: (event) =>
     event.preventDefault()
     event.stopPropagation()
     new intertwinkles.EventsHistory({collection: @coll}).render()
+
+recent_events_summary_template = """
+  <div class='recent-activity-summary'>
+    <div class='counts'>
+      <%- stats.numVisits %> visits,
+      <%- stats.numEdits %> edits
+      <%- days <= 1 ? "since yesterday" : "over the last " + day + " days" %>
+      <a href='#' class='history'>details</a>
+    </div>
+    <div class='current'>
+      <% if (stats.editors.length > 0) { %>
+        Recent editors:
+        <% for (var i = 0; i < Math.min(stats.editors.length, 5); i++) { %>
+          <% var ident = stats.editors[i]; %>
+          <%= intertwinkles.user_icon(ident.user, ident.name, "tiny") %>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+"""
+class intertwinkles.RecentEventsSummary extends Backbone.View
+  template: _.template(recent_events_summary_template)
+  events: {
+    'click .recent-activity-summary': 'showHistory'
+    'click .history':                 'showHistory'
+  }
+  initialize: (options) ->
+    @coll = options.collection
+    @groupCount = intertwinkles.groups[@coll.at(0)?.get("group")]?.members.length
+
+  render: =>
+    if @coll.length > 0
+      stats = @coll.summarize()
+      days = Math.ceil(
+        (new Date().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
+      )
+      @$el.html(@template({stats: stats, days: days}))
+    this
+    
+  showHistory: (event) =>
+    event.preventDefault()
+    event.stopPropagation()
+    new intertwinkles.RecentEventsHistory({collection: @coll}).render()
+
 
 event_history_template = """
   <div class='modal-body'>
@@ -221,121 +260,96 @@ event_history_template = """
       <% }); %>
     </div>
   </div>
+  <div class='modal-footer'>
+    <a data-dismiss='modal' class='btn'>Close</a>
+  </div>
 """
 class intertwinkles.EventsHistory extends intertwinkles.BaseModalFormView
   template: _.template(event_history_template)
   initialize: (options) ->
-    coll = options.collection.clone()
-    coll.comparator = (e) -> -intertwinkles.parse_date(e.get("date")).getTime()
-    coll.sort()
-    @context = { events: coll }
+    @context = { events: options.collection }
 
-##############################################
-# The old way... a ruled timeline view:
-##############################################
 #
-#ruled_timeline_template = """
-#  <div class='container timeline'>
-#    <% for (var i = 0; i < rows.length; i++) { %>
-#      <div class='row-fluid ruled'>
-#        <div class='span2' style='text-align: right;'><%- rows[i].label %></div>
-#        <div class='span8' style='position: relative;'>
-#          <% for (var j = 0; j < rows[i].length; j++) { %>
-#            <% var point = rows[i][j]; %>
-#            <span class='timeline-bump' style='left: <%- point.left %>%'>
-#              <%= point.formatted %>
-#            </span>
-#          <% } %>
-#        </div>
-#      </div>
-#    <% } %>
-#    <div class='row-fluid'>
-#      <div class='span2'></div>
-#      <div class='span8 ruled' style='position: relative;'>
-#        <% for (var i = 0; i < ticks.length; i++) { %>
-#          <span class='date-legend'
-#                style='left: <%- ticks[i].left %>%'
-#                ><%- ticks[i].label %></span>
-#        <% } %>
-#      </div>
-#  </div>
-#"""
+# Recent events history show things across multiple documents, grouped by
+# document.
 #
-#class TimelineView extends Backbone.View
-#  template:  _.template(ruled_timeline_template)
-#
-#  initialize: (options) ->
-#    @coll = options.collection
-#    @formatter = options.formatter
-#
-#  render: =>
-#    if @coll.length == 0
-#      @$el.html("")
-#      return this
-#    rows = []
-#    ticks = []
-#    min_date = @coll.at(0).get("date")
-#    min_time = min_date.getTime()
-#    max_date = @coll.at(@coll.length - 1).get("date")
-#    max_time = max_date.getTime()
-#    time_span = Math.max(max_time - min_time, 1)
-#    @coll.each (entry) =>
-#      type = entry.get("type")
-#      unless rows[type]?
-#        rows[type] = []
-#        rows[type].label = entry.get("type")
-#        rows.push(rows[type])
-#      point = {
-#        formatted: @formatter(entry.toJSON())
-#        left: 100 * (entry.get("date").getTime() - min_time) / time_span
-#      }
-#      rows[type].push(point)
-#
-#    # Build timeline scale
-#    if time_span < 1000 * 60
-#      date_fmt = "h:mm:s"
-#      step = 1000
-#    else if time_span < 1000 * 60 * 60
-#      date_fmt = "h:mm tt"
-#      step = 1000 * 60
-#    else if time_span < 1000 * 60 * 60 * 24
-#      date_fmt = "h tt"
-#      step = 1000 * 60 * 60
-#    else if time_span < 1000 * 60 * 60 * 24 * 7
-#      date_fmt = "ddd M-d"
-#      step = 1000 * 60 * 60 * 24
-#    else if time_span < 1000 * 60 * 60 * 24 * 14
-#      date_fmt = "M-d"
-#      step = 1000 * 60 * 60 * 24
-#    else if time_span < 1000 * 60 * 60 * 24 * 7 * 12
-#      date_fmt = "MMM d"
-#      step = 1000 * 60 * 60 * 24 * 31
-#    else if time_span < 1000 * 60 * 60 * 24 * 7 * 52
-#      date_fmt = "MMM"
-#      step = 1000 * 60 * 60 * 24 * 31
-#    else
-#      date_fmt = "yyyy"
-#      step = 1000 * 60 * 60 * 24 * 365
-#
-#    # Adjust scale. #FIXME
-#    while time_span / step < 2
-#      step /= 2
-#    while time_span / step > 10
-#      step *= 2
-#
-#    ticks = []
-#    i = 0
-#    while true
-#      next = step * i++
-#      if next < time_span
-#        ticks.push({
-#          label: new Date(min_time + next).toString(date_fmt)
-#          left: parseInt(next / time_span * 100)
-#        })
-#      else
-#        break
-#
-#    @$el.html @template({ rows, ticks })
-#    @$("[rel=popover]").popover()
-#
-#
+recent_events_history_template = """
+  <div class='modal-body'>
+    <button class='close' type='button' data-dismiss='modal' title='close'>&times;</button>
+    <h3>Recent activity</h3>
+    <div class='recent-activity'>
+      <% _.each(entities, function (events) { %>
+        <% var event = events.at(0); %>
+        <div class='entity <%- events.length > 10 ? 'longer collapsed' : '' %>'>
+          <div class='event-list'>
+            <span class='entity-name document-app-icon'>
+              <a href='<%- event.get("absolute_url") %>'>
+                <img src='<%- INTERTWINKLES_APPS[event.get("application")].image %>' alt='<%- event.get("application") %>' />
+              </a>
+              <a href='<%- event.get("absolute_url") %>'><%- event.get("grammar")[0].entity %></a>
+            </span>
+            <% events.each(function(event) { %>
+              <% var grammar = event.get("grammar"); %>
+              <span class='event <%- event.get("type") %>'>
+                <%= intertwinkles.simple_date(event.get("date")) %>
+                <span class='attrib'>
+                  <%= intertwinkles.inline_user(event.get("user"), name) %>
+                  <% if (event.get("via_user")) { %>
+                    <span class='via'>
+                      (via <%= intertwinkles.inline_user(event.get("via_user")) %>)
+                    </span>
+                  <% } %>
+                </span>
+                <span class='about'>
+                  <% for (var i = 0; i < grammar.length; i++) { %>
+                    <span class='verbed'><%- grammar[i].verbed %></span>
+                    <span class='aspect'><%- grammar[i].aspect %></span>
+                    <% if (grammar[i].manner) { %>
+                      <span class='manner'>(<%- grammar[i].manner %>)</span>
+                    <% } %>
+                    <br />
+                  <% } %>
+                </span>
+              </span>
+            <% }); %>
+            <div class='fadeout'></div>
+          </div>
+          <% if (events.length > 10) { %>
+            <a href='#' class='more'>show more</a>
+          <% } %>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+  <div class='modal-footer'>
+    <a data-dismiss='modal' class='btn'>Close</a>
+  </div>
+"""
+class intertwinkles.RecentEventsHistory extends intertwinkles.BaseModalFormView
+  template: _.template(recent_events_history_template)
+  events:
+    'click .more': 'showMore'
+  initialize: (options) ->
+    # Then partition by entity...
+    by_entity = {}
+    entity_order = []
+    options.collection.each (event) ->
+      entity = event.get("entity")
+      if not by_entity[entity]?
+        by_entity[entity] = new intertwinkles.EventCollection()
+        entity_order.push(entity)
+      by_entity[entity].add(event)
+
+    @context = {
+      entities:  (by_entity[entity].deduplicate() for entity in entity_order)
+    }
+
+  showMore: (event) =>
+    event.preventDefault()
+    link = $(event.currentTarget)
+    container = link.closest(".entity.longer")
+    container.toggleClass("collapsed")
+    if container.hasClass("collapsed")
+      link.html("show more")
+    else
+      link.html("show fewer")

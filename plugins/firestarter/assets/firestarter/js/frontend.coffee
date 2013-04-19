@@ -345,7 +345,7 @@ class ShowFirestarter extends Backbone.View
     if fire.model.id
       callback = "events_" + new Date().getTime()
       fire.socket.once callback, (data) =>
-        collection = intertwinkles.buildEventCollection(data)
+        collection = intertwinkles.buildEventCollection(data.events)
         summary = new intertwinkles.EventsSummary({collection: collection.deduplicate()})
         @$(".history-holder").html(summary.el)
         summary.render()

@@ -1,41 +1,37 @@
 extends www_base
 
+block poststyles
+  link(rel="stylesheet", type="text/css", href=asset("/css/dashboard.styl"))
+
+
 block body
-  div.container-fluid#frontpage
+  div.container-fluid#dashboard
+
+  script#groupsList(type='text/template')
+    div.row-fluid
+      h1 Groups
     div.row-fluid
       div.span3
-        h3 Groups
-        ul
-          for group in groups
-            li.
-              <a href='/groups/show/#{group.slug}'>#{group.name}</a>
-              (#{group.members.length} members)
-        a.btn(href='/groups/new') Add new group
-        div
-          if (activity.group.length > 0)
-            h4 Group activity
-            ul.events-and-docs
-              for event in activity.group
-                li.tile-link
-                  show_user = true
-                  include includes/event
+        // This will contain howto/guide stuff?
+      div.span6.groups
+      div.span2
+        div.pull-right
+          a.btn(href='/groups/new/') Add Group
+    div.personal-events
 
-      div.span9
-        div.row-fluid
-          div.span6
-            if (activity.docs.length > 0)
-              h3 Recent things
-              ul.events-and-docs
-                for doc in activity.docs
-                  li.tile-link
-                    summary = "<span class='markmeup'>" + doc.summary + "</span>"
-                    include includes/search_result
-
-          div.span6
-            if (activity.user.length > 0)
-              h3 Your activity
-              ul.events-and-docs
-                for event in activity.user
-                  li.tile-link
-                    show_user = false
-                    include includes/event
+  script#groupDocumentList(type='text/template').
+    <div class='group'>
+      <div class='group-head'>
+        <% if (group.logo.small) { %>
+          <img src='<%- group.logo.small %>' alt='Logo' />
+        <% } %>
+        <h3><a href='/groups/show/<%- group.slug %>/'><%- group.name %></a></h3>
+        <a href='/groups/edit/<%- group.slug %>/' title='edit group settings'><i class='icon-cog'></i></a>
+      </div>
+      <ul class='documents-list'></ul>
+      <a class='more-docs' href='/groups/show/<%- group.slug %>/'>more from <%- group.name %></a>
+      <div class='events-pane' style='text-align: center'></div>
+    </div>
+ 
+block postscripts
+  script(src=asset("js/home/dashboard.coffee"))

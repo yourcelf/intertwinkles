@@ -46,15 +46,15 @@ intertwinkles.user_icon = (user_id, name, size="small") ->
   else
     return "<span style='width: 32px;'><i class='icon icon-user' title='#{name}'></i></span>"
 
-intertwinkles.inline_user = (user_id, name) ->
+intertwinkles.inline_user = (user_id, name, size="small") ->
   name ?= "Anonymous"
   user = intertwinkles.users?[user_id]
-  if user?
-    return "<img src='#{_.escape(user.icon.small)}' /> #{_.escape(user.name)}"
+  if user? and user.icon?
+    return "<img src='#{_.escape(user.icon[size])}' /> #{_.escape(user.name)}"
   else
-    return "<span style='width: 32px;'><i class='icon icon-user'></i></span> #{name}"
+    return "<span style='width: 32px;'><i class='icon icon-user'></i></span> #{user?.name or name}"
 
-intertwinkles.simple_date = (date) ->
+intertwinkles.simple_date = (date, bare=false) ->
   #N.B. duplicates logic above in AutoUpdatingDate
   date = intertwinkles.parse_date(date)
   now = new Date()
@@ -71,6 +71,9 @@ intertwinkles.simple_date = (date) ->
       str = parseInt(seconds / 60) + "m"
     else
       str = parseInt(seconds) + "s"
+
+  if bare
+    return str
   return """<span class='date' title='#{date.toString("dddd, MMMM dd, yyyy h:mm:ss tt")}'>
       #{str}
     </span>"""

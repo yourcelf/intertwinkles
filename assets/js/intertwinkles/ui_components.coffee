@@ -556,3 +556,27 @@ class intertwinkles.InviteHelper extends Backbone.View
         loading.replaceWith(orig)
       else
         loading.replaceWith("Short URL:<br /><input type='text' readonly value='#{result}' />")
+
+document_list_template = _.template("""
+  <% _.each(docs, function(doc) { %>
+    <li class='document'>
+      <a class='document-app-icon' href='<%- doc.absolute_url %>'>
+        <img src='<%- INTERTWINKLES_APPS[doc.application].image %>' alt='<%- doc.application %>' />
+      </a>
+      <a class='title' href='<%- doc.absolute_url %>'>
+        <%- doc.title %>
+      </a>
+      <span class='date'><%= intertwinkles.simple_date(doc.modified) %>
+    </li>
+  <% }); %>
+""")
+
+class intertwinkles.DocumentList extends Backbone.View
+  tagName: "ul"
+  template: document_list_template
+  initialize: (options) ->
+    @docs = options.docs
+  render: =>
+    @$el.html(@template({docs: @docs}))
+    @$el.addClass("documents-list")
+    this

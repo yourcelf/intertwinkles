@@ -43,9 +43,9 @@ describe "www methods", ->
       data: {ok: "whatevs"}
     }
     api_methods.post_event event_params, (err, event) =>
-      www_methods.get_user_events @session, (err, events) =>
+      www_methods.get_dash_events @session, (err, events) =>
         expect(events.length).to.be(1)
-        evt = events[0].toObject()
+        evt = events[0]
         delete evt._id
         delete evt.__v
         evt.user = evt.user.toString()
@@ -55,9 +55,13 @@ describe "www methods", ->
           absolute_url: "http://localhost:#{config.port}/groups/hey"
           verbed: 'tested'
           title: "Groups"
+          grammar: null
         }, event_params)
         expect(evt).to.eql(result_params)
-        events[0].remove(done)
+        www_schema.Event.findOne {_id: evt.id}, (err, doc) ->
+          expect(err).to.be(null)
+          expect(doc).to.not.be(null)
+          doc.remove(done)
 
   it "Edits profiles", (done) ->
     params = {

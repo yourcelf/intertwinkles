@@ -40,7 +40,7 @@ block postapp
 
   script(type='text/template', id='splashItemTemplate')
     li.
-      <a class='softnav' href='/points/u/<%- pointset.id %>/'>
+      <a class='softnav' href='/points/u/<%- pointset.get("slug") %>/'>
         <%- pointset.get("name") %>
       </a>
       <span class='group-name label varsub' data-group-id='<%- pointset.get("sharing").group_id %>'></span>
@@ -85,9 +85,8 @@ block postapp
           <% } %>
       ul.drafts.two-col
 
-    div.row-fluid.timeline-holder-holder
-      h3 Timeline
-      div.timeline-holder.span11
+    div.row-fluid
+      div.history-holder(style='text-align: center;')
 
   script(type='text/template', id='supportersTemplate').
     <span

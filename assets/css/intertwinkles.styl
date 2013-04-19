@@ -283,13 +283,12 @@ ul.sharing-online-group
 .events-summary
   text-align: left
   border-radius: 10px
-  box-shadow: 1px 1px 2px #666
-  background-color: rgba(255, 255, 255, 0.5)
   display: inline-block
   padding: 1em
   cursor: pointer
+  border: 3px dotted #eee
   &:hover
-    box-shadow: 1px 1px 2px #993
+    background-color: #ffe
   .more
     text-align: center
     font-style: italic
@@ -333,6 +332,82 @@ ul.sharing-online-group
 
   .date, .attrib, .about
     display: table-cell
+
+.recent-activity-summary
+  border-top: 3px dotted #eee 
+  border-radius: 10px 10px 0px 0px
+  cursor: pointer
+  &:hover
+    background-color: #ffe
+  .history
+    font-style: italic
+
+.recent-activity
+  .more
+    display: block
+    text-align: center
+    font-style: italic
+    outline: 0;
+  .entity
+    margin-bottom: 0.5em
+  .entity.longer
+    border-bottom: 1px solid #eee
+    &.collapsed
+      .event-list
+        position: relative
+        max-height: 10em
+        overflow: hidden
+        .fadeout
+          position: absolute
+          bottom: 0
+          height: 50px
+          width: 100%
+          background: linear-gradient(top, rgba(255,255,255,0), rgba(255,255,255,1))
+
+  .entity-name
+    display: block
+  .event
+    display: block
+    margin-left: 1em
+    &.visit
+      opacity: 0.5
+    .attrib
+      img
+        max-width: 16px
+        max-height: 16px
+    .manner
+      font-size: smaller
+      color: #aaa
+    .about
+      vertical-align: top
+      display: inline-block
+
+/*
+  documents list
+*/
+.documents-list
+  width: 100%
+  display: table
+  list-style-type: none
+  margin: 0
+  li
+    list-style-type: none
+    display: table-row
+    .icon, .title, .date
+      display: table-cell
+      padding-left: 0.5em
+      padding-right: 0.5em
+    &:hover
+      a
+        color: white
+      background-color: #acf
+
+.document-app-icon
+  img
+    width: 24px
+    height: 24px
+
+ 
   
 /*
   Notifications

@@ -85,31 +85,34 @@ module.exports = (config) ->
     res.send({error: msg or "Bad Request", status: 400})
 
   #
-  # Recent events attributed to the given session
-  #
-  www.get_user_events = (session, callback) ->
-    schema.Event.find({
-        user: session.auth.user_id
-      }).sort('-date').limit(20).exec (err, events) ->
-        return callback(err) if err?
-        for event in events
-          event.grammar = api_methods.get_event_grammar(event)
-        return callback(null, events)
-
-  #
   # Recent events for groups the given session is a member of, excluding those
   # attributed to the given session (e.g. everyone else's activity in my
   # groups).
   #
-  www.get_group_events = (session, callback) ->
+  www.get_dash_events = (session, callback) ->
     schema.Event.find({
-        group: {$in: _.keys(session.groups)},
-        user: {$ne: session.auth.user_id},
-      }).sort('-date').limit(20).exec (err, events) ->
+        $or: [
+          {group: {$in: _.keys(session.groups)}}
+          {user: session.auth.user_id}
+        ],
+        date: {$gt: new Date() - (1000 * 60 * 60 * 24 * 14)},
+      }).sort('-date').exec (err, events) ->
         return callback(err) if err?
-        for event in events
+        events_json = (event.toJSON() for event in events)
+        for event in events_json
           event.grammar = api_methods.get_event_grammar(event)
-        return callback(null, events)
+        return callback(null, events_json)
+
+  www.get_group_events = (session, group, callback) ->
+    schema.Event.find({
+      group: group._id
+      date: {$gt: new Date() - (1000 * 60 * 60 * 24 * 14)}
+    }).sort('-date').exec (err, events) ->
+        return callback(err) if err?
+        events_json = (event.toJSON() for event in events)
+        for event in events_json
+          event.grammar = api_methods.get_event_grammar(event)
+        return callback(null, events_json)
 
   #
   # Basic text search for indexed documents.
@@ -126,7 +129,8 @@ module.exports = (config) ->
       return callback(err) if err?
       for doc in results?.response?.docs
         # Absolutize urls
-        doc.absolute_url = "#{config.apps[doc.application].url}" + doc.url
+        console.log doc.application
+        doc.absolute_url = "#{config.apps[doc.application]?.url}" + doc.url
       callback(null, results)
 
   #
@@ -356,7 +360,7 @@ module.exports = (config) ->
     async.parallel [
       # Update plain group properties.
       (done) ->
-        if group_update.name
+        if group_update.name and group.name != group_update.name
           event_data.old_name = group.name if group.name?
           group.name = group_update.name
           event_data.name = group_update.name

@@ -355,7 +355,8 @@ class EditPointSetView extends PointsBaseView
     ]
 
 #
-# Display a single board.
+# Main view for a pointset. Display a single board with many points and drafts
+# of points.
 #
 
 class PointSetView extends PointsBaseView
@@ -369,10 +370,7 @@ class PointSetView extends PointsBaseView
     @listenTo @model, "change:name", @render
     @listenTo @model, "change:points", @renderPoints
     @listenTo @model, "change:drafts", @renderDrafts
-    @listenTo intertwinkles.socket, "points:events", @buildTimeline
-    #intertwinkles.socket.send "points/get_points_events", {
-    #  _id: @model.id
-    #}
+    @listenTo intertwinkles.socket, "points:events", @renderSummary
 
   addPoint: (event) =>
     event.preventDefault()
@@ -383,6 +381,7 @@ class PointSetView extends PointsBaseView
     @$el.html(@template(model: @model.toJSON()))
     @renderPoints()
     @renderDrafts()
+    intertwinkles.socket.send "points/get_points_events", {_id: @model.id}
 
   _renderPointList: (list, dest) =>
     dest = $(dest)
@@ -403,6 +402,16 @@ class PointSetView extends PointsBaseView
 
   renderDrafts: =>
     @draftviews = @_renderPointList(@model.get("drafts"), ".drafts")
+
+  renderSummary: (data) =>
+    collection = intertwinkles.buildEventCollection(data.events)
+    summary = new intertwinkles.EventsSummary({
+      collection: collection.deduplicate()
+      modificationWhitelist: ["visit", "vote"]
+    })
+    @$(".history-holder").html(summary.el)
+    summary.render()
+
 
   _get_box: ($el) ->
     offset = $el.offset()
@@ -454,7 +463,6 @@ class PointSetView extends PointsBaseView
   startDrag: (pointview, event) =>
     event.preventDefault()
     return unless intertwinkles.can_edit(@model)
-    console.log("Drag start")
     # Calculate all the things!
     [list, number] = @model.getListPos(pointview.point._id)
     @dragState = {
@@ -572,7 +580,6 @@ class PointSetView extends PointsBaseView
     # If necessary, set a new drop target.
     return if (@dragState.target?.number == target.number and
                @dragState.target?.type == target.type)
-    console.log "set target", target.type, target.number
     @_clearTarget()
     @dragState.placeholder = $("<div></div>").css({
       width: @dragState.width
@@ -587,18 +594,15 @@ class PointSetView extends PointsBaseView
     }).slideDown(100)
     target.$el.before(@dragState.placeholder)
     @dragState.target = target
-    #@dragState.pointview.$el.slideUp(100)
 
   _clearTarget: =>
     # Remove the drop target.
     # Re-show ourselves, so we take up space again.
-    #@dragState.pointview.$el.slideDown(100)
     if @dragState?.placeholder or @dragState?.target
       @dragState.placeholder?.slideUp(100)
       delete @dragState?.target
 
   stopDrag: (event) =>
-    console.log "stop drag"
     $(window).off "mousemove", @continueDrag
     $(window).off "mouseup", @stopDrag
     $(".point").off "mouseover", @dragOver
@@ -614,7 +618,6 @@ class PointSetView extends PointsBaseView
           # New drafts start at 0.
           position = null
 
-        console.log @dragState.target.type, position
         # Confirm that we want to change types.
         form = new ApprovePointView({
           model: @model, point: @dragState.pointview.point
@@ -644,7 +647,6 @@ class PointSetView extends PointsBaseView
         "z-index": "0"
       })
     else
-      console.log "remove?"
       @dragState.pointview.$el.css("opacity", 1.0)
       @dragState.dragger.remove()
 
@@ -652,50 +654,6 @@ class PointSetView extends PointsBaseView
       el.remove()
     @_clearTarget()
     @dragState = null
-
-  buildTimeline: (data) =>
-    collection = new intertwinkles.EventCollection()
-    for event in data.events
-      event.date = new Date(event.date)
-      collection.add new intertwinkles.Event(event)
-    intertwinkles.build_timeline @$(".timeline-holder"), collection, (event) ->
-      user = intertwinkles.users?[event.user]
-      via_user = intertwinkles.users?[event.via_user]
-      via_user = null if via_user? and via_user.id == user?.id
-      if user?
-        icon = "<img src='#{user.icon.tiny}' />"
-      else
-        icon = "<i class='icon-user'></i>"
-      switch event.type
-        when "create"
-          title = "Board created"
-          content = "#{user?.name or "Anonymous"} created this board."
-        when "visit"
-          title = "Visit"
-          content = "#{user?.name or "Anonymous"} stopped by."
-        when "append"
-          title = "Point added"
-          if via_user?
-            content = "#{user?.name or event.data.action.name} added a point (via #{via_user.name})."
-          else
-            content = "#{user?.name or event.data.action.name} added a point."
-        when "update"
-          title = "Board updated"
-          content = "#{user?.name or "Anonymous"} updated the board."
-        when "trim"
-          title = "Point removed"
-          content = "#{user?.name or "Anonymous"} removed
-                    the point by #{event.data.action.deleted_opinion.name}."
-        when "vote"
-          title = "Vote"
-          content = "#{user?.name or "Anonymous"} voted"
-        else
-          console.info "Unhandled event type", event.type
-      return """
-        <a class='#{ event.type }' rel='popover' data-placement='bottom'
-          data-trigger='hover' title='#{ title }'
-          data-content='#{ content }'>#{ icon }</a>
-      """
 
 #
 # Display a single point.

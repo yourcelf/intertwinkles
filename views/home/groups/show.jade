@@ -1,29 +1,46 @@
 extends ../www_base
 
+block poststyles
+  style(type='text/css')
+    #members li, #invitations li { list-style-type: none }
+
 block body
   div(style='text-align: center')
     h1(style='display: inline-block; vertical-align: middle;')= group.name + "&ensp;"
-    a.btn(href='/groups/edit/#{group.slug}/', title='Edit group') <i class='icon-cog'></i> Edit
-  div.row-fluid
-    div.span3.offset3
-      h3 Members
-      for member in group.members
-        div.member
-          <span class='varsub' data-user-id='#{member.user}'></span>
-          br
-          span
-            | Member since: <span class='varsub' data-date='#{member.joined}'></span>
-          br
-          if member.role
-            | Role: #{member.role}
-          unless member.voting
-            | (nonvoting)
-      p
-        a(href='/groups/edit/#{group.slug}/') Invite or manage members
 
-    div.span3
+  div.row-fluid
+    div.span3.offset1
+      h3(style='display: inline-block; vertical-align: middle;') Members
+      a.btn(href='/groups/edit/#{group.slug}/', title='Edit group').
+        <i class='icon-cog'></i> Edit
+      div#members
+      if group.invited_members.length > 0
+        div#invited_members
+          a(href='/groups/edit/#{group.slug}/') #{group.invited_members.length} invited members
+      h3 Clusters
+      p #{group.name} is not in any clusters yet.
+
+    div.span6
       h3 Stuff
-      for doc in docs
-        div.search-result.green-glow
-          summary = "<span class='markmeup'>" + doc.summary + "</span>"
-          include ../includes/search_result
+      div#docs
+      div#events(style='margin-top: 2em;')
+
+  script#membershipListTemplate(type='text/template').
+    <ul class='membership-list'>
+      <% _.each(group[type], function(member) { %>
+        <li rel='tooltip'
+            <% if (member.left) { %>
+              title='left <%- intertwinkles.simple_date(member.invitation_sent, true) %>'
+            <% } else if (member.joined) { %>
+              title='member since <%- intertwinkles.simple_date(member.joined, true) %>'
+            <% } else if (member.invitation_sent) { %>
+              title='invited <%- intertwinkles.simple_date(member.invitation_sent, true) %>'
+            <% } %>
+            >
+          <%= intertwinkles.inline_user(member.user, "", "tiny") %>
+        </li>
+      <% }); %>
+    </ul>
+ 
+block postscripts
+  script(src=asset("js/home/show_group.coffee"))

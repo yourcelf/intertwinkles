@@ -33,35 +33,37 @@ route = (config, app, sockrooms) ->
 
   app.get '/', (req, res) ->
     # Show the landing page if we're not signed in.
-    hero_apps =  ["firestarter", "twinklepad", "dotstorm", "resolve"]
-    if not utils.is_authenticated(req.session)
+    if (not utils.is_authenticated(req.session))
       return res.render 'home/landing', context(req, {
         title: "InterTwinkles: Twinkling all over the InterWebs"
-        hero_apps: hero_apps
       })
+    group_ids = _.keys(req.session.groups)
+    if group_ids.length == 0
+      return res.redirect("/about/starting/")
 
     # Show the dashboard if we are signed in.
     async.parallel [
-      (done) -> www_methods.get_user_events(req.session, done)
-      (done) -> www_methods.get_group_events(req.session, done)
-      (done) -> utils.list_group_documents(
-          schema.SearchIndex, req.session, done, {}, "-modified", 0, 20, true
-        )
+      (done) ->
+        www_methods.get_dash_events(req.session, done)
+      (done) ->
+        # N queries for N groups. Most users should have only a tiny number, so
+        # this is OK for now, but potentially problematic some day.
+        async.map group_ids, (group_id, done) ->
+          utils.list_group_documents(schema.SearchIndex, req.session, done,
+            {"sharing.group_id": group_id}, "-modified", 0, 10, true
+          )
+        , done
     ], (err, results) ->
       return www_methods.handle_error(req, res, err) if err?
-      [user_events, group_events, recent_docs] = results
-      if user_events.length == group_events.length == recent_docs.length == 0
-        return res.redirect("/about/starting/")
+      [events, groups_docs] = results
+      return res.redirect("/about/starting/") if events.length == 0
       res.render 'home/dashboard', context(req, {
         title: "InterTwinkles"
-        hero_apps: hero_apps
-        activity: {
-          user: user_events
-          group: group_events
-          docs: recent_docs
-        }
-        groups: req.session.groups
-      }, {active_name: "Groups"})
+      }, {
+        active_name: "Groups",
+        events: events,
+        groups_docs: groups_docs
+      })
 
   utils.append_slash(app, "/feedback")
   app.get '/feedback/', (req, res) ->
@@ -359,13 +361,22 @@ route = (config, app, sockrooms) ->
             'sharing.group_id': doc._id
           }).sort('-modified').exec done
 
+        (done) ->
+          console.log www_methods
+          www_methods.get_group_events(req.session, doc, done)
+
       ], (err, results) ->
-        [search_indexes] = results
+        return www_methods.handle_error(req, res, err) if err?
+        [search_indexes, events] = results
         res.render "home/groups/show", context(req, {
           title: doc.name
           group: doc
+        }, {
+          active_name: "Groups"
+          group: doc
+          events: events
           docs: search_indexes
-        }, {active_name: "Groups"})
+        })
 
   app.get "/r/:shortpath", (req, res) ->
     schema.ShortURL.findOne { short_path: req.params.shortpath }, (err, doc) ->

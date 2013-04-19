@@ -113,7 +113,7 @@ block body
               | Last modified:&nbsp;
               span.date-auto
             br
-            a.pull-right.history(href='#') show proposal changes
+            a.pull-right.history(href='#') proposal history
 
         div.span6
           h4 Vote Tallies
@@ -135,7 +135,7 @@ block body
       div.opinions
 
       
-    div.row-fluid(style='clear: both; text-align: right;')
+    div.row-fluid(style='clear: both; text-align: center;')
       div.events-holder
 
   script(type='text/template', id='proposalHistoryViewTemplate')
@@ -179,6 +179,8 @@ block body
             </div>
           </div>
         <% }); %>
+    div.modal-footer
+      a.btn(href='#', data-dismiss='modal') Close
 
   script(type='text/template', id='editProposalDialogTemplate')
     form.edit-proposal.form-horizontal
@@ -319,7 +321,7 @@ block body
               <% for (var j = 0; j < tally.counts.length; j++) { %>
                 <% var type = tally.counts[j]; %>
                 <% if (type.count > 0) { %>
-                  <div class='bar <%- type.className %> popover-trigger'
+                  <div class='bar <%- type.className %>'
                        rel="popover"
                        data-title='<%- type.title %>'
                        data-content='<%- type.content %>'

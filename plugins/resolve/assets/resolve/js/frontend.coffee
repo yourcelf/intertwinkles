@@ -288,6 +288,7 @@ class ShowProposalView extends intertwinkles.BaseView
       @$(".resolution .resolved-date").html(
         "<nobr>" +
         new Date(resolved).toString("htt dddd, MMMM dd, yyyy") + "</nobr>")
+    @$(".history").toggle(resolve.model.get("revisions").length > 1)
 
   _getOwnOpinion: =>
     return _.find resolve.model.get("opinions"), (o) ->
@@ -612,7 +613,7 @@ class ShowProposalView extends intertwinkles.BaseView
     if resolve.model.id
       callback = "resolve_events_#{resolve.model.id}"
       resolve.socket.once callback, (data) =>
-        collection = intertwinkles.buildEventCollection(data)
+        collection = intertwinkles.buildEventCollection(data.events)
         summary = new intertwinkles.EventsSummary({
           collection: collection.deduplicate(),
           modificationWhitelist: ["visit", "append", "trim"]
