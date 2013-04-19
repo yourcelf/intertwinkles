@@ -91,20 +91,24 @@ module.exports = (config) ->
   #
   www.get_dash_events = (session, callback) ->
     schema.Event.find({
-        $or: [
-          {group: {$in: _.keys(session.groups)}}
-          {user: session.auth.user_id}
-        ],
-        date: {$gt: new Date() - (1000 * 60 * 60 * 24 * 14)},
-      }).sort('-date').exec (err, events) ->
-        return callback(err) if err?
-        events_json = (event.toJSON() for event in events)
-        for event in events_json
-          event.grammar = api_methods.get_event_grammar(event)
-        return callback(null, events_json)
+      # Exclude records that use the pre events-refactor-branch schema.
+      entity_url: {$exists: false}
+      $or: [
+        {group: {$in: _.keys(session.groups)}}
+        {user: session.auth.user_id}
+      ],
+      date: {$gt: new Date() - (1000 * 60 * 60 * 24 * 14)},
+    }).sort('-date').exec (err, events) ->
+      return callback(err) if err?
+      events_json = (event.toJSON() for event in events)
+      for event in events_json
+        event.grammar = api_methods.get_event_grammar(event)
+      return callback(null, events_json)
 
   www.get_group_events = (session, group, callback) ->
     schema.Event.find({
+      # Exclude records that use the pre events-refactor-branch schema.
+      entity_url: {$exists: false}
       group: group._id
       date: {$gt: new Date() - (1000 * 60 * 60 * 24 * 14)}
     }).sort('-date').exec (err, events) ->

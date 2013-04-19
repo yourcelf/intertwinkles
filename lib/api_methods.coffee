@@ -372,7 +372,8 @@ module.exports = (config) ->
   #
 
   api.get_events = (params, callback) ->
-    filter = {}
+    # Exclude records that use the pre events-refactor-branch schema.
+    filter = {entity_url: {$exists: false}}
     async.parallel [
       (done) ->
         # Resolve email to user ID.
