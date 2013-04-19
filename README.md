@@ -52,6 +52,8 @@ just leave the defaults.
 
 Join us over at [project.intertwinkles.org](http://project.intertwinkles.org)!  Follow [@intertwinkles](https://twitter.com/intertwinkles).
 
+Read our blog at [blog.intertwinkles.org](http://blog.intertwinkles.org).
+
 ## License
 Copyright (c) 2013, Charlie DeTar
 All rights reserved.
