@@ -56,7 +56,6 @@ route = (config, app, sockrooms) ->
     ], (err, results) ->
       return www_methods.handle_error(req, res, err) if err?
       [events, groups_docs] = results
-      return res.redirect("/about/starting/") if events.length == 0
       res.render 'home/dashboard', context(req, {
         title: "InterTwinkles"
       }, {
