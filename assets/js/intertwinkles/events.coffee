@@ -159,18 +159,20 @@ class intertwinkles.EventsSummary extends Backbone.View
   # single entity.
   initialize: (options) ->
     @coll = options.collection
-    @groupCount = intertwinkles.groups[@coll.at(0)?.get("group")]?.members.length
-    if options.modificationWhitelist?
-      @modificationWhitelist = options.modificationWhitelist
+    if @coll?.length > 0
+      @groupCount = intertwinkles.groups[@coll.at(0)?.get("group")]?.members.length
+      if options.modificationWhitelist?
+        @modificationWhitelist = options.modificationWhitelist
     
   render: =>
-    stats = @coll.summarize(@modificationWhitelist)
-    days = 0
-    if stats.lastEdit
-      days = Math.ceil(
-        (new Date().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
-      )
-    @$el.html(@template({stats: stats, days: days, groupCount: @groupCount}))
+    if @coll?.length > 0
+      stats = @coll.summarize(@modificationWhitelist)
+      days = 0
+      if stats.lastEdit
+        days = Math.ceil(
+          (new Date().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
+        )
+      @$el.html(@template({stats: stats, days: days, groupCount: @groupCount}))
     this
 
   showHistory: (event) =>
@@ -205,10 +207,11 @@ class intertwinkles.RecentEventsSummary extends Backbone.View
   }
   initialize: (options) ->
     @coll = options.collection
-    @groupCount = intertwinkles.groups[@coll.at(0)?.get("group")]?.members.length
+    if @coll?.length > 0
+      @groupCount = intertwinkles.groups[@coll.at(0)?.get("group")]?.members.length
 
   render: =>
-    if @coll.length > 0
+    if @coll?.length > 0
       stats = @coll.summarize()
       days = Math.ceil(
         (new Date().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
