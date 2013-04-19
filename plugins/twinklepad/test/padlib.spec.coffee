@@ -11,7 +11,7 @@ padlib      = require("../lib/padlib")(config)
 
 timeoutSet = (a, b) -> setTimeout(b, a)
 
-can_run = not not config.apps.twinklepad.etherpad.api_key
+skip_tests = process.env.SKIP_ETHERPAD_TESTS
 
 delete_all_test_pads = (callback) ->
   tp_schema.TwinklePad.find (err, docs) ->
@@ -24,7 +24,7 @@ delete_all_test_pads = (callback) ->
 
 describe "padlib", ->
   before (done) ->
-    return done() unless can_run?
+    return done() if skip_tests
     async.series [
       (done) ->
         require("../bin/resync_etherpad_ids").run config, done
@@ -43,12 +43,12 @@ describe "padlib", ->
     ], done
 
   after (done) ->
-    return done() unless can_run?
+    return done() if skip_tests
     delete_all_test_pads =>
       common.shutDown(@server, done)
 
   it "Saves a pad", (done) ->
-    return done() unless can_run?
+    return done() if skip_tests
     pad = new tp_schema.TwinklePad(pad_name: "tptest_1")
     pad.save (err, doc) ->
       expect(err).to.be(null)
@@ -56,6 +56,7 @@ describe "padlib", ->
       done()
 
   it "Posts a twinklepad event", (done) ->
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       expect(err).to.be(null)
       padlib.post_twinklepad_event {anon_id: "me"}, doc, "visit", {}, 0, (err, event) ->
@@ -78,7 +79,7 @@ describe "padlib", ->
         done()
 
   it "Gets read-only html", (done) ->
-    return done() unless can_run?
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       expect(err).to.be(null)
       padlib.get_read_only_html doc, (err, html) ->
@@ -87,7 +88,7 @@ describe "padlib", ->
         done()
 
   it "Creates a session", (done) ->
-    return done() unless can_run?
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       expect(err).to.be(null)
       padlib.create_pad_session {}, doc, 500, (err, sess_id) ->
@@ -96,7 +97,7 @@ describe "padlib", ->
         done()
 
   it "posts a search index", (done) ->
-    return done() unless can_run?
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       expect(err).to.be(null)
       padlib.post_search_index doc, 0, (err, si) ->
@@ -106,7 +107,7 @@ describe "padlib", ->
         done()
 
   it "creates a pad via url", (done) ->
-    return done() unless can_run?
+    return done() if skip_tests
     browser = common.fetchBrowser()
     url = "#{config.apps.twinklepad.url}/p/tptest_2"
     browser.visit url, (e, browser, status) =>
@@ -126,4 +127,3 @@ describe "padlib", ->
           expect(terms[0].verbed).to.be("created")
           expect(terms[0].manner).to.be("")
           done()
-

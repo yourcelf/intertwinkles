@@ -1,7 +1,9 @@
 language: node_js
 node_js:
  - 0.8
-env: SKIP_SOLR_TESTS=1
+env:
+ - SKIP_SOLR_TESTS=1
+ - SKIP_ETHERPAD_TESTS=1
 services:
  - redis-server
  - mongodb
