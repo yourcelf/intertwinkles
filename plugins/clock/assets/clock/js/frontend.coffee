@@ -547,9 +547,9 @@ class GraphView extends ClockBaseView
         name_and_times.times.push(start_stop)
         sorted_times.push(start_stop)
 
+    sorted_times = _.sortBy(sorted_times, (t) -> t.start)
 
     if @ignoreGaps
-      sorted_times = _.sortBy(sorted_times, (t) -> t.start)
       accumulated_gap = 0
       max_stop = 0
       for time,i in sorted_times
@@ -581,8 +581,8 @@ class GraphView extends ClockBaseView
 
     @$(".time-block").each (i, el) ->
       $el = $(el)
-      start = parseInt($el.attr("data-start"))
-      end = parseInt($el.attr("data-stop"))
+      start = parseInt($el.attr("data-start"), 10)
+      end = parseInt($el.attr("data-stop"), 10)
       leftPercent = 100 * (start - startTime) / totalTime
       widthPercent = 100 * (end - start) / totalTime
       $(el).css({
