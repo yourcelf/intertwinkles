@@ -907,6 +907,7 @@ class Router extends Backbone.Router
   board: (slug) =>
     $("title").html(@model.get("name") + " - Points of Unity")
     @_open(new PointSetView({model: @model}), slug)
+    @_joinRoom() unless @_inRoom?
   add: =>
     $("title").html("Add - Points of Unity")
     @_open(new EditPointSetView({model: @model}), null)
@@ -930,8 +931,7 @@ class Router extends Backbone.Router
         $("title").html(@model.get("name") + " - Points of Unity")
         @_joinRoom(@model)
         @_showView(view)
-    else
-      @_showView(view)
+    @_showView(view)
 
   _showView: (view) =>
     @view?.remove()
@@ -941,6 +941,7 @@ class Router extends Backbone.Router
     window.scrollTo(0, 0)
 
   _leaveRoom: =>
+    @_inRoom = null
     @roomView?.$el.before("<li class='room-users'></li>")
     @roomView?.remove()
     @sharingView?.remove()
@@ -948,6 +949,7 @@ class Router extends Backbone.Router
   _joinRoom: =>
     @_leaveRoom()
 
+    @_inRoom = @model.id
     @roomView = new intertwinkles.RoomUsersMenu(room: "points/#{@model.id}")
     $(".sharing-online-group .room-users").replaceWith(@roomView.el)
     @roomView.render()

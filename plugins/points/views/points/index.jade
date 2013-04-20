@@ -70,9 +70,8 @@ block postapp
 
   script(type='text/template', id='pointsetTemplate')
     div.hover-edit(style='text-align: center;')
-      h1
-        <%- model.name %>
-        <a class='edit-link softnav' href='/points/u/<%- model.slug %>/edit/'>edit</a>
+      h1 <%- model.name %>
+      <a class='edit-link softnav' href='/points/u/<%- model.slug %>/edit/'>edit</a>
     ul.points.two-col
     hr
 
@@ -229,6 +228,7 @@ block postapp
   script(type='text/template', id='historyTemplate')
     div.point-history
       h3(style='text-align: center').
+        <a class='softnav' href='<%- model.absolute_url.split(window.location.host)[1] %>' title='back' style='font-size: 16px;'>back</a>
         <%- model.name %> <%- group ? "by " + group.name: "" %>
       div.point-revisions.
         <% for (var i = 0; i < point.revisions.length; i++) { %>

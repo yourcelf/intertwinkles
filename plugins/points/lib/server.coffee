@@ -77,7 +77,7 @@ start = (config, app, sockrooms) ->
         doc.sharing = utils.clean_sharing(session, doc)
       for doc in docs.public
         doc.sharing = utils.clean_sharing(session, doc)
-      return socket.sendJSON(data.callback or "points:list", {model: doc})
+      return socket.sendJSON(data.callback or "points:list", docs)
 
   sockrooms.on "points/save_pointset", (socket, session, data) ->
     pointslib.save_pointset session, data, (err, doc) ->
