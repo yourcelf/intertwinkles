@@ -35,7 +35,7 @@ load = (config) ->
       async.series [
         (done) =>
           etherpad.createGroupIfNotExistsFor {
-            groupMapper: @pad_name
+            groupMapper: encodeURIComponent(@pad_name)
           }, (err, data) =>
             @etherpad_group_id = data?.groupID
             done(err, data?.groupID)
@@ -43,7 +43,7 @@ load = (config) ->
         (done) =>
           etherpad.createGroupPad {
             groupID: @etherpad_group_id,
-            padName: @pad_name
+            padName: encodeURIComponent(@pad_name)
           }, (err, data) =>
             @pad_id = data?.padID
             return done(err, data)

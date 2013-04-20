@@ -53,7 +53,8 @@ block append postscripts
     randomName = (chars.charAt(parseInt(Math.random() * chars.length)) for i in [0...12]).join("")
     $("#name").attr("placeholder", randomName)
     $("#createPad").on "submit", ->
-      window.location.href = "/twinklepad/p/#{$("[name=padname]").val() or randomName}"
+      name = encodeURIComponent($("[name=padname]").val() or randomName)
+      window.location.href = "/twinklepad/p/#{name}"
       return false
 
     if intertwinkles.is_authenticated()
