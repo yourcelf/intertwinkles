@@ -462,6 +462,14 @@ class CategoryTimerView extends ClockBaseView
       @template({name: @category.name or "Undefined"})
     )
     
+    # Set width of text.
+    textWidth = @$(".width").width()
+    width = @$(".category-name").width()
+    if textWidth > width
+      percentage = width / textWidth * 100
+      @$(".width").css("font-size", percentage + "%")
+
+    
     # Show elapsed time.
     go = => @$(".elapsed").html(@get_elapsed())
     go()
