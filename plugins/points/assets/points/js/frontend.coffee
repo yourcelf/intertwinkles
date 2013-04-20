@@ -288,8 +288,8 @@ class EditPointSetView extends PointsBaseView
       @action = "Save"
     else
       @model = new PointsModel()
-      @title = "Add new board"
-      @action = "Add board"
+      @title = "Add new set of points"
+      @action = "Add point set"
 
   _slugCheck = (show) =>
 
