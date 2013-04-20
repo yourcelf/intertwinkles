@@ -82,7 +82,7 @@ sharing_control_template = _.template("""
         </div>
         <div class='advertise'>
           <label>
-            List the link publicly?
+            Show up in public searches?
             <input type='checkbox' name='advertise' />
           </label>
         </div>

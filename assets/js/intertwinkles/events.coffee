@@ -83,7 +83,7 @@ class intertwinkles.EventCollection extends Backbone.Collection
 
       # Add current.
       if not out.lastEdit and ident.user
-        group = intertwinkles.groups[event.get("group")]
+        group = intertwinkles.groups?[event.get("group")]
         if group? and _.find(group.members, (u) -> u.user == ident.user)
           out.current.push(ident)
           if event.get("via_user")
@@ -160,7 +160,7 @@ class intertwinkles.EventsSummary extends Backbone.View
   initialize: (options) ->
     @coll = options.collection
     if @coll?.length > 0
-      @groupCount = intertwinkles.groups[@coll.at(0)?.get("group")]?.members.length
+      @groupCount = intertwinkles.groups?[@coll.at(0)?.get("group")]?.members.length
       if options.modificationWhitelist?
         @modificationWhitelist = options.modificationWhitelist
     
@@ -208,7 +208,7 @@ class intertwinkles.RecentEventsSummary extends Backbone.View
   initialize: (options) ->
     @coll = options.collection
     if @coll?.length > 0
-      @groupCount = intertwinkles.groups[@coll.at(0)?.get("group")]?.members.length
+      @groupCount = intertwinkles.groups?[@coll.at(0)?.get("group")]?.members.length
 
   render: =>
     if @coll?.length > 0

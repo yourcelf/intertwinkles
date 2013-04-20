@@ -722,6 +722,7 @@ class Router extends Backbone.Router
     @view?.remove()
     $("#app").html(view.el)
     view.render()
+    window.scrollTo(0, 0)
     @view = view
 
 intertwinkles.connect_socket ->

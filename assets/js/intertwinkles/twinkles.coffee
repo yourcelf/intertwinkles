@@ -98,6 +98,8 @@ class TwinkleView extends intertwinkles.BaseView
         html: true
       }
       @secondRender = true
+    else
+      @delegateEvents()
 
   parseTwinkles: (data) =>
     render = false
