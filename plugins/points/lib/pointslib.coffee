@@ -159,7 +159,7 @@ module.exports = (config) ->
           (data.user_id? and s.user_id? and
             s.user_id.toString() == data.user_id.toString()) or
           ((not data.user_id) and (not s.user_id) and
-            s.name? and data.name?  and s.name == data.name)
+            s.name? and data.name?  and s.name.toLowerCase() == data.name.toLowerCase())
         )
 
       found = _.find(rev.supporters, supporter_matches)

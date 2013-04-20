@@ -46,7 +46,7 @@ class PointsModel extends Backbone.Model
     return (
       (s.user_id? and d.user_id? and s.user_id == d.user_id) or
       (not s.user_id and not data.user_id and
-       s.name and d.name and s.name == d.name)
+       s.name and d.name and s.name.toLowerCase() == d.name.toLowerCase())
     )
 
   isSupporter: (data, point) =>
@@ -463,6 +463,7 @@ class PointSetView extends PointsBaseView
   startDrag: (pointview, event) =>
     event.preventDefault()
     return unless intertwinkles.can_edit(@model)
+    @$(".children-draggable").addClass("dragging")
     # Calculate all the things!
     [list, number] = @model.getListPos(pointview.point._id)
     @dragState = {
@@ -606,6 +607,7 @@ class PointSetView extends PointsBaseView
     $(window).off "mousemove", @continueDrag
     $(window).off "mouseup", @stopDrag
     $(".point").off "mouseover", @dragOver
+    @$(".children-draggable").removeClass("dragging")
 
     if @dragState.target?
       # Move points around.
@@ -785,12 +787,17 @@ class VoteView extends intertwinkles.BaseModalFormView
     user_id = @$("#id_user_id").val()
     name = @$("#id_user").val()
     @canSupport = not @model.isSupporter({user_id, name}, @point)
-    if @canSupport
-      @$(".status").html("#{name} does not support this point yet.")
-      @$(".btn-primary").html("<i class='icon-thumbs-up'></i> Add vote")
+    if not name
+      @$(".status").html("")
+      @$(".btn-primary").hide()
     else
-      @$(".status").html("#{name} supports this point.")
-      @$(".btn-primary").html("<i class='icon-thumbs-down'></i> Remove vote")
+      @$(".btn-primary").show()
+      if @canSupport
+        @$(".status").html("Add #{name}'s vote")
+        @$(".btn-primary").html("<i class='icon-thumbs-up'></i> Add vote")
+      else
+        @$(".status").html("Remove #{name}'s vote")
+        @$(".btn-primary").html("<i class='icon-thumbs-down'></i> Remove vote")
   
   render: =>
     super()

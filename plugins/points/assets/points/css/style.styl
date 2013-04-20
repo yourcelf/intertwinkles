@@ -152,11 +152,14 @@ ul.two-col
 
 .drag-handle
   opacity: 0
-.children-draggable .drag-handle
-  opacity: 1
-  &:hover
-    color: #ff0088
-    cursor: move
+.children-draggable
+  &.dragging
+    background-color: #ffe
+  .drag-handle
+    opacity: 1
+    &:hover
+      color: #ff0088
+      cursor: move
 
 .drafts-area
   margin-bottom: 2em
