@@ -74,7 +74,6 @@ start = (config, app, sockrooms) ->
         if utils.is_authenticated(req.session)
           solr.execute_search {
             public: false
-            
             application: "twinklepad"
             sort: "modified desc"
           }, req.session.auth.user_id, (err, results) ->

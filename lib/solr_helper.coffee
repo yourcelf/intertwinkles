@@ -93,7 +93,7 @@ module.exports = (config) ->
         solr_query.q(query_parts.join(" AND "))
         solr_query.set("hl=true")
         if query.sort?
-          solr_query.set("sort=#{querystring.stringify(escape(query.sort))}")
+          solr_query.set(querystring.stringify({sort: escape(query.sort)}))
         done(null, solr_query)
 
     ], (err, solr_query) ->
