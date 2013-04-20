@@ -55,6 +55,13 @@ describe "padlib", ->
       expect(doc.read_only_pad_id).to.not.be(null)
       done()
 
+  it "Saves a pad with special chars", (done) ->
+    pad = new tp_schema.TwinklePad(pad_name: "test/url&chars%'=")
+    pad.save (err, doc) ->
+      expect(err).to.be(null)
+      expect(doc.read_only_pad_id).to.not.be(null)
+      done()
+
   it "Posts a twinklepad event", (done) ->
     return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
