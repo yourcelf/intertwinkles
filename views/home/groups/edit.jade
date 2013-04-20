@@ -98,6 +98,7 @@ block append postscripts
           if not data.available
             errorify(name_field, "This name is not available.")
           else if name_field.val() != INITIAL_DATA.groups?[GROUP_ID]?.name
+            cg.find(".controls .help-inline").remove()
             cg.find(".controls").append("<span class='help-inline error-msg'>Name available</span>")
       }
     check_name()
