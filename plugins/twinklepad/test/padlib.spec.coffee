@@ -49,6 +49,7 @@ describe "padlib", ->
 
   it "Saves a pad", (done) ->
     return done() if skip_tests
+    @timeout(20000)
     pad = new tp_schema.TwinklePad(pad_name: "tptest_1")
     pad.save (err, doc) ->
       expect(err).to.be(null)
@@ -56,7 +57,9 @@ describe "padlib", ->
       done()
 
   it "Saves a pad with special chars", (done) ->
-    pad = new tp_schema.TwinklePad(pad_name: "test/url&chars%'=")
+    return done() if skip_tests
+    @timeout(20000)
+    pad = new tp_schema.TwinklePad(pad_name: "tptest_test/url&chars%'=")
     pad.save (err, doc) ->
       expect(err).to.be(null)
       expect(doc.read_only_pad_id).to.not.be(null)

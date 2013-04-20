@@ -67,7 +67,7 @@ module.exports = (config) ->
         application: "twinklepad"
         entity: doc._id
         type: "etherpad"
-        url: "/p/#{doc.pad_name}"
+        url: "/p/#{encodeURIComponent(doc.pad_name)}"
         title: "#{doc.pad_name}"
         summary: summary
         text: text

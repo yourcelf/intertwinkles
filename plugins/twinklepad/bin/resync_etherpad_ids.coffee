@@ -103,6 +103,7 @@ run = (config, callback) ->
               logger.error("Ignoring pads beyond first.")
           if data.padIDs.length > 0
             [group, name] = data.padIDs[0].split("$")
+            name = decodeURIComponent(name)
             group_to_pad_name[group] = name
             if pad_name_to_group[name]?
               logger.error("Unexpectedly found more than one pad named #{name}:")
@@ -116,6 +117,7 @@ run = (config, callback) ->
       # Fix discrepencies in pad ID's.
       logger.debug("Fix discrepencies in pad ID's")
       schema.TwinklePad.find {}, (err, docs) ->
+        return done(err) if err?
         logger.debug("found #{docs.length} twinklepads")
         async.map docs, sync_etherpad_ids, done
 
@@ -132,7 +134,7 @@ run = (config, callback) ->
         doc = new schema.TwinklePad({
           pad_name: name
           etherpad_group_id: group_id
-          pad_id: group_id + "$" + name
+          pad_id: group_id + "$" + encodeURIComponent(name)
         })
         doc.save(done)
       , done)

@@ -45,10 +45,18 @@ load = (config) ->
             groupID: @etherpad_group_id,
             padName: encodeURIComponent(@pad_name)
           }, (err, data) =>
-            @pad_id = data?.padID
-            return done(err, data)
+            if err?.message == "padName does already exist"
+              @pad_id = @etherpad_group_id + "$" + encodeURIComponent(@pad_name)
+              done(null)
+            else if err?
+              done(err)
+            else
+              @pad_id = data?.padID
+              done(null)
 
-      ], next
+      ], (err) ->
+        throw new Error(err.message) if err?
+        next()
   TwinklePadSchema.pre 'save', (next) ->
     if @read_only_pad_id
       next()
