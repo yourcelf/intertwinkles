@@ -155,7 +155,7 @@ start = (config, app, sockrooms) ->
           else
             # Display editable. Establish an etherpad auth session.
             # Get the author mapper / author name
-            maxAge = 24 * 60 * 60
+            maxAge = 24 * 60 * 60 * 1000
             padlib.create_pad_session req.session, doc, maxAge, (err, pad_session_id) ->
               return done(err) if err?
               req.session.etherpad_session_id = pad_session_id

@@ -354,7 +354,7 @@ intertwinkles.sharing_summary = (sharing) ->
     if other_viewers.length > 0
       perms.push("Extra spectators: <i>#{other_viewers.join(", ")}</i>.")
     if not is_public
-      perms.push("All others, and people who aren't signed in, can't touch this.")
+      perms.push("All others, and people who aren't signed in, can't view or edit.")
   if is_public
     if sharing.advertise
       perms.push("The link will show up in public search results.")
