@@ -957,6 +957,8 @@ class Router extends Backbone.Router
     @_leaveRoom()
 
     @_inRoom = @model.id
+    return unless @_inRoom?
+
     @roomView = new intertwinkles.RoomUsersMenu(room: "points/#{@model.id}")
     $(".sharing-online-group .room-users").replaceWith(@roomView.el)
     @roomView.render()
