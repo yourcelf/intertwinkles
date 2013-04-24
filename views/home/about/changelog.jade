@@ -1,0 +1,66 @@
+extends ../www_base
+
+block poststyles
+  style(type='text/css')
+    ul.changelog li {
+      list-style-type: none;
+      margin-bottom: 1em
+    }
+    .date {
+      font-weight: bold;
+    }
+    
+
+block body
+  div.row-fluid
+    div.span6.offset3
+      h1 Change log
+      h3(style='text-align: center;') InterTwinkles feature updates
+
+      ul.changelog
+        li
+          div.date April 19, 2013
+          div.about.
+            New dashboard and events views. Easier to find your group's
+            documents, and to see what people in your group have been up to.
+
+        li
+          div.date March 28, 2013
+          div.about.
+            Added new app, <a href='/points/'>Points of Unity</a>, improving on
+            the older standalone "tenpoints" app. All old tenpoints boards are
+            imported to Points of Unity, and old links redirect.
+
+        li
+          div.date March 21, 2013
+          div.about.
+            Add CSV and JSON exports to Dotstorm. Just add "/json/" or "/csv/"
+            to the end of any dotstorm board's URL.
+
+        li
+          div.date March 17, 2013
+          div.about.
+            Added new app, <a href='/clock/'>Progressive Clock</a> with real-time
+            collaboration.
+
+        li
+          div.date March 10, 2013
+          div.about.
+            Turn on <a href='https://en.wikipedia.org/wiki/Secure_Sockets_Layer'>SSL</a>
+            by default, everywhere.
+
+        li
+          div.date March 7, 2013
+          div.about.
+            Change how scripts are compiled &ndash; 100x speed boost for first
+            load.
+
+        li
+          div.date March 5, 2013
+          div.about.
+            Make connection status messages clearer and less noisy.
+
+        li
+          div.date March 1, 2013
+          div.about.
+            Public beta launched!

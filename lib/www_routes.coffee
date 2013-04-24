@@ -113,6 +113,12 @@ route = (config, app, sockrooms) ->
       title: "Related Work"
     }, {active_name: "Related"})
 
+  utils.append_slash(app, "/about/changelog")
+  app.get '/about/changelog/', (req, res) ->
+    res.render 'home/about/changelog', context(req, {
+      title: "Changelog"
+    }, {active_name: "Changes"})
+
 
   #
   # Search
