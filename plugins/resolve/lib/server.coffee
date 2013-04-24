@@ -146,6 +146,7 @@ start = (config, app, sockrooms) ->
         "proposal_change",
         {proposal},
         socket.sid)
+      api_methods.emit_notifications(sockrooms, notices) if notices?
       socket.sendJSON(data.callback, {proposal}) if data.callback?
 
       user_id = session.auth?.user_id

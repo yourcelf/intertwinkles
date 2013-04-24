@@ -347,6 +347,14 @@ module.exports = (config) ->
 
     async.map(notices, store_notice, callback)
 
+  api.emit_notifications = (sockrooms, notifications, callback=(->)) ->
+    async.map notifications, (notification, done) ->
+      sockrooms.broadcast(notification.recipient.toString(), "notifications", {
+        notifications: [notification.toJSON()]
+      })
+      done()
+    , callback
+
   #
   # Profiles
   #
