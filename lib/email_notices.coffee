@@ -82,7 +82,7 @@ load = (config) ->
     }, context)
 
     formats.web = view.web(context) if view.web
-    if view.email.subject
+    if view.email?.subject
       formats.email = {}
       formats.email.subject = view.email.subject(context)
       context.subject = formats.email.subject

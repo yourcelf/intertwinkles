@@ -38,26 +38,26 @@ web = _.template("""<b><%- group.name %></b> needs your response to a proposal""
 
 module.exports = {
   web: web
-  sms: (context) ->
-    proposal = context.proposal
-    prefix = sms(context)
-    prop_text = proposal.revisions[0].text
-    if prop_text.length + prefix < 160
-      return prefix + prop_text
-    else
-      return prefix + prop_text.substring(0, 160 - 3 - prefix.length) + "..."
-
-  email: {
-    subject: (context) ->
-      context.subject = subject(context)
-      return base.email.subject(context)
-
-    text: (context) ->
-      context.body = text(context)
-      return base.email.text(context)
-
-    html: (context) ->
-      context.body = html(context)
-      return base.email.html(context)
-  }
+#  sms: (context) ->
+#    proposal = context.proposal
+#    prefix = sms(context)
+#    prop_text = proposal.revisions[0].text
+#    if prop_text.length + prefix < 160
+#      return prefix + prop_text
+#    else
+#      return prefix + prop_text.substring(0, 160 - 3 - prefix.length) + "..."
+#
+#  email: {
+#    subject: (context) ->
+#      context.subject = subject(context)
+#      return base.email.subject(context)
+#
+#    text: (context) ->
+#      context.body = text(context)
+#      return base.email.text(context)
+#
+#    html: (context) ->
+#      context.body = html(context)
+#      return base.email.html(context)
+#  }
 }

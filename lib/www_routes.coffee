@@ -116,7 +116,7 @@ route = (config, app, sockrooms) ->
   utils.append_slash(app, "/about/changelog")
   app.get '/about/changelog/', (req, res) ->
     res.render 'home/about/changelog', context(req, {
-      title: "Changelog"
+      title: "Change log"
     }, {active_name: "Changes"})
 
 

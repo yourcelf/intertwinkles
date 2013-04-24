@@ -180,6 +180,8 @@ describe "resolve", ->
       for notice in notices
         expect(notice.url).to.be(proposal.url)
         expect(notice.absolute_url).to.be(proposal.absolute_url)
+        expect(notice.formats.web).to.not.be(undefined)
+        expect(notice.toObject().formats.email).to.be(undefined)
 
       expect(err).to.be(null)
       @proposal_with_notices = proposal
@@ -220,6 +222,8 @@ describe "resolve", ->
           else
             uncleared += 1
             expect(notice.recipient.toString()).to.not.eql(user_id.toString())
+          expect(notice.formats.web).to.not.be(undefined)
+          expect(notice.toObject().formats.email).to.be(undefined)
         expect(cleared).to.be(2)
         expect(uncleared).to.be(1)
         doc.opinions.pop()
