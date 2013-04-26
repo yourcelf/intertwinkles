@@ -24,7 +24,7 @@
     "imagemagick": "~0",
     "jade": "~0",
     "marked": "~0",
-    "mongoose": "~3.5",
+    "mongoose": "3.5.11",
     "node-uuid": "*",
     "async": "~0",
     "solr-client": "~0",
