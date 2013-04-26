@@ -123,6 +123,7 @@ class intertwinkles.SocketClient
 
     if route == "error"
       console.log "socket message: error", body
+      console.log("error message was: ", body.error) if body.error?
 
     if route == "identify"
       @state = @IDENTIFIED

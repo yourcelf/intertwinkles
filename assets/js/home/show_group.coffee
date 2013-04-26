@@ -20,7 +20,10 @@ intertwinkles.connect_socket ->
     group: INITIAL_DATA.group
     type: "members"
   }).render().el)
-  $("#docs").html(new intertwinkles.DocumentList({docs: INITIAL_DATA.docs}).render().el)
+  if INITIAL_DATA.docs.length > 0
+    $("#docs").html(new intertwinkles.DocumentList({docs: INITIAL_DATA.docs}).render().el)
+  else
+    $("#docs").html("No stuff created yet.")
   $("#events").html(new intertwinkles.RecentEventsSummary({
     collection: intertwinkles.buildEventCollection(INITIAL_DATA.events)
   }).render().el)

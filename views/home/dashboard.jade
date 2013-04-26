@@ -19,6 +19,21 @@ block body
           a.btn(href='/groups/new/') Add Group
     div.personal-events
 
+  script#emptyGroup(type='text/template').
+    <div class='group'>
+      <div class='group-head'>
+        <% if (group.logo.small) { %>
+          <img src='<%- group.logo.small %>' alt='Logo' />
+        <% } %>
+        <h3><a href='/groups/show/<%- group.slug %>/'><%- group.name %></a></h3>
+        <a href='/groups/edit/<%- group.slug %>/' title='edit group settings'><i class='icon-cog'></i></a>
+      </div>
+      <p>
+        <em><%- group.name %></em> doesn't have any documents yet.  When you
+        create something, share it with this group, and it will show up here.
+      </p>
+
+
   script#groupDocumentList(type='text/template').
     <div class='group'>
       <div class='group-head'>

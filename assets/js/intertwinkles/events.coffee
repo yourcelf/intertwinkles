@@ -108,7 +108,7 @@ class intertwinkles.EventCollection extends Backbone.Collection
     out.anonVisitors = _.unique(out.anonVisitors, false, _key)
     out.editors = _.uniq(out.editors, false, _key)
     out.current = _.uniq(out.current, false, _key)
-    out.start = @at(0)?.get("date") or new Date()
+    out.start = @at(@length - 1)?.get("date") or new Date()
     return out
 
 intertwinkles.buildEventCollection = (events) ->
@@ -185,7 +185,7 @@ recent_events_summary_template = """
     <div class='counts'>
       <%- stats.numVisits %> visits,
       <%- stats.numEdits %> edits
-      <%- days <= 1 ? "since yesterday" : "over the last " + day + " days" %>
+      <%- days <= 1 ? "since yesterday" : "over the last " + days + " days" %>
       <a href='#' class='history'>details</a>
     </div>
     <div class='current'>

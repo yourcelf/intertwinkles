@@ -49,7 +49,8 @@ route = (config, app, sockrooms) ->
         # N queries for N groups. Most users should have only a tiny number, so
         # this is OK for now, but potentially problematic some day.
         async.map group_ids, (group_id, done) ->
-          utils.list_group_documents(schema.SearchIndex, req.session, done,
+          finish = (err, docs) -> done(err, {group_id: group_id, docs: docs})
+          utils.list_group_documents(schema.SearchIndex, req.session, finish,
             {"sharing.group_id": group_id}, "-modified", 0, 10, true
           )
         , done
@@ -260,7 +261,7 @@ route = (config, app, sockrooms) ->
       return www_methods.handle_error(req, res, "Invalid JSON for member changeset")
     www_methods.create_group req.session, group_update, (err, group) ->
       return www_methods.handle_error(req, res, err) if err?
-      return res.redirect("/groups/edit/#{group.slug}")
+      return res.redirect("/groups/show/#{group.slug}")
 
   utils.append_slash(app, "/groups/is_available")
   app.get '/groups/is_available/', (req, res) ->
@@ -310,7 +311,7 @@ route = (config, app, sockrooms) ->
 
       www_methods.update_group req.session, group, group_update, (err) ->
         return www_methods.handle_error(req, res, err) if err?
-        return res.redirect("/groups/edit/#{group.slug}")
+        return res.redirect("/groups/show/#{group.slug}")
 
   utils.append_slash(app, "/groups/join/[^/]+", ["get", "post"])
   app.get '/groups/join/:slug/', (req, res) ->
@@ -367,7 +368,6 @@ route = (config, app, sockrooms) ->
           }).sort('-modified').exec done
 
         (done) ->
-          console.log www_methods
           www_methods.get_group_events(req.session, doc, done)
 
       ], (err, results) ->

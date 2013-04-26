@@ -28,7 +28,7 @@ describe "creates and edits groups", ->
         expect(browser.queryAll(".newinvite").length).to.be(1)
         browser.query("form.form-horizontal").submit()
         common.await ->
-          if browser.text("h1") == "Affinito" and browser.queryAll("tr").length > 0
+          if browser.location.pathname == "/groups/show/affinito/"
             # We'd check for results here; but Zombie isn't re-parsing js after
             # a redirect, so we need to fetch a new browser first.
             done()
