@@ -42,7 +42,7 @@ start = (config, app, sockrooms) ->
 
   # /d/:slug/:action (action optional)
   utils.append_slash(app, "/dotstorm/d/([^/]+)(/[^/]+)?")
-  app.get "/dotstorm/d/:slug/:action?/", (req, res) ->
+  app.get "/dotstorm/d/:slug/:action?/:id?/", (req, res) ->
     passes_checks = (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
       return www_methods.not_found(req, res) unless doc?

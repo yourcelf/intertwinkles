@@ -38,12 +38,12 @@ intertwinkles.connect_socket (socket) ->
           when "create"
             ds.ideas.add(new ds.Idea(data.model))
           when "update"
-            model = ds.ideas.get(data.model.id)
+            model = ds.ideas.get(data.model._id)
             if model?
               model.set(data.model)
             else
               ds.ideas.fetch({
-                query: {dotstorm_id: ds.model.id}
+                query: {dotstorm_id: ds.model._id}
                 fields: {drawing: 0}
               })
           when "delete"
