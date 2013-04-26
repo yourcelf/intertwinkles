@@ -261,7 +261,7 @@ route = (config, app, sockrooms) ->
       return www_methods.handle_error(req, res, "Invalid JSON for member changeset")
     www_methods.create_group req.session, group_update, (err, group) ->
       return www_methods.handle_error(req, res, err) if err?
-      return res.redirect("/groups/show/#{group.slug}")
+      return res.redirect("/groups/show/#{group.slug}/")
 
   utils.append_slash(app, "/groups/is_available")
   app.get '/groups/is_available/', (req, res) ->
@@ -311,7 +311,7 @@ route = (config, app, sockrooms) ->
 
       www_methods.update_group req.session, group, group_update, (err) ->
         return www_methods.handle_error(req, res, err) if err?
-        return res.redirect("/groups/show/#{group.slug}")
+        return res.redirect("/groups/show/#{group.slug}/")
 
   utils.append_slash(app, "/groups/join/[^/]+", ["get", "post"])
   app.get '/groups/join/:slug/', (req, res) ->
