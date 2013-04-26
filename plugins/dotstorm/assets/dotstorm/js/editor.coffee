@@ -107,6 +107,72 @@ class ds.IdeaCanvas extends Backbone.View
     @ctx.lineTo action[3], action[4]
     @ctx.stroke()
 
+class ds.CameraGrabber extends intertwinkles.BaseModalFormView
+  template: _.template $("#dotstormCameraDialog").html()
+  events:
+    'submit form':           'submit'
+    'click .toggle-capture': 'toggleCapture'
+    'click .cheese':         'snapshot'
+  initialize: (options) ->
+    # De-prefix getters.
+    navigator.getUserMedia = (navigator.getUserMedia or navigator.webkitGetUserMedia or
+      navigator.mozGetUserMedia or navigator.msGetUserMedia)
+    window.URL = window.URL or window.webkitURL or window.mozURL or window.msURL
+    @$el.on 'hidden', => @stream?.stop()
+
+  toggleCapture: (event) =>
+    event.preventDefault()
+    if @stream?
+      @handleNoStream()
+    else
+      $(event.currentTarget).addClass("loading")
+      navigator.getUserMedia({video: true}, @handleStream, @handleNoStream)
+
+  handleStream: (stream) =>
+    @stream = stream
+    @$(".capture").show()
+    $(window).resize() # trigger re-positioning of modal
+    @$(".toggle-capture").attr("value", "Stop camera").removeClass("loading")
+    video = document.querySelector('#monitor')
+    if video.mozSrcObject != undefined
+      video.mozSrcObject = stream
+      video.src = stream
+    else
+      video.src = window.URL?.createObjectURL?(stream) or stream
+    video.play()
+
+  handleNoStream: (err) =>
+    if err?
+      flash "info", "Can't access camera."
+    if @stream?
+      video = document.querySelector("#monitor")
+      video.pause()
+      @stream.stop()
+      @stream = null
+    @$(".toggle-capture").attr("value", "Use camera").removeClass("loading")
+    @$(".capture").hide()
+    $(window).resize() # trigger re-positioning of modal
+
+  snapshot: (event) ->
+    event.preventDefault()
+    if @stream
+      video = document.querySelector('#monitor')
+      canvas = document.querySelector('#photo')
+      ctx = canvas.getContext('2d')
+      ctx.drawImage(video, 0, 0)
+      @imageDataURL = canvas.toDataURL('image/png')
+
+  submit: (event) =>
+    event.preventDefault()
+    @$("input[type=submit]").addClass("loading")
+    if @$("input[type=file]").val()
+      @trigger "file", @$("input[type=file]")[0].files[0]
+    else if @imageDataURL
+      console.log "triggering a data url"
+      @trigger "dataURL", @imageDataURL
+    else
+      @remove()
+
 class ds.EditIdea extends Backbone.View
   #
   # Container for editing ideas, including a canvas for drawing, a form for
@@ -125,7 +191,8 @@ class ds.EditIdea extends Backbone.View
     @idea = options.idea
     @dotstorm = options.dotstorm
     @canvas = new ds.IdeaCanvas {idea: @idea}
-    @cameraEnabled = options.cameraEnabled
+    @cameraEnabled = not not (navigator.getUserMedia or navigator.webkitGetUserMedia or
+      navigator.mozGetUserMedia or navigator.msGetUserMedia)
 
   render: =>
     fileEnabled = window.File and window.FileReader and window.FileList and window.Blob
@@ -138,7 +205,7 @@ class ds.EditIdea extends Backbone.View
       fileEnabled: fileEnabled
 
     # Using this hack for file input styling:
-    # http://stackoverflow.com/questions/3226167/how-to-style-input-file-with-css3-javascript
+    # http://stackoverflow.com/a/3226279
     if fileEnabled
       @$("input.file-input").wrap(
         $("<div/>").css { height: 0, width: 0, overflow: "hidden" }
@@ -173,8 +240,9 @@ class ds.EditIdea extends Backbone.View
     @$("input.file-input").click()
 
   fileAdded: (event) =>
-    files = event.originalEvent.target.files
-    file = files[0]
+    handleFile(event.originalEvent.target.files[0])
+
+  handleFile: (file) =>
     if file? and file.type.match('image.*')
       @$(".file-upload").addClass("loading")
       reader = new FileReader()
@@ -275,9 +343,9 @@ class ds.EditIdea extends Backbone.View
     @$(".tool").removeClass("active")
     switch tool
       when "camera"
-        @trigger "takePhoto"
+        @promptForPhoto()
         el = @$(".tool[data-tool=text]")
-        tool = "text"
+        el.addClass("active")
       when "file-upload"
         @changeFile()
       when "text"
@@ -288,6 +356,17 @@ class ds.EditIdea extends Backbone.View
         @canvas.tool = tool
         el.addClass("active")
     return false
+
+  promptForPhoto: (event) =>
+    grabber = new ds.CameraGrabber()
+    grabber.on "file", (file) =>
+      @handleFile(file)
+      grabber.remove()
+    grabber.on "dataURL", (dataURL) =>
+      parts = dataURL.split(",")
+      @setPhoto(parts[1], parts[0] + ",")
+      grabber.remove()
+    grabber.render()
 
   handleChangeBackgroundColor: (event) =>
     @changeBackgroundColor $(event.currentTarget).css("background-color")

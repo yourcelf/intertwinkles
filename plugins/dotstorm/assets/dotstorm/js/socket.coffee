@@ -67,17 +67,6 @@ intertwinkles.connect_socket (socket) ->
         when "Idea"
           ds.ideas.get(data.id).trigger data.event
 
-window.addEventListener 'message', (event) ->
-  if event.origin == "file://"
-    if event.data.cameraEnabled?
-      ds.cameraEnabled = true
-    else if event.data.error?
-      flash "info", event.data.error
-    else if event.data.reload?
-      flash "info", "Reloading..."
-      window.location.reload(true)
-, false
-
 $("a.soft").on 'touchend click', (event) ->
   ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
   return false

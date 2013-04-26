@@ -31,6 +31,29 @@ block postapp
       input.btn(type='submit', value='save')
       a.cancel(href='#') cancel
 
+  script#dotstormCameraDialog(type='text/template')
+    form
+      div.modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        h3 Add photo
+
+      div.modal-body
+        canvas#photo.capture(width=640, height=480, style='display: none; float: right; width: 260px; height: 195px;')
+        div#capture.capture(style='display: none;')
+          div.row-fluid
+            video#monitor(width=640, height=480, style='width: 160px; height: 120px;')
+        p
+          button.btn.btn-success.cheese.capture(style='display: none;') <i class='icon-camera'></i> Take picture!
+          input.btn.toggle-capture(value='Use camera', type='button')
+        p 
+          | Or pick image file:
+        p
+          input(type='file')
+
+      div.modal-footer
+        input.btn.btn-primary(type='submit', value='Add photo')
+        a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+
   script#dotstormAddIdea(type='text/template')
     div#addIdea
       div.toolbar
