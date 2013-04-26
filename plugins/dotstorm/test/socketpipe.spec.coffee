@@ -22,7 +22,7 @@ await = (fn) ->
   setTimeout (-> await fn), 100
 
 describe "Dotstorm socket pipeline", ->
-  this.timeout(10000)
+  this.timeout(20000)
   before (done) ->
     common.startUp (server) =>
       @server = server
