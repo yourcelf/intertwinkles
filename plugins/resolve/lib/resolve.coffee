@@ -276,11 +276,29 @@ module.exports = (config) ->
     if data.proposal?.passed?
       proposal.passed = data.proposal.passed
       proposal.resolved = new Date()
+      proposal.resolutions.unshift {
+        date: new Date()
+        is_resolved: true
+        passed: data.proposal.passed
+        message: data.proposal.message
+        user_id: session.auth?.user_id
+        name: data.name
+      }
       event_opts.data.passed = data.proposal.passed
+      event_opts.data.message = data.proposal.message
     else if data.proposal?.reopened?
       proposal.passed = null
       proposal.resolved = null
+      proposal.resolutions.unshift {
+        date: new Date()
+        is_resolved: false
+        passed: null
+        message: data.proposal.message
+        user_id: session.auth?.user_id
+        name: data.name
+      }
       event_opts.data.reopened = true
+      event_opts.data.message = data.proposal.message
 
     proposal.save (err, doc) ->
       return callback(err) if err?

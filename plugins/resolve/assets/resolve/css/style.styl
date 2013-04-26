@@ -137,12 +137,30 @@ a.show-opinion-history
   .byline
     .editor
       opacity: 0.8
+
+  .resolution-change
+    font-style: italic
+  .reslution-message
+    border-left: 6px solid #eee
     
   .revision
     background-color: rgba(200, 200, 200, 0.1)
     margin-top: 1em
     padding: 1em
     border-radius: 5px
+  .resolution
+    margin-top: 1em
+    padding: 0.5em
+    &.passed
+      background-color: rgba(200, 255, 200, 0.2)
+    &.failed
+      background-color: #FCF8E3
+    &.reopened
+      background-color: rgba(200, 200, 255, 0.2)
+    .resolution-message
+      border-left: 6px solid #eee
+      padding-left: 1em
+      margin-left: 1em
   .text
     padding: 0.5em
     margin: 0.5em

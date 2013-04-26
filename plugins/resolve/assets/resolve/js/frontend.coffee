@@ -120,8 +120,12 @@ class FinalizeProposalDialog extends intertwinkles.BaseModalFormView
   events:
     "click [name=passed]": "passed"
     "click [name=failed]": "failed"
-  passed: => @trigger "passed"
-  failed: => @trigger "failed"
+  passed: (event) =>
+    event.preventDefault()
+    @trigger "passed"
+  failed: (event) =>
+    event.preventDefault()
+    @trigger "failed"
 
 
 class ReopenProposalDialog extends intertwinkles.BaseModalFormView
@@ -181,6 +185,13 @@ class ProposalHistoryView extends intertwinkles.BaseModalFormView
               revision: rev
             })
             break
+
+    # Add proposal resolutions, and sort.
+    revs = revs.concat(@model.get("resolutions") or [])
+    revs = _.sortBy(revs, (r) ->
+      -intertwinkles.parse_date(r.revision?.date or r.date).getTime()
+    )
+
     @context = {revs: revs, vote_map: @vote_map}
     super()
     intertwinkles.sub_vars(@$el)
@@ -294,8 +305,13 @@ class ShowProposalView extends intertwinkles.BaseView
     if resolved?
       @$(".resolution").toggleClass("alert-success", resolve.model.get("passed"))
       @$(".resolution .resolved-date").html(
-        "<nobr>" +
-        new Date(resolved).toString("htt dddd, MMMM dd, yyyy") + "</nobr>")
+        intertwinkles.simple_date(resolve.model.get("resolved"))
+      )
+      res = resolve.model.get("resolutions")?[0]
+      if res?
+        @$(".resolver").html("by " + intertwinkles.inline_user(res.user_id, res.name))
+        @$(".resolution-message").html(res.message or "")
+
     @$(".history").toggle(resolve.model.get("revisions").length > 1)
 
   _getOwnOpinion: =>
@@ -519,16 +535,16 @@ class ShowProposalView extends intertwinkles.BaseView
     form = new FinalizeProposalDialog()
     form.render()
     form.on "passed", =>
-      @_saveProposal {passed: true}, form.remove
+      @_saveProposal {passed: true, message: form.$("#id_message").val()}, form.remove
     form.on "failed", =>
-      @_saveProposal {passed: false}, form.remove
+      @_saveProposal {passed: false, message: form.$("#id_message").val()}, form.remove
 
   reopenProposal: (event) =>
     event.preventDefault()
     form = new ReopenProposalDialog()
     form.render()
     form.on "submitted", =>
-      @_saveProposal {reopened: true}, form.remove
+      @_saveProposal {reopened: true, message: form.$("#id_message").val()}, form.remove
 
   _saveProposal: (changes, done) =>
     callback = "update_proposal"+ new Date().getTime()

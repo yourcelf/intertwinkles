@@ -14,6 +14,15 @@ load = (config) ->
       text: {type: String, required: true}
     }]
 
+    resolutions: [{
+      date: Date
+      user_id: String
+      name: String
+      message: String
+      is_resolved: Boolean
+      passed: Boolean
+    }]
+
     opinions: [{
       user_id: String
       name: String

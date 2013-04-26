@@ -93,10 +93,12 @@ block body
           div.resolution.hide.alert
             div.resolution-passed.hide.
               This proposal was <b>approved</b>.<br />
-              Closed <span class='resolved-date'></span>
+              Closed <span class='resolved-date'></span> <span class='resolver'></span>
+              <div class='resolution-message'></div>
             div.resolution-failed.hide.
               This proposal <b>failed to carry</b>.<br />
-              Closed <span class='resolved-date'></span>
+              Closed <span class='resolved-date'></span> <span class='resolver'></span>
+              <div class='resolution-message'></div>
             a.btn.btn-link.reopen-proposal.pull-right(href='#') Re-open proposal
             div(style='clear: both;')
           blockquote.text
@@ -143,41 +145,59 @@ block body
       button.close(type='button', data-dismiss='modal') &times;
       div.proposal-history.
         <% _.each(revs, function(rev) { %>
-          <div class='revision'>
-            <div class='byline'>
-              <span class='date varsub' data-date='<%- rev.revision.date %>'></span>
-              <span class='editor'>
-                <%= intertwinkles.inline_user(rev.revision.user_id, rev.revision.name) %>
-              </span>
-            </div>
-            <div class='text'>
-              <%= rev.diff %>
-            </div>
-            <div class='supporters'>
-              <% _.each(vote_map, function(votedef) { %>
-                <% var vote_key = votedef[0]; %>
-                <% var vote_name = votedef[1]; %>
-                <% if (rev.opinions[vote_key]) { %>
-                  <div class='row'>
-                    <span class='vote-cell'>
-                      <span class='vote <%- vote_key %>'><%- vote_name %></span>
-                    </span>
-                    <div class='people'>
-                    <% _.each(rev.opinions[vote_key], function(op) { %>
-                      <span rel='popover'
-                            data-title='<%- vote_name %>'
-                            data-content='<%- op.revision.text %>'
-                            data-trigger='hover'
-                            data-placement='top'>
-                        <%= intertwinkles.inline_user(op.opinion.user_id, op.opinion.name) %>
+          <% if (rev.revision) { %>
+            <div class='revision'>
+              <div class='byline'>
+                <span class='date varsub' data-date='<%- rev.revision.date %>'></span>
+                <span class='editor'>
+                  <%= intertwinkles.inline_user(rev.revision.user_id, rev.revision.name, "tiny") %>
+                </span>
+              </div>
+              <div class='text'>
+                <%= rev.diff %>
+              </div>
+              <div class='supporters'>
+                <% _.each(vote_map, function(votedef) { %>
+                  <% var vote_key = votedef[0]; %>
+                  <% var vote_name = votedef[1]; %>
+                  <% if (rev.opinions[vote_key]) { %>
+                    <div class='row'>
+                      <span class='vote-cell'>
+                        <span class='vote <%- vote_key %>'><%- vote_name %></span>
                       </span>
-                    <% }); %>
+                      <div class='people'>
+                      <% _.each(rev.opinions[vote_key], function(op) { %>
+                        <span rel='popover'
+                              data-title='<%- vote_name %>'
+                              data-content='<%- op.revision.text %>'
+                              data-trigger='hover'
+                              data-placement='top'>
+                          <%= intertwinkles.inline_user(op.opinion.user_id, op.opinion.name) %>
+                        </span>
+                      <% }); %>
+                      </div>
                     </div>
-                  </div>
-                <% } %>
-              <% }); %>
+                  <% } %>
+                <% }); %>
+              </div>
             </div>
-          </div>
+          <% } else { %>
+            <% console.log(rev); %>
+            <div class='resolution <%- rev.is_resolved ? (rev.passed ? "passed" : "failed") : "reopened" %>'>
+              <div class='byline'>
+                <span class='date varsub' data-date='<%- rev.date %>'></span>
+                <span class='editor'>
+                  <%= intertwinkles.inline_user(rev.user_id, rev.name, "tiny") %>
+                </span>
+                <span class='resolution-change'>
+                  Proposal <%- rev.is_resolved ? (rev.passed ? "marked as passed" : "marked as failed") : "re-opened" %>.
+                </span>
+              </div>
+              <% if (rev.message) { %>
+                <div class='resolution-message'><%= intertwinkles.markup(rev.message) %></div>
+              <% } %>
+            </div>
+          <% } %>
         <% }); %>
     div.modal-footer
       a.btn(href='#', data-dismiss='modal') Close
@@ -226,29 +246,38 @@ block body
         a.pull-left.btn(href='#', data-dismiss='modal') Cancel
 
   script(type='text/template', id='finalizeProposalDialogTemplate')
-    div.modal-header
-      button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
-      h3 Finalize Proposal
-    div.modal-body
-      p.
-        Finalizing the proposal ends voting, and marks the proposal as
-        passed or failed.
-    div.modal-footer
-      button.btn.btn-danger(name='failed', type='submit') Proposal failed
-      button.btn.btn-success(name='passed', type='submit') Proposal passed
-      a.pull-left.btn(href='#', data-dismiss='modal') Cancel
+    form.form-horizontal
+      div.modal-header
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        h3 Finalize Proposal
+      div.modal-body
+        p.
+          Finalizing the proposal ends voting, and marks the proposal as
+          passed or failed.
+        div
+          label(for="id_message") Notes regarding finalizing (optional)
+        div
+          textarea#id_message(name='message', rows=3, cols=40)
+
+      div.modal-footer
+        button.btn.btn-danger(name='failed', type='submit') Proposal failed
+        button.btn.btn-success(name='passed', type='submit') Proposal passed
+        a.pull-left.btn(href='#', data-dismiss='modal') Cancel
 
   script(type='text/template', id='reopenProposalDialogTemplate')
     div.modal-header
       button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
       h3 Re-open proposal?
-    div.modal-body
-      p.
-        Delete the resolution for this proposal and open it back up to
-        voting and edits?
-    div.modal-footer
-      a.pull-left.btn(href='#', data-dismiss='modal') Cancel
-      form
+    form
+      div.modal-body
+        p.
+          Open this proposal back up to voting and edits?
+        div
+          label(for='id_message') Optional reason for reopening:
+          textarea#id_message(name='message', rows=3, cols=40)
+
+      div.modal-footer
+        a.pull-left.btn(href='#', data-dismiss='modal') Cancel
         button.btn.btn-success.really-reopen(type='submit') Re-open
 
   script(type='text/template', id='editOpinionDialogTemplate')

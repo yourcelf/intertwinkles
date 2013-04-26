@@ -449,3 +449,41 @@ describe "resolve", ->
 
       done()
 
+  it "Adds resolution notices for passage", (done) ->
+    resolve.update_proposal @session, {
+      proposal: {
+        _id: @proposal_with_notices.id
+        passed: true
+        message: "This is why it passed"
+      }
+    }, (err, proposal, event, si, notices) =>
+      expect(err).to.be(null)
+      expect(proposal).to.not.be(null)
+      expect(proposal.resolutions.length).to.be(2)
+      res = proposal.resolutions[0]
+      expect(res.is_resolved).to.be(true)
+      expect(res.passed).to.be(true)
+      expect(res.message).to.be("This is why it passed")
+      expect(res.user_id).to.be(@session.auth.user_id)
+      expect(res.name).to.be(undefined)
+      done()
+
+  it "Adds resolution notices for reopening", (done) ->
+    resolve.update_proposal @session, {
+      proposal: {
+        _id: @proposal_with_notices.id
+        reopened: true
+        message: "This is why it reopened"
+      }
+    }, (err, proposal, event, si, notices) =>
+      expect(err).to.be(null)
+      expect(proposal).to.not.be(null)
+      expect(proposal.resolved).to.be(null)
+      expect(proposal.resolutions.length).to.be(3)
+      res = proposal.resolutions[0]
+      expect(res.is_resolved).to.be(false)
+      expect(res.passed).to.be(null)
+      expect(res.message).to.be("This is why it reopened")
+      expect(res.user_id).to.be(@session.auth.user_id)
+      expect(res.name).to.be(undefined)
+      done()
