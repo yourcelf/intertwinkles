@@ -186,6 +186,14 @@ class ProposalHistoryView extends intertwinkles.BaseModalFormView
     intertwinkles.sub_vars(@$el)
     @$("[rel=popover]").popover()
 
+class OpinionHistoryView extends intertwinkles.BaseModalFormView
+  template: _.template $("#opinionHistoryViewTemplate").html()
+  initialize: (options) ->
+    @context = {
+      opinion: options.opinion
+      vote_defs: options.vote_defs
+    }
+
 class ShowProposalView extends intertwinkles.BaseView
   template: _.template($("#showProposalTemplate").html())
   opinionTemplate: _.template($("#opinionTemplate").html())
@@ -267,7 +275,7 @@ class ShowProposalView extends intertwinkles.BaseView
     rev = resolve.model.get("revisions")?[0]
     if rev?
       @$(".proposal .text").html(intertwinkles.markup(rev.text))
-      @$(".proposal .editors").html("by " + (
+      @$(".proposal .editors").html("by " + _.unique(
         @renderUser(r.user_id, r.name) for r in resolve.model.get("revisions")
       ).join(", "))
       @$(".proposal-twinkle-holder").html("
@@ -319,7 +327,7 @@ class ShowProposalView extends intertwinkles.BaseView
         delete @_renderedOpinions[opinion_id]
 
     # Handle the rest
-    for opinion in opinions
+    _.each opinions, (opinion) =>
       is_non_voting = (
         resolve.model.get("sharing")?.group_id? and
         intertwinkles.is_authenticated() and
@@ -332,6 +340,7 @@ class ShowProposalView extends intertwinkles.BaseView
       )
       rendered = $(@opinionTemplate({
         _id: opinion._id
+        num_revs: opinion.revisions.length
         rev_id: opinion.revisions[0]._id
         proposal_id: resolve.model.id
         proposal_url: resolve.model.get("url")
@@ -346,6 +355,10 @@ class ShowProposalView extends intertwinkles.BaseView
           new Date(resolve.model.get("revisions")[0].date)
         )
       }))
+      $(".show-opinion-history", rendered).on "click", (event) =>
+        event.preventDefault()
+        new OpinionHistoryView({opinion: opinion, vote_defs: @votes}).render()
+
       if not @_renderedOpinions[opinion._id]?
         $(".opinions").prepend(rendered)
         @_renderedOpinions[opinion._id] = rendered
@@ -361,6 +374,7 @@ class ShowProposalView extends intertwinkles.BaseView
 
       @addView("##{opinion._id} .date",
         new intertwinkles.AutoUpdatingDate(date: opinion.revisions[0].date))
+
 
     @renderTallies()
 

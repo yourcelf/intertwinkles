@@ -182,6 +182,24 @@ block body
     div.modal-footer
       a.btn(href='#', data-dismiss='modal') Close
 
+  script(type='text/template', id='opinionHistoryViewTemplate')
+    div.modal-header
+      <%= intertwinkles.inline_user(opinion.user_id, opinion.name) %> opinion history
+      button.close(type='button', data-dismiss='modal') &times;
+    div.modal-body
+      div.opinion-history.
+        <% _.each(opinion.revisions, function(rev) { %>
+          <div class='revision'>
+            <div><%= intertwinkles.simple_date(rev.date) %></div> 
+            <div class='vote-cell'>
+              <span class='vote <%- rev.vote %>'><%- vote_defs[rev.vote] %></span>
+            </div>
+            <div class='opinion'><%= intertwinkles.markup(rev.text) %></diV>
+          </div>
+        <% }); %>
+    div.modal-footer
+      a.btn(href='#', data-dismiss='modal') Close
+
   script(type='text/template', id='editProposalDialogTemplate')
     form.edit-proposal.form-horizontal
       div.modal-header
@@ -298,7 +316,12 @@ block body
                 data-url='<%- proposal_url %>'></span>
         </div>
               
-        <span class='date pull-right'></span>
+        <div class='pull-right' style='text-align: right;'>
+          <span class='date'></span>
+          <% if (num_revs > 1) { %>
+            <br /><a href='#' class='show-opinion-history'>revisions</a>
+          <% } %>
+        </div>
       </div>
       <div class='edit-links'>
         <a href='#' class='delete-opinion pull-left' data-id="<%- _id %>">
