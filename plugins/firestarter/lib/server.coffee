@@ -164,6 +164,52 @@ start = (config, app, sockrooms) ->
         responseData,
         socket.sid)
 
+  #
+  # Twinkles
+  #
+
+  sockrooms.on "firestarter/post_twinkle", (socket, session, data) ->
+    respond = (err, twinkle, firestarter) ->
+      return sockrooms.handleError(socket, err) if err?
+      sockrooms.broadcast(
+        "firestarter/" + firestarter.slug,
+        "twinkles",
+        { twinkles: [twinkle] })
+
+    return respond("Missing entity") unless data.entity?
+    return respond("Missing subentity") unless data.subentity?
+    fslib.post_twinkle(session, data.entity, data.subentity, respond)
+
+  sockrooms.on "firestarter/remove_twinkle", (socket, session, data) ->
+    respond = (err, twinkle, firestarter) ->
+      return sockrooms.handleError(socket, err) if err?
+      sockrooms.broadcast(
+        "firestarter/" + firestarter.slug,
+        "twinkles",
+        {remove: data.twinkle_id}
+      )
+
+    return respond("Missing twinkle_id") unless data.twinkle_id?
+    return respond("Missing entity") unless data.entity?
+    fslib.remove_twinkle(session, data.twinkle_id, data.entity, respond)
+
+  sockrooms.on "firestarter/get_twinkles", (socket, session, data) ->
+    async.waterfall [
+      (done) ->
+        return done("Missing entity") unless data.entity?
+        schema.Firestarter.findOne {_id: data.entity}, (err, doc) ->
+          return done(err) if err?
+          unless utils.can_view(session, doc)
+            return done("Permission denied")
+          api_methods.get_twinkles {
+            application: "firestarter"
+            entity: doc._id
+          }, done
+    ], (err, twinkles) ->
+      return sockrooms.handleError(err) if err?
+      socket.sendJSON "twinkles", {twinkles: twinkles}
+
+
   return { app }
 
 module.exports = { start }

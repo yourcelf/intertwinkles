@@ -38,6 +38,9 @@ load = (config) ->
     return "/f/#{@slug}"
   FirestarterSchema.virtual('absolute_url').get ->
     return config.apps.firestarter.url + @url
+  FirestarterSchema.set('toObject', {virtuals: true})
+  FirestarterSchema.set('toJSON', {virtuals: true})
+
 
   schemas = {}
   for name, schema of {Firestarter: FirestarterSchema, Response: ResponseSchema}

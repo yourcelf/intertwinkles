@@ -97,7 +97,7 @@ start = (config, app, sockrooms) ->
           }, done
 
     ], (err, twinkles) ->
-      return sockerooms.handleError(err) if err?
+      return sockrooms.handleError(err) if err?
       socket.sendJSON "twinkles", {twinkles: twinkles}
 
   sockrooms.on "resolve/get_proposal_list", (socket, session, data) ->

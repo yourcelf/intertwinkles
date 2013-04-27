@@ -299,3 +299,28 @@ describe "firestarter", ->
           "New name\nAnd this is my prompty\nProxy response\nAnonymous response"
         )
         done()
+
+  it "adds and removes a twinkle", (done) ->
+    fslib.get_firestarter @session, {slug: "test"}, (err, doc, event) =>
+      expect(err).to.be(null)
+      expect(doc).to.not.be(null)
+
+      res = doc.responses[0]
+      fslib.post_twinkle @session, doc._id, res._id.toString(), (err, twinkle, firestarter, response) =>
+        expect(err).to.be(null)
+        expect(twinkle).to.not.be(null)
+        expect(firestarter.id).to.be(doc.id)
+        expect(response.id).to.be(res._id.toString())
+
+        expect(twinkle.url).to.be(doc.url)
+        expect(twinkle.recipient.toString()).to.be(response.user_id)
+        expect(twinkle.sender.toString()).to.be(@session.auth.user_id)
+
+        fslib.remove_twinkle @session, twinkle.id, firestarter.id, (err, delTwinkle) =>
+          expect(err).to.be(null)
+          expect(delTwinkle.id).to.be(twinkle.id)
+          www_schema.Twinkle.find {application: "firestarter"}, (err, docs) ->
+            expect(err).to.be(null)
+            expect(docs.length).to.be(0)
+            done()
+

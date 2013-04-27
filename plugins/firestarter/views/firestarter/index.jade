@@ -149,12 +149,19 @@ block postscripts
         <input class='btn btn-danger' type='submit' value='<%- verb %>' />
 
   script(type="text/template", id="responseTemplate")
-    div.name
-      <%= intertwinkles.inline_user(user_id, name) %>
+    div.name(style='text-align: center;')
+      span(style='float: left;')
+        <%= intertwinkles.inline_user(user_id, name) %>
       span(style="float: right;").date-holder
-    div.response
+      | <span class='twinkles'
+      |       data-application='firestarter'
+      |       data-entity='<%- firestarter_id %>'
+      |       data-subentity='<%- _id %>'
+      |       data-recipient='<%- user_id %>'
+      |       data-url='<%- firestarter_url %>'></span>
+    div.response(style='clear: both;')
       <%= intertwinkles.markup(response) %>
-    div.foot
+    div.foot(style='text-align: center;')
       <% if (!read_only) { %>
       a.delete(href='#', style='float: left;')
         i.icon.icon-trash

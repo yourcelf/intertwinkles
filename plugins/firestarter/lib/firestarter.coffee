@@ -213,5 +213,43 @@ module.exports = (config) ->
           [firestarter, deleted_response, event, si] = results
           return callback(null, firestarter, deleted_response, event, si)
 
+  f.post_twinkle = (session, firestarter_id, subentity, callback) ->
+    schema.Firestarter.findOne {_id: firestarter_id}, (err, firestarter) ->
+      return callback(err) if err?
+      return callback("Not found") unless firestarter?
+      unless utils.can_view(session, firestarter)
+        return callback("Permission denied")
+      unless _.find(firestarter.responses, (r) -> r.toString() == subentity)
+        return callback("Unknown subentity")
+      schema.Response.findOne {_id: subentity}, (err, response) ->
+        return callback(err) if err?
+        return callback("Not found") unless response?
+        api_methods.post_twinkle {
+          application: "firestarter"
+          entity: firestarter._id
+          subentity: response._id
+          url: firestarter.url
+          sender: session.auth?.user_id
+          sender_anon_id: session.anon_id
+          recipient: response.user_id
+        }, (err, twinkle) ->
+          callback(err, twinkle, firestarter, response)
+
+  f.remove_twinkle = (session, twinkle_id, firestarter_id, callback) ->
+    return callback("Missing twinkle_id") unless twinkle_id?
+    return callback("Missing firestarter_id") unless firestarter_id?
+    schema.Firestarter.findOne {_id: firestarter_id}, (err, firestarter) ->
+      return callback(err) if err?
+      return callback("Not found") unless firestarter?
+      unless utils.can_view(session, firestarter)
+        return callback("Permission denied")
+
+      api_methods.delete_twinkle {
+        twinkle_id: twinkle_id
+        entity: firestarter_id
+        sender: session.auth?.user_id or null
+        sender_anon_id: session.anon_id
+      }, (err, twinkles) ->
+        return callback(err, twinkles, firestarter)
 
   return f

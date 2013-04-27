@@ -55,7 +55,7 @@ class SplashView extends Backbone.View
         for doc in docs
           item = $(@itemTemplate({
             doc: doc
-            url: "firestarter/f/#{doc.slug}"
+            url: "/firestarter/f/#{doc.slug}"
             group: intertwinkles.groups?[doc.sharing.group_id]
           }))
           @$(".#{key}-doc-list").append(item)
@@ -465,11 +465,13 @@ class ShowResponseView extends Backbone.View
     @$el.addClass("firestarter-response")
     context = @response.toJSON()
     context.read_only = not intertwinkles.can_edit(fire.model)
+    context.firestarter_url = fire.model.get("url")
     @$el.html(@template(context))
     @date = new intertwinkles.AutoUpdatingDate(date: @response.get("created"))
     @$(".date-holder").html @date.el
     @date.render()
     @$el.effect("highlight", {}, 3000)
+    @twinkle_map = intertwinkles.twinklify("firestarter", @$el, @twinkle_map)
 
   confirmDelete: (event) =>
     event.preventDefault()
