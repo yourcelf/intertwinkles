@@ -21,25 +21,25 @@ describe "HTTP api", ->
 
   # Groups API invalid requests
   it "Gets bad request without API key", (done) ->
-    url = "http://localhost:8888/api/groups/?user=one%40mockmyid.com"
+    url = "http://localhost:#{config.port}/api/groups/?user=one%40mockmyid.com"
     @browser.visit url, (err, browser, status) ->
       expect(status).to.be(400)
       done()
 
   it "Gets bad request without user", (done) ->
-    url = "http://localhost:8888/api/groups/?api_key=test-key-one"
+    url = "http://localhost:#{config.port}/api/groups/?api_key=test-key-one"
     @browser.visit url, (err, browser, status) ->
       expect(status).to.be(400)
       done()
 
   it "Gets permission denied with invalid API key", (done) ->
-    url = "http://localhost:8888/api/groups/?user=one%40mockmyid.com&api_key=invalid"
+    url = "http://localhost:#{config.port}/api/groups/?user=one%40mockmyid.com&api_key=invalid"
     @browser.visit url, (err, browser, status) ->
       expect(status).to.be(403)
       done()
 
   it "Gets permission denied with invalid user", (done) ->
-    url = "http://localhost:8888/api/groups/?user=noexist%40mockmyid.com&api_key=invalid"
+    url = "http://localhost:#{config.port}/api/groups/?user=noexist%40mockmyid.com&api_key=invalid"
     @browser.visit url, (err, browser, status) ->
       expect(status).to.be(403)
       done()
@@ -48,7 +48,7 @@ describe "HTTP api", ->
   # Groups API valid request
   #
   it "Gets success with correct user and api key", (done) ->
-    url = "http://localhost:8888/api/groups/?api_key=test-key-one&user=one%40mockmyid.com"
+    url = "http://localhost:#{config.port}/api/groups/?api_key=test-key-one&user=one%40mockmyid.com"
     browser = @browser
     schema.User.findOne {email: "one@mockmyid.com"}, (err, doc) ->
       expect(err).to.be(null)
@@ -111,7 +111,7 @@ describe "HTTP api", ->
       done()
 
   it "Edit initial profile", (done) ->
-    url = "http://localhost:8888/api/profiles/"
+    url = "http://localhost:#{config.port}/api/profiles/"
     schema.User.findOne {email: "one@mockmyid.com"}, (err, doc) ->
       expect(err).to.be(null)
       expect(doc.mobile.number).to.be(null)
@@ -237,7 +237,7 @@ describe "HTTP api", ->
     ], done)
 
   it "Posts notifications", (done) ->
-    url = "http://localhost:8888/api/notifications/"
+    url = "http://localhost:#{config.port}/api/notifications/"
     # Add several notifications
     add_notice = (data, cb) ->
       utils.post_data url, {
@@ -246,7 +246,7 @@ describe "HTTP api", ->
           application: "resolve"
           entity: "one"
           type: "please_respond"
-          url: "http://localhost:8888/f/one"
+          url: "http://localhost:#{config.port}/f/one"
           recipient: "one@mockmyid.com"
           sender: "two@mockmyid.com"
           formats: {
@@ -290,7 +290,7 @@ describe "HTTP api", ->
         done()
 
   it "Retrieves notifications", (done) ->
-    url = "http://localhost:8888/api/notifications/"
+    url = "http://localhost:#{config.port}/api/notifications/"
     utils.get_json url, {
       api_key: config.api_key
       user: "one@mockmyid.com"
@@ -303,7 +303,7 @@ describe "HTTP api", ->
       done()
 
   it "Clears notifications by ID", (done) ->
-    url = "http://localhost:8888/api/notifications/clear"
+    url = "http://localhost:#{config.port}/api/notifications/clear"
     schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
       expect(err).to.be(null)
       schema.Notification.find({recipient: user._id}).sort('date').exec (err, notices) ->
@@ -321,7 +321,7 @@ describe "HTTP api", ->
           done()
 
   it "Clears notifications by application,entity,type", (done) ->
-    url = "http://localhost:8888/api/notifications/clear"
+    url = "http://localhost:#{config.port}/api/notifications/clear"
     utils.post_data url, {
       api_key: config.api_key
       application: "resolve"
@@ -335,7 +335,7 @@ describe "HTTP api", ->
       done()
 
   it "Retrieves uncleared notifications only", (done) ->
-    url = "http://localhost:8888/api/notifications/"
+    url = "http://localhost:#{config.port}/api/notifications/"
     utils.get_json url, {
       api_key: config.api_key
       user: "one@mockmyid.com"
@@ -346,8 +346,8 @@ describe "HTTP api", ->
       done()
 
   it "Suppresses a notification", (done) ->
-    get_post_url = "http://localhost:8888/api/notifications/"
-    suppress_url = "http://localhost:8888/api/notifications/suppress"
+    get_post_url = "http://localhost:#{config.port}/api/notifications/"
+    suppress_url = "http://localhost:#{config.port}/api/notifications/suppress"
     utils.get_json get_post_url, {
       api_key: config.api_key
       user: "one@mockmyid.com"
@@ -560,13 +560,13 @@ describe "HTTP api", ->
 
       http.get({
         hostname: "localhost"
-        port: "8888"
+        port: config.port
         path: "/r/#{short_url_path}"
       }, (res) ->
         answer = ''
         res.on 'data', (chunk) -> answer += chunk
         res.on 'end', ->
           expect(res.statusCode).to.be(302)
-          expect(res.headers.location).to.be("http://localhost:8888/firestarter/this/is/awesome")
+          expect(res.headers.location).to.be("http://localhost:#{config.port}/firestarter/this/is/awesome")
           done()
       ).on "error", done

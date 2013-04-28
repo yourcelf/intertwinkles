@@ -59,7 +59,7 @@ describe "pointslib", ->
       expect(p for p in doc.points).to.eql([])
       expect(doc.sharing.group_id).to.eql(@all_groups['two-members'].id)
       expect(doc.url).to.eql("/u/my-ten-point/")
-      expect(doc.absolute_url).to.eql("http://localhost:8888/points/u/my-ten-point/")
+      expect(doc.absolute_url).to.eql("http://localhost:#{config.port}/points/u/my-ten-point/")
 
       expect(event.application).to.be("points")
       expect(event.url).to.be(doc.url)

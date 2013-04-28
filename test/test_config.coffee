@@ -2,12 +2,12 @@ config = require '../config/config'
 mongoose  = require "mongoose"
 
 # Arbitrary different port that doesn't clash with dev server
-config.port = 8888
+config.port = 8889
 # Different database which we can nuke between tests.
 config.dbname = "testintertwinkles"
 # Fix the URLs.
 config.short_url_base = "http://rly.shrt/r"
-config.api_url = "http://localhost:8888"
+config.api_url = "http://localhost:#{config.port}"
 config.api_key = "test-key-one"
 config.authorized_keys = ["test-key-one"]
 config.apps.www.url = config.api_url
