@@ -11,7 +11,7 @@ if INITIAL_DATA.twinklepad?
 
 intertwinkles.connect_socket ->
   intertwinkles.build_toolbar($("header"), {applabel: "twinklepad"})
-  intertwinkles.build_footer($("footer"))
+  intertwinkles.build_footer($("footer"), {collapsed: true})
   socket = intertwinkles.socket
   if tp.model?
     socket.send "join", {room: "twinklepad/" + tp.model.get("pad_id")}
@@ -38,7 +38,7 @@ if $("iframe").length > 0
     window_height = $(window).height()
     height = Math.min(
       window_height,
-      Math.max(400, window_height - $("iframe").position().top - $("footer").height() - 10)
+      Math.max(400, window_height - $("iframe").offset().top - 10)
     )
     $("#etherpad").css("height", "#{height}px")
   resize()

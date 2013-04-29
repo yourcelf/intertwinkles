@@ -270,22 +270,22 @@ footer_template = _.template("""
 <div class='bg'>
   <img src='/static/img/coop-world.png' alt='Flavor image' />
 </div>
-<div class='container-fluid'>
+<div class='container-fluid collapsible'>
   <div class='ramp'></div>
   <div class='footer-content'>
     <div class='row-fluid'>
       <div class='span4 about-links'>
         <h2>About</h2>
         <ul>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/'>About</a></li>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/starting/'>Getting Started</a></li>
+          <li><a href='/about/'>About</a></li>
+          <li><a href='/about/starting/'>Getting Started</a></li>
           <li><a href='http://blog.intertwinkles.org'>Blog</a></li>
           <li><a href='http://twitter.com/intertwinkles'>Follow us on twitter</a></li>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/changelog/'>Change log</a></li>
+          <li><a href='/about/changelog/'>Change log</a></li>
           <li style='margin-left: -0.5em; font-size: smaller;'>Legal:</li>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/terms/'>Terms of Use</a></li>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/privacy/'>Privacy Policy</a></li>
-          <li><a href='#{INTERTWINKLES_APPS.www.url}/about/dmca/'>DMCA</a></li>
+          <li><a href='/about/terms/'>Terms of Use</a></li>
+          <li><a href='/about/privacy/'>Privacy Policy</a></li>
+          <li><a href='/about/dmca/'>DMCA</a></li>
         </ul>
       </div>
       <div class='span4 community'>
@@ -315,11 +315,38 @@ footer_template = _.template("""
     </div>
   </div>
 </div>
+<a class='expander' href='#' aria-hidden='true' title='Show footer'>Show bottom links</a>
+<a class='collapser' href='#' aria-hidden='true' title='Hide footer'>&ldquo; hide this</a>
 """)
 
-intertwinkles.build_footer = (destination) ->
-  $(destination).html(footer_template())
-  intertwinkles.twunklify($(destination))
+class intertwinkles.Footer extends Backbone.View
+  template: footer_template
+  events:
+    'click .collapser':  'collapse'
+    'click .expander':    'expand'
+
+  initialize: (options={}) ->
+    @collapsed = not not options.collapsed
+
+  render: =>
+    @$el.html(@template({collapsed: @collapsed}))
+    intertwinkles.twunklify(@$el)
+    $("footer, #push, #page").toggleClass("footer-collapsed", @collapsed)
+    this
+
+  collapse: (event) =>
+    event.preventDefault()
+    $("footer, #push, #page").addClass("footer-collapsed")
+
+  expand: (event) =>
+    event.preventDefault()
+    $("footer, #push, #page").removeClass("footer-collapsed")
+    @el.scrollIntoView()
+
+
+
+intertwinkles.build_footer = (destination, options) ->
+  $(destination).html(new intertwinkles.Footer(options).render().el)
 
 #
 # User choice widget

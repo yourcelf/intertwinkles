@@ -526,9 +526,9 @@ footer-height-narrow = 600px
 
 html,body { height: 100% }
 #page
-  min-height: 100%
   height: auto !important
   height: 100%
+  min-height: 100%
   margin: 0 auto (0px - footer-height)
 
 @media (max-width: 767px)
@@ -608,3 +608,38 @@ footer
     white-space: nowrap
     margin-bottom: 0.5em !important
 
+// Collapsible footer
+footer .expander
+  display: none
+footer
+  .expander
+    position: absolute
+    transform: rotate(270deg)
+    padding: 0.2em
+    left: -70px
+    bottom: 80px
+    width: 160px
+    color: #666
+    text-align: center
+    text-shadow: 0px 0px 2px #fff
+    background-color: rgba(200, 200, 200, 0.8)
+    box-shadow: 0px 0px 3px #aaa
+  .collapser
+    position: absolute
+    bottom: 1em
+    left: 1em
+
+#push.footer-collapsed
+  display: none
+#page.footer-collapsed
+  margin: 0
+footer.footer-collapsed
+  .collapser
+    display: none
+  opacity: 1
+  .bg, .ramp, .footer-content
+    display: none
+  .expander
+    display: block
+  height: 0px
+  width: 0px

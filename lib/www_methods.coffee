@@ -37,7 +37,6 @@ module.exports = (config) ->
   www.handle_error = (req, res, err, msg) ->
     www.log_error("www", req, res, err, msg)
     res.statusCode = 500
-#    res.send "Server Errror" # Simple view.
     res.render("500", {
       title: "Server Error"
       initial_data: utils.get_initial_data(req?.session, config)
