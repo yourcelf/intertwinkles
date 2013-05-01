@@ -150,7 +150,7 @@ utils.get_initial_data = (session, config) ->
     email: session?.auth?.email or null
     groups: session?.groups or {}
     users: session?.users or {}
-    anon_id: session.anon_id
+    anon_id: session?.anon_id
   }
   if config.alpha_cookie_domain
     initial_data.ALPHA_COOKIE_DOMAIN = config.alpha_cookie_domain
