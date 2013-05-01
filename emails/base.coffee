@@ -39,7 +39,7 @@ html_template = _.template("""
 
     /* Hotmail header color reset
     Bring inline: Yes. */
-    h1, h2, h3, h4, h5, h6 {color: black !important;}
+    h1, h2, h3, h4, h5, h6 {color: black !important; font-weight: normal !important;}
 
     h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {color: blue !important;}
 
@@ -150,7 +150,7 @@ html_template = _.template("""
 <!-- Wrapper/Container Table: Use a wrapper table to control the width and the background color consistently of your email. Use this approach instead of setting attributes on the body tag. -->
 <table cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
   <tr>
-    <td valign="top"> 
+    <td valign="top" style='padding: 1em;'> 
     <!-- Tables are the most common way to format your email consistently. Set your table widths inside cells and in most cases reset cellpadding, cellspacing, and border to zero. Use nested tables as a way to space effectively in your message. -->
     <table cellpadding="0" cellspacing="0" border="0" align="center">
       <tr>
@@ -168,7 +168,7 @@ html_template = _.template("""
     <td style='border-top: 1px solid #eee;'>&nbsp;</td>
   </tr>
   <tr>
-    <td>
+    <td style='padding: 1em;'>
       <span style='font-size: 12px;'>
       Unsubscribe or edit preferences at <a href='<%- subscription_settings_link %>'>Your profile page</a>
       </span>

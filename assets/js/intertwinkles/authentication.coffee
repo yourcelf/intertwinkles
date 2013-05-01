@@ -35,13 +35,17 @@ intertwinkles.request_login = ->
     opts.siteLogo = "/static/img/star-icon.png"
   navigator.id.request(opts)
 
-
+intertwinkles.SOCKET_TIMEOUT_COUNT = 0
 intertwinkles.onlogin = (assertion) ->
   if window.INTERTWINKLES_AUTH_LOGOUT?
     return intertwinkles.request_logout()
 
   if not intertwinkles.socket?
     console.log "onlogin awaiting socket"
+    intertwinkles.SOCKET_TIMEOUT_COUNT += 1
+    if intertwinkles.SOCKET_TIMEOUT_COUNT > 100
+      console.error "Socket fail; can't handle onlogin request."
+      return
     return setTimeout((-> intertwinkles.onlogin(assertion)), 100)
 
   console.info "onlogin"
@@ -103,7 +107,7 @@ intertwinkles.onlogout = (count) ->
     intertwinkles.user.trigger("logout")
     if reload or window.INTERTWINKLES_AUTH_LOGOUT
       flash "info", "Signed out."
-      window.location.pathname = "/"
+      window.location.pathname = window.INTERTWINKLES_AUTH_LOGOUT_REDIRECT or "/"
   intertwinkles.socket.send "logout", {callback: "logout"}
 
 intertwinkles.is_authenticated = -> return intertwinkles.user.get("email")?

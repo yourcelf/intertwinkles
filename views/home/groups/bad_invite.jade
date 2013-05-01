@@ -1,0 +1,28 @@
+extends ../../error
+
+block body
+  div.container-fluid
+    div.row-fluid
+      div.span6.offset3
+        h1= title
+        p.
+          Oops &ndash; we can't find an invitation for you to this group.
+        p.
+          You are signed in as <strong>#{email}</strong>.  Were you invited at
+          a different address?  You can ask a group member change your
+          invitation, or <a class='logout' href='#'>logout</a> and sign in
+          using the address with which you were invited.
+        p.
+          Is this unexpected? Please tell us!
+
+block append postscripts
+  :coffeescript
+    intertwinkles.connect_socket ->
+      intertwinkles.build_toolbar($("header"), {applabel: "www"})
+      intertwinkles.build_footer($("footer"))
+      $("footer").show()
+      $(".logout").on "click", (event) ->
+        event.preventDefault()
+        window.INTERTWINKLES_AUTH_LOGOUT = true
+        window.INTERTWINKLES_AUTH_LOGOUT_REDIRECT = window.location.pathname
+        intertwinkles.request_logout()

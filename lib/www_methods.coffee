@@ -132,7 +132,6 @@ module.exports = (config) ->
       return callback(err) if err?
       for doc in results?.response?.docs
         # Absolutize urls
-        console.log doc.application
         doc.absolute_url = "#{config.apps[doc.application]?.url}" + doc.url
       callback(null, results)
 
@@ -486,9 +485,7 @@ module.exports = (config) ->
       return callback(err, group) if err? or not group?
       invitation = _.find group.invited_members, (m) ->
         m.user.toString() == session.auth?.user_id
-      if not invitation?
-        return callback(null, null)
-      callback(null, group)
+      callback(null, group, invitation)
 
   www.process_invitation = (session, group, accepted, callback) ->
     invitation = null

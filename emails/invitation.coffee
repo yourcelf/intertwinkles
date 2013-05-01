@@ -8,7 +8,9 @@ subject = _.template("Invitation to <%= group.name %> on InterTwinkles")
 text = _.template("""
 <%= recipient.name %>,
 
-<%= sender ? sender.name + " invited you" : "You've been invited" %> to join "<%= group.name %>" at InterTwinkles!
+<%= sender ? sender.name + " (" + sender.email + ") invited you" : "You've been invited" %> to join "<%= group.name %>" at InterTwinkles!  
+
+You were invited as <b><%- recipient.email %></b>. Sign in using that address to accept or decline this invitation.
 
 You can accept or decline the invitation here:
 <%= url %>
@@ -18,12 +20,19 @@ html = _.template("""
 <p><%- recipient.name %>, </p>
 <p>
   <% if (sender) { %>
-    <%- sender.name %> invited you
+    <%- sender.name %>
+    <% if (sender.email) { %>
+      (<a href='mailto:<%- sender.email %>'><%- sender.email %></a>)
+    <% } %>
+    invited you
   <% } else { %>
     You've been invited
   <% } %>
-  to join <b><%- group.name %></b>
-  at <a href='<%- home_url %>'>InterTwinkles</a></span>!
+  to join <b><%- group.name %></b> at InterTwinkles!
+</p>
+<p>
+  You were invited as <strong><%- recipient.email %></strong>. Sign in using that
+  address to accept or decline this invitation.
 </p>
 <p><a href='<%- url %>'>Accept or Decline the invitation</a></p>
 """.trim())

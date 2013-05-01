@@ -318,9 +318,20 @@ route = (config, app, sockrooms) ->
     unless utils.is_authenticated(req.session)
       req.flash("info", "You must sign in to join a group.")
       return www_methods.redirect_to_login(req, res)
-    www_methods.verify_invitation req.session, req.params.slug, (err, group) ->
+    www_methods.verify_invitation req.session, req.params.slug, (err, group, invitation) ->
       return www_methods.handle_error(req, res, err) if err?
       return www_methods.not_found(req, res) unless group?
+      unless invitation?
+        membership = _.find group.members, (m) ->
+          m.user.toString() == req.session.auth.user_id
+        if membership
+          # They are already a member; just redirect to the group display page.
+          return res.redirect("/groups/show/#{group.slug}/")
+        return res.render 'home/groups/bad_invite', context(req, {
+          title: "Invitation not found"
+          email: req.session.auth.email
+        })
+
       user_ids = []
       for m in group.members
         user_ids.push(m.user)
@@ -334,15 +345,17 @@ route = (config, app, sockrooms) ->
         }, {active_name: "Groups"})
 
   app.post '/groups/join/:slug/', (req, res) ->
-    www_methods.verify_invitation req.session, req.params.slug, (err, group) ->
+    www_methods.verify_invitation req.session, req.params.slug, (err, group, invitation) ->
       return www_methods.handle_error(req, res, err) if err?
-      return www_methods.not_found(req, res) unless group?
+      return www_methods.not_found(req, res) unless invitation?
 
       accepted = !!req.body.accept
 
       www_methods.process_invitation req.session, group, accepted, (err) ->
         return www_methods.handle_error(req, res, err) if err?
         if accepted
+          req.session.groups ?= {}
+          req.session.groups[group.id] = group
           req.flash("success", "Welcome to #{group.name}!")
         else
           req.flash("success", "Invitation successfully declined.")
@@ -416,8 +429,8 @@ route = (config, app, sockrooms) ->
     app.get '/test/notices/invitation/', (req, res) ->
       render_notifications require("../emails/invitation"), {
         group: {name: "The Awesomest Group"}
-        sender: {name: "John Dough"}
-        recipient: {name: "Super Happypants"}
+        sender: {name: "John Dough", email: "johndough@example.com"}
+        recipient: {name: "Super Happypants", email: "superhappypants@example.com"}
         url: config.api_url + "/groups/join/the-awesomest-group"
         application: "www"
       }, (err, rendered) ->
