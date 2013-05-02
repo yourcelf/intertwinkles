@@ -179,17 +179,31 @@ block postapp
         h2 Sticky-note brainstorming
         div(style='text-align: center;')
           iframe(width="350", height="400", src="https://intertwinkles.org/dotstorm/e/8771d8b6-a355-4ffc-90ff-49832b65ebde", style='overflow: hidden;', scrolling="no")
-      div.span5(style='padding-top: 5em;')
+      div.span6(style='padding-top: 5em;')
         p(style='margin-bottom: 2em')
           <a href='#' class='modal-video' data-url='https://www.youtube-nocookie.com/embed/dj_yW2WfsEw' data-width='480' data-height='360'><i class='icon-play'></i> 2 minute video</a> introducing Dotstorm.
         
+        p
+          a.btn.btn-primary.btn-large.softnav.new-dotstorm(href='/dotstorm/new/') New dotstorm
 
-        form#random
-          input.btn.btn-primary.btn-large(type='submit', value='New random dotstorm')
-        form#named
-          p
-            label(for='id_join')
-              | Or choose a name:
-            div.input-append
-              input(type='text', name='room', id='id_join', placeholder='name')
-              input.btn.btn-success(type='submit', value='OK')
+  script#createTemplate(type='text/template')
+    div.span12
+      form.form-horizontal#add
+        h3 Create dotstorm
+        div.control-group
+          label.control-label(for="id_name") Name
+          div.controls
+            input#id_name(type='text', name='name', placeholder='Name')
+        div.control-group
+          label.control-label(for="id_slug") URL name
+          div.controls
+            <input id='id_slug' type='text' name='slug' placeholder='<%- randomSlug %>' />
+            div.dotstorm-url
+              | URL: <%- INTERTWINKLES_APPS.dotstorm.url %>/d/<span class='slug-val'><%- randomSlug %></span>
+        div.control-group
+          label.control-label(for="id_sharing") Sharing
+          div.controls
+            div#sharingControl
+        div.control-group
+          div.controls
+            input.btn.btn-primary.btn-large(type="submit", value="Create dotstorm")

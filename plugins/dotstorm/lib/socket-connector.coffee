@@ -11,8 +11,14 @@ utils         = require '../../../lib/utils'
 attach = (config, sockrooms) ->
   models = require('./schema').load(config)
   events = require('./events')(config)
-  sockrooms.on 'dotstorm/backbone', (socket, session, data) ->
 
+  sockrooms.on "dotstorm/check_slug", (socket, session, data) ->
+    return sockrooms.handleError(socket, "Missing slug") unless data.slug?
+    models.Dotstorm.findOne {slug: data.slug}, '_id', (err, doc) ->
+      return sockrooms.handleError(socket, err) if err?
+      socket.sendJSON(data.callback or "dotstorm:check_slug", {available: not doc?})
+
+  sockrooms.on 'dotstorm/backbone', (socket, session, data) ->
     errorOut = (error, level="error") ->
       logger[level](error)
       sockrooms.socketEmit socket, data.signature.event, {error: error}

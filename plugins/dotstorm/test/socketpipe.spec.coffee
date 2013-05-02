@@ -35,18 +35,22 @@ describe "Dotstorm socket pipeline", ->
   it "visits the front page", (done) ->
     @browser.visit config.apps.dotstorm.url + "/", (blank, browser, status, errors) =>
       await =>
-        if @browser.querySelector("#id_join")?
-          done()
+        if @browser.querySelector(".new-dotstorm")?
+          @browser.clickLink("New dotstorm")
+          await =>
+            if @browser.querySelector("#add")?
+              done()
+              return true
           return true
   
   it "connects to a room", (done) ->
-    @browser.fill("#id_join", "test").pressButton "OK", =>
+    @browser.fill("#id_slug", "test").pressButton "Create dotstorm", =>
       await =>
         if @browser.evaluate("window.location.pathname") == "/dotstorm/d/test/"
           schema.Dotstorm.findOne {slug: "test"}, (err, doc) ->
             expect(err).to.be(null)
             expect(doc).to.not.be(null)
-            expect(doc.name).to.be("test")
+            expect(doc.slug).to.be("test")
             www_schema.Event.find {entity: doc._id}, (err, events) ->
               expect(events.length).to.be(1)
               expect(events[0].type).to.be("create")
@@ -54,7 +58,7 @@ describe "Dotstorm socket pipeline", ->
               expect(terms.length).to.be(1)
               expect(terms[0]).to.eql({
                 entity: "Dotstorm"
-                aspect: "\"test\""
+                aspect: "\"Untitled\""
                 collective: "created dotstorms"
                 verbed: "created"
                 manner: ""
@@ -90,7 +94,7 @@ describe "Dotstorm socket pipeline", ->
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
-              entity: "test"
+              entity: "Untitled"
               aspect: "idea"
               collective: "added ideas"
               verbed: "added"
@@ -123,7 +127,7 @@ describe "Dotstorm socket pipeline", ->
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
-              entity: "test"
+              entity: "Untitled"
               aspect: "idea"
               collective: "edited ideas"
               verbed: "edited"
@@ -157,7 +161,7 @@ describe "Dotstorm socket pipeline", ->
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
-              entity: "test"
+              entity: "Untitled"
               aspect: "idea"
               collective: "edited ideas"
               verbed: "edited"
@@ -191,7 +195,7 @@ describe "Dotstorm socket pipeline", ->
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
-              entity: "test"
+              entity: "Untitled"
               aspect: "idea"
               collective: "edited ideas"
               verbed: "edited"
@@ -366,7 +370,7 @@ describe "Dotstorm socket pipeline", ->
           terms = api_methods.get_event_grammar(events[0])
           expect(terms.length).to.be(1)
           expect(terms[0]).to.eql({
-            entity: "test"
+            entity: "Untitled"
             aspect: "dotstorm"
             collective: "visited dotstorms"
             verbed: "visited"
@@ -416,7 +420,7 @@ describe "Dotstorm socket pipeline", ->
               aspect: "name"
               collective: "changed dotstorms"
               verbed: "changed"
-              manner: 'from "test" to "new name"'
+              manner: 'from "" to "new name"'
             })
             # Clear events for de-comlecting of tests
             async.map(events, ((e, done) -> e.remove(done)), done)

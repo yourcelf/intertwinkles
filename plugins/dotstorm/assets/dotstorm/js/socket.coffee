@@ -1,5 +1,5 @@
 # 
-# Socket data!!!!!!!!!!!!!!
+# Socket data
 #
 intertwinkles.connect_socket (socket) ->
   intertwinkles.build_toolbar($("header"), {applabel: "dotstorm"})
@@ -24,7 +24,7 @@ intertwinkles.connect_socket (socket) ->
       if ds.room_view?
         ds.room_view.connect()
 
-  ds.app = new ds.Router
+  ds.app = intertwinkles.app = new ds.Router
   Backbone.history.start pushState: true, hashChange: false
 
   intertwinkles.twunklify("#app")

@@ -40,6 +40,12 @@ start = (config, app, sockrooms) ->
       title: "DotStorm", slug: ""
     })
 
+  utils.append_slash(app, "/dotstorm/new")
+  app.get '/dotstorm/new/', (req, res) ->
+    res.render 'dotstorm/dotstorm', context(req, {
+      title: "New DotStorm", slug: ""
+    })
+
   # /d/:slug/:action (action optional)
   utils.append_slash(app, "/dotstorm/d/([^/]+)(/[^/]+)?")
   app.get "/dotstorm/d/:slug/:action?/:id?/", (req, res) ->
