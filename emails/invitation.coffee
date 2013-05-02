@@ -6,9 +6,10 @@ sms = _.template("InterTwinkles! Invitation to join <%= group.name %>: <%= short
 subject = _.template("Invitation to <%= group.name %> on InterTwinkles")
 
 text = _.template("""
+<% if (recipient.name) { %>
 <%= recipient.name %>,
 
-<%= sender ? sender.name + " (" + sender.email + ") invited you" : "You've been invited" %> to join "<%= group.name %>" at InterTwinkles!  
+<% } %><%= sender ? sender.name + " (" + sender.email + ") invited you" : "You've been invited" %> to join "<%= group.name %>" at InterTwinkles!  
 
 You were invited as <b><%- recipient.email %></b>. Sign in using that address to accept or decline this invitation.
 
@@ -17,7 +18,9 @@ You can accept or decline the invitation here:
 """.trim())
 
 html = _.template("""
+<% if (recipient.name) { %>
 <p><%- recipient.name %>, </p>
+<% } %>
 <p>
   <% if (sender) { %>
     <%- sender.name %>
