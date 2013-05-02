@@ -427,10 +427,13 @@ route = (config, app, sockrooms) ->
     app.get '/403/', (req, res) -> www_methods.permission_denied(req, res)
 
     app.get '/test/notices/invitation/', (req, res) ->
+      recipient = {email: "superhappypants@example.com"}
+      if req.query.named
+        recipient.name = "Super Happypants"
       render_notifications require("../emails/invitation"), {
         group: {name: "The Awesomest Group"}
         sender: {name: "John Dough", email: "johndough@example.com"}
-        recipient: {name: "Super Happypants", email: "superhappypants@example.com"}
+        recipient: recipient
         url: config.api_url + "/groups/join/the-awesomest-group"
         application: "www"
       }, (err, rendered) ->

@@ -11,7 +11,7 @@ text = _.template("""
 
 <% } %><%= sender ? sender.name + " (" + sender.email + ") invited you" : "You've been invited" %> to join "<%= group.name %>" at InterTwinkles!  
 
-You were invited as <b><%- recipient.email %></b>. Sign in using that address to accept or decline this invitation.
+You were invited as <%- recipient.email %>. Sign in using that address to accept or decline this invitation.
 
 You can accept or decline the invitation here:
 <%= url %>
