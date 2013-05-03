@@ -11,7 +11,7 @@ log4js         = require 'log4js'
 
 utils          = require './utils'
 RoomManager    = require("./socket_server").RoomManager
-socket_routes  = require './socket_routes'
+socket_routes  = require './www_socket_routes'
 www_routes     = require "./www_routes"
 api_routes     = require "./api_routes"
 yaac           = require "yaac"

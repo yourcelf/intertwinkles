@@ -8,7 +8,7 @@ block body
       InterTwinkles.
     tr
       th Online now
-      td= online_now
+      td.online-now= online_now
     tr
       th Total users
       td= total_users
@@ -19,3 +19,15 @@ block body
       th Total documents
       td= total_documents
 
+block append postscripts
+  :coffeescript
+    intertwinkles.connect_socket ->
+      intertwinkles.build_toolbar($("header"), {
+        applabel: "www",
+        active_name: INITIAL_DATA.active_name
+      })
+      intertwinkles.build_footer($("footer"))
+      intertwinkles.socket.on "stats", (data) ->
+        $(".online-now").html(data.count)
+      setInterval (-> intertwinkles.socket.send("stats", {})), 1000
+    

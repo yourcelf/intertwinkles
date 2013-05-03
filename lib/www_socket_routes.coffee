@@ -120,6 +120,11 @@ route = (config, sockrooms) ->
         long_url: short_doc.absolute_long_url
       }
 
+  sockrooms.on "stats", (socket, session, data) ->
+    return socket.sendJSON "stats", {
+      count: _.size(sockrooms.sessionIdToSockets)
+    }
+
   sockrooms.on "join", (data) ->
     {socket, session, room, first} = data
     build_room_users_list_for_user sockrooms, session, room, (err, users) ->
