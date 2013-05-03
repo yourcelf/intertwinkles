@@ -348,7 +348,10 @@ class intertwinkles.Footer extends Backbone.View
 
 
 intertwinkles.build_footer = (destination, options) ->
-  $(destination).html(new intertwinkles.Footer(options).render().el)
+  footer = new intertwinkles.Footer(options)
+  footer.render()
+  $(destination).html(footer.el)
+  return footer
 
 #
 # User choice widget

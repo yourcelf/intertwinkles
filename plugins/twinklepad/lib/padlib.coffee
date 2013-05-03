@@ -19,7 +19,7 @@ module.exports = (config) ->
 
   pl.post_twinklepad_event = (session, pad, type, data, timeout, callback) ->
     data ?= {}
-    data.entity_name = pad.pad_name
+    data.entity_name = pad.title
     api_methods.post_event {
       application: "twinklepad"
       type: type
@@ -68,13 +68,14 @@ module.exports = (config) ->
         entity: doc._id
         type: "etherpad"
         url: "/p/#{encodeURIComponent(doc.pad_name)}"
-        title: "#{doc.pad_name}"
+        title: "#{doc.title}"
         summary: summary
         text: text
         sharing: doc.sharing
       }, timeout, callback
 
   pl.create_pad = (session, data, callback) ->
+    console.log data.twinklepad
     pad = new schema.TwinklePad(data.twinklepad)
     unless utils.can_change_sharing(session, pad)
       return callback("Permission denied")
@@ -99,8 +100,8 @@ module.exports = (config) ->
       return callback("Twinklepad not found for #{data.twinklepad._id}") unless doc?
       delete data.twinklepad.sharing unless utils.can_change_sharing(session, doc)
 
-      if data.twinklepad.pad_name
-        doc.pad_name = data.twinklepad.pad_name
+      if data.twinklepad.name
+        doc.name = data.twinklepad.name
 
       if data.twinklepad.sharing
         utils.update_sharing(doc, data.twinklepad.sharing)

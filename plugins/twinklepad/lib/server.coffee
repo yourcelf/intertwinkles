@@ -90,7 +90,7 @@ start = (config, app, sockrooms) ->
   index_res = (req, res, extraContext={}, initialData={}) ->
     # include extraContext as both 
     res.render 'twinklepad/index', context(req, _.extend({
-      title: "#{config.apps.twinklepad.pad_name}"
+      title: "#{config.apps.twinklepad.name}"
     }, extraContext), initialData)
 
   utils.append_slash(app, '/twinklepad')
@@ -118,7 +118,7 @@ start = (config, app, sockrooms) ->
       return www_methods.handle_error(req, res, err) if err?
       return www_methods.not_found(req, res) unless doc?
 
-      extraContext = {title: "#{doc.pad_name}"}
+      extraContext = {title: "#{doc.title}"}
       initialData = {twinklepad: _.extend(doc.toJSON(), extras)}
       initialData.twinklepad.sharing = utils.clean_sharing(req.session, doc)
       return index_res(req, res, extraContext, initialData)

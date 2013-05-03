@@ -22,6 +22,8 @@ class TwinklePad extends Backbone.Model
     else
       console.error "No pad name"
 
+  isNew: => return !@id
+
 class TwinklePadIndexView extends intertwinkles.BaseView
   template: _.template $("#twinklePadIndexViewTemplate").html()
   events:
@@ -35,7 +37,8 @@ class EditTwinklePadView extends intertwinkles.BaseView
   events:
     'submit form': 'save'
     'click .softnav': 'softNav'
-    'keyup input[name=name]': 'checkName'
+    'keyup input[name=pad_name]':   'changePadName'
+    'keyup input[name=name]':     'populatePadName'
 
   initialize: (options={}) ->
     super()
@@ -48,39 +51,60 @@ class EditTwinklePadView extends intertwinkles.BaseView
     @$el.html(@template({
       randomName: @randomName
       model: @model.toJSON()
+      isNew: @model.isNew()
     }))
     @sharingControl = new intertwinkles.SharingFormControl({
       sharing: @model.get("sharing")
     })
     @addView("#sharing", @sharingControl)
+    @checkPadName()
 
   save: (event) =>
     event.preventDefault()
     return if @$(".error").length > 0
     @model.set {
-      pad_name: @$("[name=name]").val() or @randomName
+      name: @$("[name=name]").val()
       sharing: @sharingControl.sharing
     }
+    # Can only set pad name if we are a new entity.
+    if @model.isNew()
+      @model.set({pad_name: @$("[name=pad_name]").val() or @randomName})
     @model.save =>
       url = "/twinklepad#{@model.get("url")}"
       intertwinkles.app.navigate url, {trigger: true}
 
-  checkName: (event) =>
-    val = @$("#id_name").val()
-    parent = @$("#id_name").closest(".control-group")
+  populatePadName: (event) =>
+    if (not @_customPadName) and @model.isNew()
+      val = intertwinkles.slugify(@$("#id_name").val())
+      @$("#id_pad_name").val(val)
+      @checkPadName(val)
+
+  changePadName: (event) =>
+    return unless @model.isNew()
+    val = @$("#id_pad_name").val()
+    @_customPadName = val != ""
+    @checkPadName(val)
+
+  checkPadName: (val) =>
+    @$(".twinklepad-url").html(
+      "#{INTERTWINKLES_APPS.twinklepad.url}/p/#{encodeURIComponent(val or @randomName)}"
+    )
     if val and val != @model.get("pad_name")
+      parent = @$("#id_pad_name").closest(".control-group")
       intertwinkles.socket.send "twinklepad/check_name", {pad_name: val}
       intertwinkles.socket.once "twinklepad:check_name", (data) =>
         parent.find(".error-msg").remove()
         if data.available
           parent.removeClass("error")
           @$("input[type=submit]").attr("disabled", false)
+          @$(".twinklepad-url").show()
         else
           @$("input[type=submit]").attr("disabled", true)
           parent.addClass("error")
-          @$("#id_name").after(
+          @$("#id_pad_name").after(
             "<span class='help-inline error-msg'>Name not available</span>"
           )
+          @$(".twinklepad-url").hide()
 
 
 class TwinklePadView extends intertwinkles.BaseView
@@ -98,7 +122,7 @@ class TwinklePadView extends intertwinkles.BaseView
     # Listeners
     @listenTo intertwinkles.socket, "twinklepad", (data) =>
       @model.set(data.twinklepad)
-    @listenTo @model, "change:pad_name", @renderName
+    @listenTo @model, "change:name", @renderName
     @listenTo @model, "change:sharing",  @renderPad
     @listenTo @model, "change:session_cookie", @setCookie
     @listenTo intertwinkles.user, "logout login", @renderPad
@@ -143,10 +167,7 @@ class TwinklePadView extends intertwinkles.BaseView
     @resize()
 
   renderName: =>
-    @$(".name, title").html(_.escape(@model.get("pad_name")))
-    intertwinkles.app.navigate("/twinklepad#{@model.get("url")}", {
-      replace: true, trigger: false
-    })
+    @$(".name, title").html(_.escape(@model.get("title")))
 
   resize: =>
     window_height = $(window).height() - $("footer").height()

@@ -65,6 +65,13 @@ route = (config, app, sockrooms) ->
         groups_docs: groups_docs
       })
 
+  utils.append_slash(app, '/dashboard')
+  app.get '/dashboard/', (req, res) ->
+    if utils.is_authenticated(req.session)
+      return res.redirect("/")
+    else
+      return res.redirect("/profiles/login?next=%2f")
+
   utils.append_slash(app, "/feedback")
   app.get '/feedback/', (req, res) ->
     res.render 'home/feedback', context(req, {

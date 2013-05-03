@@ -116,24 +116,12 @@ describe "padlib", ->
         expect(si.title).to.be("tptest_1")
         done()
 
-  it "creates a pad via url", (done) ->
+  it "cannot create a pad via url", (done) ->
     return done() if skip_tests
     browser = common.fetchBrowser()
     url = "#{config.apps.twinklepad.url}/p/tptest_2"
     browser.visit url, (e, browser, status) =>
-      expect(status).to.be(200)
       tp_schema.TwinklePad.findOne {pad_name: "tptest_2"}, (err, doc) ->
         expect(err).to.be(null)
-        expect(doc).to.not.be(null)
-        www_schema.Event.findOne {entity: doc._id}, (err, event) ->
-          expect(err).to.be(null)
-          expect(event).to.not.be(null)
-          expect(event.type).to.be("create")
-          terms = api_methods.get_event_grammar(event)
-          expect(terms.length).to.be(1)
-          expect(terms[0].entity).to.be("Pad")
-          expect(terms[0].aspect).to.be("\"tptest_2\"")
-          expect(terms[0].collective).to.be("new pads")
-          expect(terms[0].verbed).to.be("created")
-          expect(terms[0].manner).to.be("")
-          done()
+        expect(doc).to.be(null)
+        done()

@@ -14,6 +14,9 @@ load = (config) ->
   })
 
   TwinklePadSchema = new Schema
+    # Non-unique human-readable name
+    name: {type: String}
+    # Slug, and unique etherpad name.
     pad_name: {type: String, required: true, unique: true}
     pad_id: {type: String}
     read_only_pad_id: {type: String}
@@ -75,6 +78,7 @@ load = (config) ->
     "#{config.apps.twinklepad.etherpad.url}/p/#{@pad_id}"
   TwinklePadSchema.virtual('read_only_url').get ->
     "#{config.apps.twinklepad.etherpad.url}/p/#{@read_only_pad_id}"
+  TwinklePadSchema.virtual('title').get -> return @name or @pad_name
   TwinklePadSchema.set('toObject', {virtuals: true})
   TwinklePadSchema.set('toJSON', {virtuals: true})
 

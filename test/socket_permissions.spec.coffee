@@ -175,7 +175,7 @@ describe "Socket permissions", ->
       [@authenty, "success"], [@authory, "success"]
     ]
     rooms = [ "dotstorm/#{@ds_public.id}", "firestarter/#{@fs_public.slug}",
-              "resolve/#{@rs_public.id}",  "twinklepad/#{@tp_public.pad_id}"]
+              "resolve/#{@rs_public.id}",  "twinklepad/#{@tp_public._id}"]
     async.mapSeries(public_join_responses, check_all_rooms(rooms), done)
 
   it "Authorizes properly for private rooms", (done) ->
@@ -184,5 +184,5 @@ describe "Socket permissions", ->
       [@authenty, "permission"], [@authory, "success"]
     ]
     rooms = [ "dotstorm/#{@ds_private.id}", "firestarter/#{@fs_private.slug}",
-              "resolve/#{@rs_private.id}",  "twinklepad/#{@tp_private.pad_id}"]
+              "resolve/#{@rs_private.id}",  "twinklepad/#{@tp_private._id}"]
     async.mapSeries(private_join_responses, check_all_rooms(rooms), done)
