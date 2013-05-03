@@ -1,70 +1,60 @@
-extends base
+extends ../../../../views/layout
 
 block body
-  div(style='text-align: center;')
+  script#twinklePadIndexViewTemplate(type='text/template')
+    h1 TwinklePad
     div.row-fluid
-      div.span4.offset4
-        h1 TwinklePad  
-        p(style='text-align: left;').
-          Public or private collaborative document editing powered by
-          <a href='http://etherpad.org'>etherpad</a>,
-          for your groups.
-        form#createPad
-          label(for='name')
-            | Pad name:&nbsp;
-            input#name(type='text', name='padname')
-          button.btn.btn-primary.btn-large(type='submit') Create Pad
+      div.span6.offset3
+        p.
+          Public or private collaborative document editing, powered by
+          <a href='http://etherpad.org'>etherpad</a>, for your groups.
+        p(style='text-align: center;')
+          a.btn.btn-primary.btn-large.softnav(href='/twinklepad/new/') New Pad
+
+  script#editTwinklePadViewTemplate(type='text/template')
+    h3 <%- model.id ? "Edit Pad" : "New Pad" %>
+    form.form-horizontal
+      div.control-group
+        label.control-label(for='id_name') Name
+        div.controls.
+          <% console.log(model); %>
+          <input id='id_name' type='text' name='name'
+                 placeholder='<%- randomName %>' value='<%- model.pad_name || "" %>' />
+
+      div.control-group
+        label.control-label(for='id_sharing') Sharing
+        div.controls
+          div#sharing
+
+      div.control-group
+        div.controls.
+          <input class='btn btn-primary btn-large' type='submit'
+                 value='<%- model.id ? 'Save changes' : 'Create Pad' %>' />
     
-    div.row-fluid
-      div.span6.public
-        h3 Public pads
-        ul
-          if listed_pads.public.length == 0
-            div.no-result Nothing here yet
-          else
-            each doc in listed_pads.public
-              div.search-result
-                a(href='#{doc.absolute_url}')= doc.title
-                &nbsp;
-                span.group-name.label(data-group-id=doc.sharing_group_id)
-                div.summary= doc.summary
+  script#twinklePadViewTemplate(type='text/template')
+    div.pull-right(style='position: absolute; right: 2em; top: 0.5em')
+      ul.sharing-online-group
+        li(style='width: 4em;')
+        li.sharing
+    div(style='height: 3em;')
+      h3(style='display: inline-block; vertical-align: middle; padding-right: 1em;')
+        <%- model.pad_name %>
+      <% if (editable) { %>
+      | <a href='/twinklepad<%- model.url %>edit/' class='softnav edit'>
+      |  change
+      | </a>
+      <% } %>
+    div.
+      <% if (editable) { %>
+        <iframe src='<%- embed_url %>'
+                style='border: none;' height="100%" width="100%"></iframe>
+      <% } else { %>
+        <div id='text'><%= model.text %></div>
+      <% } %>
 
-      div.span6.groups
-        h3 From your groups
-        ul
-          if (listed_pads.group.length == 0)
-            if (is_authenticated)
-              div.no-result Nothing here yet.
-            else
-              div.no-result Sign in &#8599; to see your group's documents.
 
-          else
-            each doc in listed_pads.group
-              div.search-result
-                a(href='#{doc.absolute_url}')= doc.title
-                &ensp;
-                span.group-name.label(data-group-id=doc.sharing_group_id)
-                &ensp;
-                div.summary= doc.summary
+block poststyles
+  link(rel="stylesheet", type="text/css", href=asset("twinklepad/css/style.styl"))
 
-block append postscripts
-  :coffeescript
-    chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-    randomName = (chars.charAt(parseInt(Math.random() * chars.length)) for i in [0...12]).join("")
-    $("#name").attr("placeholder", randomName)
-    $("#createPad").on "submit", ->
-      name = encodeURIComponent($("[name=padname]").val() or randomName)
-      window.location.href = "/twinklepad/p/#{name}"
-      return false
-
-    if intertwinkles.is_authenticated()
-      $("[data-group-id]").each ->
-        group = intertwinkles.groups[$(this).attr("data-group-id")]
-        if group?
-          $(this).html group.name
-
-    $(".search-result").on "click", ->
-      window.location.href = $(this).find("a").attr("href")
-
-    intertwinkles.user.on "change", ->
-      window.location.href = window.location.href
+block postscripts
+  script(type="text/javascript", src=asset("twinklepad/js/frontend.coffee"))

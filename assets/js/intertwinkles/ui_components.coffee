@@ -337,11 +337,13 @@ class intertwinkles.Footer extends Backbone.View
   collapse: (event) =>
     event.preventDefault()
     $("footer, #push, #page").addClass("footer-collapsed")
+    $(window).resize()
 
   expand: (event) =>
     event.preventDefault()
     $("footer, #push, #page").removeClass("footer-collapsed")
     @el.scrollIntoView()
+    $(window).resize()
 
 
 

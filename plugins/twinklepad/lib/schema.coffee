@@ -68,6 +68,10 @@ load = (config) ->
         @read_only_pad_id = data.readOnlyID
         next()
   TwinklePadSchema.virtual('url').get ->
+    "/p/#{encodeURIComponent(@pad_name)}/"
+  TwinklePadSchema.virtual('absolute_url').get ->
+    config.apps.twinklepad.url + @url
+  TwinklePadSchema.virtual('pad_url').get ->
     "#{config.apps.twinklepad.etherpad.url}/p/#{@pad_id}"
   TwinklePadSchema.virtual('read_only_url').get ->
     "#{config.apps.twinklepad.etherpad.url}/p/#{@read_only_pad_id}"

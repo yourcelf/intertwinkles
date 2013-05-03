@@ -31,20 +31,20 @@ module.exports = (config) ->
       data: data
     }, timeout, callback
 
-  pl.leave_pad = (socket, session, pad_id, callback=(->)) ->
+  pl.leave_pad = (socket, session, _id, callback=(->)) ->
     # Update the search index.
     async.parallel [
       (done) ->
-        schema.TwinklePad.findOne {pad_id: pad_id}, (err, doc) ->
+        schema.TwinklePad.findOne {_id: _id}, (err, doc) ->
           return done(err) if err?
           pl.post_search_index(doc, done)
 
       (done) ->
         # Remove the session's etherpad_session_id.
         return done() unless session.etherpad_session_id?
-        pl.etherpad.deleteSession {
-          sessionID: session.etherpad_session_id
-        }, done
+        #pl.etherpad.deleteSession {
+        #  sessionID: session.etherpad_session_id
+        #}, done
 
     ], callback
 
@@ -74,27 +74,47 @@ module.exports = (config) ->
         sharing: doc.sharing
       }, timeout, callback
 
+  pl.create_pad = (session, data, callback) ->
+    pad = new schema.TwinklePad(data.twinklepad)
+    unless utils.can_change_sharing(session, pad)
+      return callback("Permission denied")
+    pad.save (err, doc) ->
+      return callback(err) if err?
+      async.parallel [
+        (done) ->
+          pl.post_twinklepad_event(session, doc, "create", {}, 0, done)
+        (done) ->
+          pl.create_pad_session_cookie(session, doc, done)
+      ], (err, results) ->
+        return callback(err) if err?
+        [event, cookie] = results
+        callback(err, doc, {session_cookie: cookie}, event)
+
   pl.save_pad = (session, data, callback) ->
-    unless data.twinklepad?._id? and data.twinklepad?.sharing?
+    unless data.twinklepad?._id?
       return callback("Missing twinklepad params")
 
     schema.TwinklePad.findOne {_id: data.twinklepad._id}, (err, doc) ->
       return callback(err) if err?
-      return callback("Twinklepad not found for #{data.twinklepad.pad_id}") unless doc?
-      return callback("Permission denied") unless utils.can_change_sharing(
-        session, doc
-      )
-      utils.update_sharing(doc, data.twinklepad.sharing)
-      # Make sure they can still change sharing.
-      unless utils.can_change_sharing(session, doc)
-        return callback("Permission denied")
+      return callback("Twinklepad not found for #{data.twinklepad._id}") unless doc?
+      delete data.twinklepad.sharing unless utils.can_change_sharing(session, doc)
+
+      if data.twinklepad.pad_name
+        doc.pad_name = data.twinklepad.pad_name
+
+      if data.twinklepad.sharing
+        utils.update_sharing(doc, data.twinklepad.sharing)
+        # Make sure they can still change sharing.
+        unless utils.can_change_sharing(session, doc)
+          return callback("Permission denied")
+
       async.parallel [
-        (done) ->
-          doc.save(done)
-        (done) ->
-          pl.post_search_index(doc, 0, done)
-      ], (err) ->
-        callback(err, doc)
+        (done) -> doc.save (err, doc) -> done(err, doc)
+        (done) -> pl.post_search_index(doc, 0, done)
+      ], (err, results) ->
+        return callback(err) if err?
+        [doc, si] = results
+        callback(null, doc, si)
 
   pl.get_read_only_html = (doc, callback) ->
     pl.etherpad.getHTML {padID: doc.pad_id}, (err, data) ->
@@ -106,7 +126,7 @@ module.exports = (config) ->
       authorMapper: session.auth?.user_id or session.anon_id
       name: session.users?[session.auth.user_id]?.name
     }, (err, data) ->
-      return done(err) if err?
+      return callback(err) if err?
       author_id = data.authorID
 
       # Set an arbitrary session length of 1 day; though that only matters if
@@ -123,5 +143,45 @@ module.exports = (config) ->
       }, (err, data) ->
         return callback(err) if err?
         return callback(null, data.sessionID)
+
+  pl.create_pad_session_cookie = (session, doc, callback) ->
+    maxAge = 24 * 60 * 60 * 1000
+    pl.create_pad_session session, doc, maxAge, (err, pad_session_id) ->
+      return callback(err) if err?
+      session.etherpad_session_id = pad_session_id
+      cookie = {
+        value: pad_session_id
+        params: {
+          path: "/",
+          expires: 1,
+          domain: config.apps.twinklepad.etherpad.cookie_domain
+        }
+      }
+      return callback(null, cookie)
+
+  pl.fetch_pad = (session, params, callback) ->
+    schema.TwinklePad.findOne {pad_name: params.pad_name}, (err, doc) ->
+      return callback(err) if err?
+      return callback(err, null) unless doc?
+      return callback("Permission denied") unless utils.can_view(session, doc)
+
+      respond = (doc, extras) ->
+        pl.post_twinklepad_event session, doc, "visit", {}, 1000 * 60 * 5, (err, event) ->
+          callback(err, doc, extras, event)
+
+      # Get pad session, or read only html.
+      extras = {}
+      if utils.can_edit(session, doc)
+        # Establish an etherpad auth session. Get the author mapper / author name
+        pl.create_pad_session_cookie session, doc, (err, cookie) ->
+          return callback(err) if err?
+          extras.session_cookie = cookie
+          return respond(doc, extras)
+      else
+        # Display read only.
+        pl.get_read_only_html doc, (err, html)->
+          return callback(err) if err?
+          extras.text = html
+          return respond(doc, extras)
 
   return pl
