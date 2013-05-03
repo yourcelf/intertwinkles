@@ -1,0 +1,21 @@
+extends ../www_base
+
+block body
+  h1 Stats
+  table.table.table-bordered(style='width: 15em; margin-left: auto; margin-right: auto;')
+    caption.
+      A very simple, rudimentary start of some basic stats for all of
+      InterTwinkles.
+    tr
+      th Online now
+      td= online_now
+    tr
+      th Total users
+      td= total_users
+    tr
+      th Total groups
+      td= total_groups
+    tr
+      th Total documents
+      td= total_documents
+

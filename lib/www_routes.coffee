@@ -127,6 +127,22 @@ route = (config, app, sockrooms) ->
       title: "Change log"
     }, {active_name: "Changes"})
 
+  utils.append_slash(app, "/about/stats")
+  app.get '/about/stats/', (req, res) ->
+    if not utils.is_authenticated(req.session)
+      return www_methods.redirect_to_login(req, res)
+    async.parallel [
+      (done) -> schema.User.count (err, len) -> done(err, len)
+      (done) -> schema.Group.count (err, len) -> done(err, len)
+      (done) -> schema.SearchIndex.count (err, len) -> done(err, len)
+    ], (err, results) ->
+      return www_methods.handle_error(req, res, err) if err?
+      [total_users, total_groups, total_documents] = results
+      online_now = _.size(sockrooms.sessionIdToSockets)
+      title = "Stats"
+      res.render 'home/about/stats', context(req, {
+        title, total_users, total_groups, total_documents, online_now
+      }, {active_name: "Stats"})
 
   #
   # Search
