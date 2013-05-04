@@ -28,6 +28,7 @@ block append postscripts
       })
       intertwinkles.build_footer($("footer"))
       intertwinkles.socket.on "stats", (data) ->
+        $("title").html("(#{data.count}) Stats")
         $(".online-now").html(data.count)
       setInterval (-> intertwinkles.socket.send("stats", {})), 1000
     
