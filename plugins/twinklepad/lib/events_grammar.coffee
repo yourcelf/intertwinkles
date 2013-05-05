@@ -23,7 +23,7 @@ module.exports = {
       when "visit"
         return [{
           entity: event.data.entity_name
-          aspect: "pad"
+          aspect: ""
           collective: "visits"
           verbed: "visited"
           manner: ""

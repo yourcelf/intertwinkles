@@ -73,7 +73,7 @@ module.exports = {
       when "visit"
         return [{
           entity: data.entity_name
-          aspect: "the firestarter"
+          aspect: ""
           collective: "visits"
           verbed: "visited"
           manner: ""
