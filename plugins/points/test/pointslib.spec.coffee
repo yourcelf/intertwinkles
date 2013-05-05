@@ -346,7 +346,7 @@ describe "pointslib", ->
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
         entity: "Your Ten Point"
-        aspect: "point set"
+        aspect: ""
         collective: "visits"
         verbed: "visited"
         manner: ""
