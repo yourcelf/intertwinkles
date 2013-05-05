@@ -67,7 +67,7 @@ module.exports = {
       when "join"
         return [{
           entity: event.data.entity_name
-          aspect: "invitation for #{event.data.user}"
+          aspect: "invitation to join"
           collective: "changed groups"
           verbed: "accepted"
           manner: ""
@@ -75,7 +75,7 @@ module.exports = {
       when "decline"
         return [{
           entity: event.data.entity_name
-          aspect: "invitation for #{event.data.user}"
+          aspect: "invitation to join"
           collective: "changed groups"
           verbed: "declined"
           manner: ""

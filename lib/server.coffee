@@ -101,6 +101,8 @@ start = (config) ->
     searchPath: asset_folders
     dest: __dirname + "/../builtAssets"
   }).asset
+  app.locals.absolutize_url = (given_url) ->
+    utils.absolutize_url(config.apps.www.url, given_url)
 
 
   ###

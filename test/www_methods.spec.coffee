@@ -69,7 +69,7 @@ describe "www methods", ->
       email: "new_one@mockmyid.com"
       icon: 42
       color: "ff0088"
-      mobile_number: "1234567890"
+      mobile_number: "123.456.7890"
       mobile_carrier: "T-Mobile"
       notifications_invitation_email: true
       notifications_group_members_changed_sms: true
@@ -95,12 +95,13 @@ describe "www methods", ->
         email: @user.email
         icon: @user.icon.pk
         color: @user.icon.color
-        mobile_number: @user.mobile.number
+        mobile_number: "123-456-7890"
         mobile_carrier: @user.mobile.carrier
       }, (err, user) =>
         expect(err).to.be(null)
         expect(user.email).to.be(@user.email)
         expect(user.email_change_request).to.be(null)
+        expect(user.mobile.number).to.be("1234567890")
         done()
 
   it "Validates profile edit with blank mobile # and carrier", (done) ->

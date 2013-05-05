@@ -50,10 +50,14 @@ describe "Dotstorm socket pipeline", ->
           schema.Dotstorm.findOne {slug: "test"}, (err, doc) ->
             expect(err).to.be(null)
             expect(doc).to.not.be(null)
+            expect(doc.url).to.be("/d/test/")
+            expect(doc.absolute_url).to.be(config.apps.dotstorm.url + "/d/test/")
             expect(doc.slug).to.be("test")
             www_schema.Event.find {entity: doc._id}, (err, events) ->
               expect(events.length).to.be(1)
               expect(events[0].type).to.be("create")
+              expect(events[0].url).to.be(doc.url)
+              expect(events[0].absolute_url).to.be(doc.absolute_url)
               terms = api_methods.get_event_grammar(events[0])
               expect(terms.length).to.be(1)
               expect(terms[0]).to.eql({
@@ -91,12 +95,13 @@ describe "Dotstorm socket pipeline", ->
           www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
             expect(events.length).to.be(1)
             expect(events[0].type).to.be("append")
+            expect(events[0].url).to.be("/d/test/")
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
               entity: "Untitled"
-              aspect: "idea"
-              collective: "added ideas"
+              aspect: "a note"
+              collective: "added notes"
               verbed: "added"
               manner: "first run"
               image: doc.drawingURLs.small
@@ -124,12 +129,13 @@ describe "Dotstorm socket pipeline", ->
           www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
             expect(events.length).to.be(1)
             expect(events[0].type).to.be("append")
+            expect(events[0].url).to.be("/d/test/")
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
               entity: "Untitled"
-              aspect: "idea"
-              collective: "edited ideas"
+              aspect: "a note"
+              collective: "edited notes"
               verbed: "edited"
               manner: ""
               image: doc.drawingURLs.small
@@ -158,12 +164,13 @@ describe "Dotstorm socket pipeline", ->
           www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
             expect(events.length).to.be(1)
             expect(events[0].type).to.be("append")
+            expect(events[0].url).to.be("/d/test/")
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
               entity: "Untitled"
-              aspect: "idea"
-              collective: "edited ideas"
+              aspect: "a note"
+              collective: "edited notes"
               verbed: "edited"
               manner: ""
               image: doc.drawingURLs.small
@@ -192,12 +199,13 @@ describe "Dotstorm socket pipeline", ->
           www_schema.Event.find {entity: doc.dotstorm_id}, (err, events) ->
             expect(events.length).to.be(1)
             expect(events[0].type).to.be("append")
+            expect(events[0].url).to.be("/d/test/")
             terms = api_methods.get_event_grammar(events[0])
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
               entity: "Untitled"
-              aspect: "idea"
-              collective: "edited ideas"
+              aspect: "a note"
+              collective: "edited notes"
               verbed: "edited"
               manner: ""
               image: doc.drawingURLs.small
@@ -371,8 +379,8 @@ describe "Dotstorm socket pipeline", ->
           expect(terms.length).to.be(1)
           expect(terms[0]).to.eql({
             entity: "Untitled"
-            aspect: "dotstorm"
-            collective: "visited dotstorms"
+            aspect: ""
+            collective: "visits"
             verbed: "visited"
             manner: ''
           })

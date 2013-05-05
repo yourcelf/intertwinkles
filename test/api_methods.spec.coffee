@@ -156,7 +156,6 @@ describe "api", ->
             expect(doc.data).to.eql({yup: "fun"})
             expect(doc.anon_id).to.be("someanonid")
             done()
-          
 
   it "Events: create with timeout", (done) ->
     _post_event = (data, callback) ->
@@ -217,5 +216,4 @@ describe "api", ->
         "http://localhost:#{config.port}/groups/join/this-one"
       )
       done()
-
 

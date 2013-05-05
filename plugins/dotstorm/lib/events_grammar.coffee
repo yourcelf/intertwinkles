@@ -15,8 +15,8 @@ module.exports = {
       when "visit"
         return [{
           entity: event.data.entity_name
-          aspect: "dotstorm"
-          collective: "visited dotstorms"
+          aspect: ""
+          collective: "visits"
           verbed: "visited"
           manner: ""
         }]
@@ -42,7 +42,7 @@ module.exports = {
         if event.data.rearranged?
           attributes.push({
             entity: event.data.entity_name
-            aspect: "ideas"
+            aspect: "notes"
             collective: "changed dotstorms"
             verbed: "rearranged"
             manner: ""
@@ -52,8 +52,8 @@ module.exports = {
         if event.data.is_new
           return [{
             entity: event.data.entity_name
-            aspect: "idea"
-            collective: "added ideas"
+            aspect: "a note"
+            collective: "added notes"
             verbed: "added"
             manner: event.data.description
             image: event.data.image
@@ -61,8 +61,8 @@ module.exports = {
         else
           return [{
             entity: event.data.entity_name
-            aspect: "idea"
-            collective: "edited ideas"
+            aspect: "a note"
+            collective: "edited notes"
             verbed: "edited"
             manner: ""
             image: event.data.image

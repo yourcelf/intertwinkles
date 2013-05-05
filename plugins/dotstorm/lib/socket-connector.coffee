@@ -43,7 +43,7 @@ attach = (config, sockrooms) ->
           idea[key] = data.model[key]
       if not data.model.tags? and data.model.taglist?
         idea.taglist = data.model.taglist
-      models.Dotstorm.findOne {_id: idea.dotstorm_id}, 'name sharing', (err, dotstorm) ->
+      models.Dotstorm.findOne {_id: idea.dotstorm_id}, (err, dotstorm) ->
         return errorOut(err) if err?
         return errorOut("Unknown dotstorm", "warn") unless dotstorm?
         return errorOut("Permission denied", "warn") unless utils.can_edit(session, dotstorm)
@@ -69,8 +69,6 @@ attach = (config, sockrooms) ->
         if data.model[key]? and data.model[key] != doc[key]
           event_data["old_" + key] = doc[key]
           event_data[key] = data.model[key]
-      if data.model.groups? and not _.isEqual(data.model.groups, doc.groups)
-        event_data.rearranged = true
 
       # Set the changes to the model
       for key in ["slug", "name", "topic", "groups", "trash"]
@@ -78,17 +76,19 @@ attach = (config, sockrooms) ->
           doc.set key, data.model[key]
       # Sharing has special permissions
       if utils.can_change_sharing(session, doc) and data.model.sharing?
-        event_data.sharing = utils.clean_sharing({}, data.model)
-        doc.sharing = data.model.sharing
-        # Make sure we can still edit.
-        unless utils.can_change_sharing(session, doc)
-          return errorOut("Permission denied", "warn")
+        unless utils.sharing_is_equal(doc.sharing, data.model.sharing)
+          utils.update_sharing(doc, data.model.sharing)
+          event_data.sharing = utils.clean_sharing({}, data.model)
+          # Make sure we can still edit.
+          unless utils.can_change_sharing(session, doc)
+            return errorOut("Permission denied", "warn")
 
-      doc.save (err) ->
+      doc.save (err, doc) ->
         if err? then return errorOut(err)
         respond(doc.serialize())
         rebroadcast("dotstorm/" + doc.id, doc)
-        events.post_event(session, doc, event_type, event_data)
+        if event_type == "create" or (not _.isEqual(event_data, {}))
+          events.post_event(session, doc, event_type, event_data)
         events.post_search_index(doc)
 
     switch data.signature.collectionName

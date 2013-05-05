@@ -91,6 +91,10 @@ load = (config) ->
   UserSchema.pre "validate", (next) ->
     @icon.color = @icon.color.toUpperCase() if @icon?.color?
     next()
+  UserSchema.pre 'validate', (next) ->
+    if @mobile.number
+      @mobile.number = @mobile.number.replace(/[^0-9]/g, "")
+    next()
   UserSchema.pre "save", (next) ->
     if not @icon?.pk? or not @icon?.color?
       icons.get_random_icon (err, icon) =>

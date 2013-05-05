@@ -18,7 +18,6 @@ class intertwinkles.EventCollection extends Backbone.Collection
 
   # Return a new collection which contains only those events which are not
   # duplicates (e.g. repeat visits) within the given timespan.
-  #TODO
   deduplicate: (timespan=1000*60*6) =>
     deduped = new intertwinkles.EventCollection()
     _lastEventByUser = {}
@@ -40,7 +39,7 @@ class intertwinkles.EventCollection extends Backbone.Collection
     attrsB = eventB.attributes
     return (
       attrsA.application == attrsB.application and
-      attrsA.type == attrsB.type == "visit" and #XXX only dedupe visits??
+      attrsA.type == attrsB.type == "visit" and
       attrsA.entity == attrsB.entity and
       attrsA.user == attrsB.user and
       attrsA.via_user == attrsB.via_user and

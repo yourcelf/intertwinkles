@@ -1,0 +1,120 @@
+extends www_base
+
+block poststyles
+  style(type='text/css')
+    ul.user li,
+    ul.entity li,
+    ul.user-events li,
+    ul.event li,
+    ul.entity-summary li {
+      list-style-type: none;
+    }
+    ul.user-events li,
+    ul.event li,
+    ul.entity-summary li {
+      display: inline-block;
+      white-space: nowrap;
+    }
+    ul.entity div.entity {
+      border-top: 1px dotted #aaa;
+      padding: 1em 1em;
+    }
+    table.summary th,
+    table.summary td,
+    table.collected-events th,
+    table.collected-events td {
+      vertical-align: top;
+      border: 1px solid #eee;
+    }
+    table.title, table.summary {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+block body
+  div(style='text-align: center;')
+    table.title
+      tr
+        td
+          a(href=absolutize_url(prev_url)) &ldquo; Previous day
+        td
+          h3 Activity in your groups on <nobr>#{start.toDateString()}</nobr>
+        td
+          a(href=absolutize_url(next_url)) Next day &rdquo;
+  if hierarchy.length == 0
+    p No activity found for this day.
+  else
+    div.tldr
+      h1 Summary
+      table.summary
+        tr
+          th Name
+          th Worked on
+        each group in hierarchy
+          each user_events in group.users
+            tr
+              th 
+                span.attrib
+                  if user_events.ident.user
+                    img(src=absolutize_url('#{user_events.ident.user.icon.tiny}'))
+                    = user_events.ident.user.name
+                  else
+                    i.icon-user
+                    = user_events.ident.name || "Anonymous"
+              td
+                ul.entity-summary
+                  each entity, i in user_events.entities
+                    li
+                      a(href=absolutize_url(entity.absolute_url))
+                        img(src=absolutize_url(conf.apps[entity.application].image),
+                            style='width: 32px; height: 32px;')
+                        = entity.entity_name
+                      if i < user_events.entities.length - 1
+                        | ,&ensp; 
+                      // > (this line is a syntax highlghting bug workaround)
+                      
+
+    h1 Details
+    each group in hierarchy
+      h3= group.group.name
+      - var curEntity = null;
+      ul.user
+        each user_events in group.users
+          li
+            span.attrib
+              if user_events.ident.user
+                img(src=absolutize_url('#{user_events.ident.user.icon.tiny}'))
+                = user_events.ident.user.name
+              else
+                i.icon-user
+                = user_events.ident.name || "Anonymous"
+            ul.entity
+              each entity in user_events.entities
+                li.user-events
+                  div.entity
+                    a(href=absolutize_url(entity.absolute_url))
+                      img(src=absolutize_url(conf.apps[entity.application].image),
+                          style='width: 32px; height: 32px;')
+                      = entity.entity_name
+                  table.collected-events
+                    tr
+                    each collective in entity.collectives
+                      th= collective.collective
+                    tr
+                    each collective in entity.collectives
+                      td
+                        ul.event
+                          each event,i in collective.events
+                            each grammar in event.grammar
+                              if grammar.image
+                                li
+                                  a(href=absolutize_url(event.absolute_url))
+                                    img(src=absolutize_url(grammar.image),
+                                        alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : '' ))")
+                                  if i < collective.events.length - 1
+                                    | ,&ensp;
+                              else
+                                li
+                                  = grammar.verbed + " " + grammar.aspect + (grammar.manner ? ' (' + grammar.manner + ')' : '')
+                                  if i < collective.events.length - 1
+                                    | ,&ensp;

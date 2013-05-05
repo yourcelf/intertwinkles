@@ -111,7 +111,7 @@ describe "www events grammar", ->
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
           entity: "This rocksors"
-          aspect: "invitation for three@mockmyid.com"
+          aspect: "invitation to join"
           collective: "changed groups"
           verbed: "declined"
           manner: ""
@@ -130,7 +130,7 @@ describe "www events grammar", ->
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
           entity: "This rocksors"
-          aspect: "invitation for four@mockmyid.com"
+          aspect: "invitation to join"
           collective: "changed groups"
           verbed: "accepted"
           manner: ""

@@ -160,9 +160,9 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
-  DotstormSchema.virtual('url').get = ->
-    return "/d/#{@slug}"
-  DotstormSchema.virtual('absolute_url').get = ->
+  DotstormSchema.virtual('url').get ->
+    return "/d/#{@slug}/"
+  DotstormSchema.virtual('absolute_url').get ->
     return "#{config.apps.dotstorm.url}#{@url}"
   DotstormSchema.methods.serialize = -> return @toJSON()
   DotstormSchema.methods.exportJSON = ->

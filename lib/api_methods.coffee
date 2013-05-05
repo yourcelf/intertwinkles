@@ -371,6 +371,8 @@ module.exports = (config) ->
         user.icon.pk = params.icon_id
         user.icon.name = icons.get_icon_name(user.icon.pk)
         user.icon.color = params.icon_color
+
+      
       user.mobile.number = params.mobile_number if params.mobile_number?
       user.mobile.carrier = params.mobile_carrier if params.mobile_carrier?
       user.save(callback)
@@ -414,6 +416,104 @@ module.exports = (config) ->
         for event in event_json
           event.grammar = api.get_event_grammar(event)
         return callback(null, event_json)
+
+  #
+  # Retrieve a hierarchy of events used to create recent activity views.
+  # Events returns events organized by:
+  #   group -> user -> entity -> collective
+  #
+  api.get_event_user_hierarchy = (params, callback) ->
+    async.parallel [
+      (done) ->
+        schema.Event.find({
+          entity_url: {$exists: false}
+          group: {$in: params.groups}
+          date: {$lt: params.end, $gt: params.start}
+        }).sort('group entity -date').exec (err, events) ->
+          done(err, events)
+
+      (done) ->
+        schema.Notification.find({
+          recipient: params.user_id
+          cleared: {$ne: true}
+          suppressed: {$ne: true}
+          "formats.web": {$ne: null}
+        }).sort('-date').limit(51).exec (err, notices) ->
+          done(err, notices)
+    ], (err, results) ->
+      return callback(err) if err?
+      [events, notices] = results
+      hierarchy = {}
+      for eventDoc in events
+        event = eventDoc.toJSON()
+        event.group = event.group?.toString()
+        event.user = event.user?.toString()
+        event.grammar = api.get_event_grammar(event)
+        event_time = event.date.getTime()
+        ident = event.user or event.data?.name or event.anon_id
+        # By group
+        hierarchy[event.group] ?= {
+          'group': event.group
+          'latest': event_time
+          'users': {}
+        }
+        group_events = hierarchy[event.group]
+        group_events.latest = event_time if event_time > group_events.latest
+        # By user
+        group_events.users[ident] ?= {
+          'latest': event_time
+          'ident': {user: event.user, name: event.data?.name, anon_id: event.anon_id}
+          'entities': {}
+        }
+        user_events = group_events.users[ident]
+        user_events.latest = event_time if event_time > user_events.latest
+        # By entity
+        user_events.entities[event.entity] ?= {
+          'latest': event_time
+          'absolute_url': event.absolute_url
+          'application': event.application
+          'entity_name': event.grammar[0].entity
+          'collectives': {}
+        }
+        entity_events = user_events.entities[event.entity]
+        entity_events.latest = event_time if event_time > entity_events.latest
+        # By collective noun phrase
+        entity_events.collectives[event.grammar[0].collective] ?= {
+          'latest': event_time
+          'collective': event.grammar[0].collective
+          'events': []
+        }
+        collective = entity_events.collectives[event.grammar[0].collective]
+        collective.latest = event_time if event_time > collective.latest
+        collective.events.push(event)
+
+      # Flatten objects and sort values for iteration.
+      hierarchy = _.sortBy(_.values(hierarchy), (e) -> -e.latest)
+      # by group
+      for group in hierarchy
+        user_events = group.users
+        group.users = _.sortBy(_.values(group.users), (e) -> -e.latest)
+        # by user
+        for user in group.users
+          user.entities = _.sortBy(_.values(user.entities), (e) -> -e.latest)
+          # by entity (document)
+          for entity in user.entities
+            # Only include visits if there aren't non-visit events.
+            delete entity.collectives.visits if _.size(entity.collectives) > 1
+            entity.collectives = _.sortBy(_.values(entity.collectives), (e) -> -e.latest)
+            for collective in entity.collectives
+              # Eliminate duplicate events. They're already time-sorted by
+              # mongo so we don't need to re-sort, but they aren't sorted by
+              # deduplication key, so second _.uniq param must be false.
+              collective.events = _.uniq collective.events, false, (e) ->
+                key = [e.type, e.user, e.via_user, e.manner].concat(
+                  _.sortBy(_.keys(e.data or {}))
+                ).concat(
+                  _.sortBy(_.values(e.data or {}))
+                ).join(":")
+                e.key = key
+                return key
+      return callback(null, hierarchy, notices)
 
   _event_timeout_queue = {}
   _post_event = (params, callback) ->

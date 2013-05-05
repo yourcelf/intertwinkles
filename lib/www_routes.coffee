@@ -426,6 +426,54 @@ route = (config, app, sockrooms) ->
         return www_methods.not_found(req, res)
       res.redirect(doc.absolute_long_url)
 
+  utils.append_slash(app, "/activity/for/.*[^/]$")
+  app.get '/activity/for/:year/:month/:day/', (req, res) ->
+    unless utils.is_authenticated(req.session)
+      return www_methods.redirect_to_login(req, res)
+    start = new Date(
+      parseInt(req.params.year, 10),
+      parseInt(req.params.month, 10) - 1,
+      parseInt(req.params.day, 10),
+      0, 0, 0
+    )
+    return www_methods.not_found(req, res) if isNaN(start)
+    end = new Date(start.getTime() + (24 * 60 * 60 * 1000))
+
+    prev = new Date(start.getTime() - 23 * 60 * 60 * 1000)
+    prev_url = "/activity/for/#{prev.getFullYear()}/#{prev.getMonth() + 1}/#{prev.getDate()}/"
+    next = new Date(start.getTime() + 26 * 60 * 60 * 1000)
+    next_url = "/activity/for/#{next.getFullYear()}/#{next.getMonth() + 1}/#{next.getDate()}/"
+
+    api_methods.get_event_user_hierarchy {
+      start: start
+      end: end
+      groups: _.keys(req.session.groups)
+      user_id: req.session.auth.user_id
+    }, (err, hierarchy, notices) ->
+      return www_methods.handle_error(req, res, err) if err?
+      # Populate groups and users
+      for group in hierarchy
+        group.group = req.session.groups[group.group]
+        for user_events in group.users
+          if user_events.ident.user
+            user_events.ident.user = req.session.users[user_events.ident.user]
+          for entity in user_events.entities
+            for collective in entity.collectives
+              for event in collective.events
+                if event.via_user?
+                  event.via_user = req.session.users[event.via_user]
+                if event.user?
+                  event.user = req.session.users[event.user]
+      res.render "home/daily_activity", context(req, {
+        title: "Activity for #{req.params.year}-#{req.params.month}-#{req.params.day}"
+        start: start
+        end: end
+        hierarchy: hierarchy
+        notices: notices
+        prev_url: prev_url
+        next_url: next_url
+      })
+
   #
   # Static and well-known
   #
@@ -486,6 +534,27 @@ route = (config, app, sockrooms) ->
       }, (err, rendered) ->
         return www_methods.handle_error(req, res, err) if err?
         res.render("test_notice", rendered)
+
+    app.get '/test/notices/daily_summary/', (req, res) ->
+      unless utils.is_authenticated(req.session)
+        return www_methods.redirect_to_login(req, res)
+
+      date = new Date()
+      start = new Date(date.getTime() - (24 * 60 * 60 * 1000))
+
+      schema.Event.find {
+        group: {$in: _.keys(req.session.groups)},
+        date: {$and: [{$gte: start, $lt: date}]},
+      }, (err, events) ->
+        return www_methods.handle_error(req, res, err) if err?
+        render_notifications require("../emails/activity_summary"), {
+          recipient: req.session.users[req.session.auth.user_id]
+          sender: null
+          url: "/activity/for/#{date.getFullYear()}/#{date.getMonth() + 1}/#{date.getDay()}/"
+          events: events
+          start: date
+          end: date
+        }
 
   return {app}
 

@@ -11,10 +11,9 @@ module.exports = (config) ->
       api_methods.post_event({
           application: "dotstorm"
           type: type
-          url: "/d/#{dotstorm.slug}/"
+          url: dotstorm.url
           entity: dotstorm._id
           user: session.auth?.user_id
-          via_user: session.auth?.user_id
           anon_id: session.anon_id
           group: dotstorm.sharing?.group_id
           data: data

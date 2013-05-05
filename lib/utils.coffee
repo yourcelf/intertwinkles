@@ -46,6 +46,11 @@ querystring = require 'querystring'
 #
 utils = {}
 utils.slugify = (name) -> return name.toLowerCase().replace(/[^-a-z0-9]+/g, '-')
+utils.absolutize_url = (base, given_url) ->
+  if url.parse(given_url).protocol
+    return given_url
+  return base + given_url
+
 # GET the resource residing at get_url with search query data `query`,
 # interpreting the response as JSON.
 utils.get_json = (get_url, query, callback) ->
@@ -257,6 +262,29 @@ utils.update_sharing = (model, sharing) ->
     model.sharing[key] = sharing[key]
   model.sharing.extra_editors = sharing.extra_editors or []
   model.sharing.extra_viewers = sharing.extra_viewers or []
+
+utils.sharing_is_equal = (s1, s2) ->
+  if !!s1.advertise != !!s2.advertise
+    return false
+  if s1.group_id or s2.group_id
+    return false if s1.group_id.toString() != s2.group_id.toString()
+  for key in ["public_view_until", "public_edit_until"]
+    if s1[key] or s2[key]
+      d1 = new Date(s1[key])
+      d2 = new Date(s2[key])
+      now = new Date().getTime()
+      d1_far_future = d1.getTime() - now > 50 * 365 * 24 * 60 * 60 * 1000
+      d2_far_future = d2.getTime() - now > 50 * 365 * 24 * 60 * 60 * 1000
+      if (!d1_far_future or !d2_far_future) and (d1.getTime() != d2.getTime())
+        return false
+  for key in ["extra_viewers", "extra_editors"]
+    if s1[key] or s2[key]
+      l1 = s1[key]?.length or 0
+      l2 = s2[key]?.length or 0
+      return false if l1 != l2
+      return false if _.union(s1[key] or [], s2[key] or []).length != l1
+  return true
+
 
 # List all the documents in `schema` (a Mongo/Mongoose collection) which are
 # currently public.  Use for providing a dashboard listing of documents.
