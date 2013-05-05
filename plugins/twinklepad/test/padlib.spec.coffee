@@ -83,7 +83,7 @@ describe "padlib", ->
         expect(terms.length).to.be(1)
         expect(terms[0].entity).to.be("tptest_1")
         expect(terms[0].aspect).to.be("pad")
-        expect(terms[0].collective).to.be("visited pads")
+        expect(terms[0].collective).to.be("visits")
         expect(terms[0].verbed).to.be("visited")
         expect(terms[0].manner).to.be("")
         done()

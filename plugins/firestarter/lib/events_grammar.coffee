@@ -74,7 +74,7 @@ module.exports = {
         return [{
           entity: data.entity_name
           aspect: "the firestarter"
-          collective: "visited firestarters"
+          collective: "visits"
           verbed: "visited"
           manner: ""
         }]

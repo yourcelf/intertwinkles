@@ -16,7 +16,6 @@ block poststyles
       white-space: nowrap;
     }
     ul.entity div.entity {
-      border-top: 1px dotted #aaa;
       padding: 1em 1em;
     }
     table.summary th,
@@ -29,6 +28,11 @@ block poststyles
     table.title, table.summary {
       margin-left: auto;
       margin-right: auto;
+    }
+    ul.user > li {
+      margin: 1em;
+      padding: 0.5em;
+      border: 3px solid #eee;
     }
 
 block body
@@ -48,11 +52,21 @@ block body
       h1 Summary
       table.summary
         tr
+          th Group
           th Name
           th Worked on
+        - var cur_group = null;
         each group in hierarchy
           each user_events in group.users
             tr
+              if group != cur_group
+                - cur_group = group
+                th(rowspan=group.users.length)
+                  - console.log(group.group.logo)
+                  if group.group.logo && group.group.logo.small
+                    img(src=absolutize_url(group.group.logo.small))
+                    br
+                  = group.group.name
               th 
                 span.attrib
                   if user_events.ident.user
@@ -76,7 +90,11 @@ block body
 
     h1 Details
     each group in hierarchy
-      h3= group.group.name
+      h3
+        a(href=absolutize_url(group.group.url))
+          if group.group.logo && group.group.logo.small
+            img(src=absolutize_url(group.group.logo.small))
+          = group.group.name
       - var curEntity = null;
       ul.user
         each user_events in group.users
@@ -88,33 +106,71 @@ block body
               else
                 i.icon-user
                 = user_events.ident.name || "Anonymous"
-            ul.entity
-              each entity in user_events.entities
-                li.user-events
-                  div.entity
-                    a(href=absolutize_url(entity.absolute_url))
-                      img(src=absolutize_url(conf.apps[entity.application].image),
-                          style='width: 32px; height: 32px;')
-                      = entity.entity_name
-                  table.collected-events
-                    tr
-                    each collective in entity.collectives
-                      th= collective.collective
-                    tr
-                    each collective in entity.collectives
-                      td
-                        ul.event
-                          each event,i in collective.events
-                            each grammar in event.grammar
-                              if grammar.image
-                                li
-                                  a(href=absolutize_url(event.absolute_url))
-                                    img(src=absolutize_url(grammar.image),
-                                        alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : '' ))")
-                                  if i < collective.events.length - 1
-                                    | ,&ensp;
-                              else
-                                li
-                                  = grammar.verbed + " " + grammar.aspect + (grammar.manner ? ' (' + grammar.manner + ')' : '')
-                                  if i < collective.events.length - 1
-                                    | ,&ensp;
+            if user_events.entities.length == 1 && user_events.entities[0].collectives.length == 1 && user_events.entities[0].collectives[0].events.length == 1 && user_events.entities[0].collectives[0].events[0].grammar.length == 1
+              // User only has one event on one entity.
+              - event = user_events.entities[0].collectives[0].events[0]
+              - grammar = event.grammar[0]
+              | &ensp;
+              if grammar.image
+                = grammar.verbed
+                a(href=absolutize_url(event.absolute_url))
+                  img(src=absolutize_url(grammar.image), alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : '' ))
+              else
+                | #{grammar.verbed} #{grammar.aspect} #{(grammar.manner ? '(' + grammar.manner + ')' : '' )}
+              a(href=absolutize_url(event.absolute_url))
+                img(src=absolutize_url(conf.apps[event.application].image),
+                    style='width: 32px; height: 32px;')
+                = grammar.entity
+            else
+              // User has more than one entity or more than one event on an entity.
+              ul.entity
+                each entity in user_events.entities
+                  li.user-events
+                    if entity.collectives.length == 1
+                      a(href=absolutize_url(entity.absolute_url))
+                        img(src=absolutize_url(conf.apps[entity.application].image),
+                            style='width: 32px; height: 32px;')
+                        = entity.entity_name
+                      | :
+                      each collective, i in entity.collectives
+                        each event, j in collective.events
+                          each grammar, k in event.grammar
+                            | &ensp; #{grammar.verbed}
+                            if grammar.image
+                              a(href=absolutize_url(event.absolute_url))
+                                img(src=absolutize_url(grammar.image),
+                                    alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : ''))
+                            else
+                              = " " + grammar.aspect + (grammar.manner ? ' (' + grammar.manner + ')' : '')
+                            - console.log(i, entity.collectives.length, j, event.grammar.length);
+                            if i < entity.collectives.length - 1 || j < collective.events.length - 1 || k < event.grammar.length - 1
+                              | ,
+
+                    else
+                      div.entity
+                        a(href=absolutize_url(entity.absolute_url))
+                          img(src=absolutize_url(conf.apps[entity.application].image),
+                              style='width: 32px; height: 32px;')
+                          = entity.entity_name
+                      table.collected-events
+                        tr
+                        each collective in entity.collectives
+                          th= collective.collective
+                        tr
+                        each collective in entity.collectives
+                          td
+                            ul.event
+                              each event, i in collective.events
+                                each grammar, j in event.grammar
+                                  if grammar.image
+                                    li
+                                      a(href=absolutize_url(event.absolute_url))
+                                        img(src=absolutize_url(grammar.image),
+                                            alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : ''))
+                                      if i < collective.events.length - 1 || j < event.grammar.length - 1
+                                        | ,&ensp;
+                                  else
+                                    li
+                                      = grammar.verbed + " " + grammar.aspect + (grammar.manner ? ' (' + grammar.manner + ')' : '')
+                                      if i < collective.events.length - 1 || j < event.grammar.length - 1
+                                        | ,&ensp;

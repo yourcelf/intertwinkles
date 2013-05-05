@@ -161,6 +161,10 @@ load = (config) ->
     if @logo.thumb?
       return "#{config.api_url}/uploads/#{@logo.thumb}"
     return null
+  GroupSchema.virtual('url').get ->
+    return "/groups/show/#{@slug}/"
+  GroupSchema.virtual('absolute_url').get ->
+    return config.apps.www.url + @url
   GroupSchema.set('toObject', {virtuals: true})
   GroupSchema.options.toObject.transform = (doc, ret, options) ->
     delete ret.logo?.full

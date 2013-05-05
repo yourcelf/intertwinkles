@@ -105,7 +105,7 @@ describe "firestarter", ->
       expect(terms[0]).to.eql({
         entity: "Test"
         aspect: "the firestarter"
-        collective: "visited firestarters"
+        collective: "visits"
         verbed: "visited"
         manner: ""
       })

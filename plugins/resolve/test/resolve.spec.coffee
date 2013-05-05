@@ -56,7 +56,7 @@ describe "resolve", ->
         expect(terms.length).to.be(1)
         expect(terms[0].entity).to.be(@proposal.title)
         expect(terms[0].aspect).to.be("proposal")
-        expect(terms[0].collective).to.be("visited proposals")
+        expect(terms[0].collective).to.be("visits")
         expect(terms[0].verbed).to.be("visited")
         expect(terms[0].manner).to.be("")
 

@@ -6,7 +6,10 @@ block poststyles
 
 block body
   div(style='text-align: center')
-    h1(style='display: inline-block; vertical-align: middle;')= group.name
+    h1(style='display: inline-block; vertical-align: middle;')
+      if group.logo && group.logo.small
+        img(src=group.logo.small)
+      = group.name
 
   div.row-fluid
     div.span3.offset1
