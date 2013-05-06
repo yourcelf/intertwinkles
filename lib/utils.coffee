@@ -267,7 +267,7 @@ utils.sharing_is_equal = (s1, s2) ->
   if !!s1.advertise != !!s2.advertise
     return false
   if s1.group_id or s2.group_id
-    return false if s1.group_id.toString() != s2.group_id.toString()
+    return false if s1.group_id?.toString() != s2.group_id?.toString()
   for key in ["public_view_until", "public_edit_until"]
     if s1[key] or s2[key]
       d1 = new Date(s1[key])
