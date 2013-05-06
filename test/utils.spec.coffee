@@ -21,6 +21,13 @@ describe "utils", ->
       utils.absolutize_url("https://example.com", "/this/that")
     ).to.be("https://example.com/this/that")
 
+  it "Checks sharing with undefined or not groups", ->
+    expect(utils.sharing_is_equal({
+      group_id: undefined
+    }, {
+      group_id: "not undefined"
+    })).to.be(false)
+
   it "Checks equality of sharing settings: empty lists", ->
     future = new Date()
     expect(utils.sharing_is_equal({
