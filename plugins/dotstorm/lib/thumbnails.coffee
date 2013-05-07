@@ -182,8 +182,7 @@ drawingThumbs = (idea, callback) ->
       callback?(null)
       logger.debug("skipping thumbnail; already exists")
     else
-      clearDir path.dirname(idea.getDrawingPath("small")), (err) ->
-        if (err) then return callback?(err)
+      mkdirs path.dirname(idea.getDrawingPath("small")), "0775", (err) ->
         drawIdeaToCanvas idea, (canvas) ->
           buffer = canvas.toBuffer()
           thumbs = []
