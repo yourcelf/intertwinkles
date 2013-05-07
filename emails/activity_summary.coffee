@@ -23,7 +23,7 @@ text_email_template = _.template("""
 <% } %>Activity summary on InterTwinkles for <%- start.toDateString() %>:
 
 View full details<%- todos ? " and respond" : "" %> here:
-<%- show_url %>/
+<%= show_url %>/
 
 
 """ + [
