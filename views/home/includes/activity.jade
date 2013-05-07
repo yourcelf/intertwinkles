@@ -1,0 +1,105 @@
+table.title(style='margin-left: auto; margin-right: auto;')
+  tr
+    td(style='text-align: center;')
+      a(href=absolutize_url(prev_url), style='color: #aaa !important; text-decoration: none;') <nobr>Previous day</nobr>
+    td(style='text-align: center;')
+      a(href=absolutize_url(show_url), style='color: black; text-decoration: none;')
+        h3(style='line-height: 1.2em;') Activity in your groups on <nobr>#{start.toDateString()}</nobr>
+    td(style='text-align: center;')
+      a(href=absolutize_url(next_url), style='color: #aaa !important; text-decoration: none;') <nobr>Next day</nobr>
+
+if notices.length > 0
+  h3 Action Items
+  table(style='margin-left: auto; margin-right: auto;')
+    for notice in notices
+      tr
+        td(style='background-color: #ffe; text-align: center; padding: 0.5em; line-height: 1.2em; border: 1px solid #ddd;')
+          != notice.formats.web
+          br
+          a(href=notice.absolute_url) Take Action
+
+if hierarchy.length == 0
+  p No activity found for this day.
+else
+  if notices.length > 0
+    h3 Activity
+  each group in hierarchy
+    h4
+      a(href=absolutize_url(group.group.url), style='color: black; font-weight: bold; text-decoration: none;')
+        if group.group.logo && group.group.logo.small
+          img(src=absolutize_url(group.group.logo.small), style='vertical-align: middle;')
+        = group.group.name
+    - var curEntity = null;
+    each user_events in group.users
+      div.user(style='margin: 1em; padding: 0.5em; border-left: 6px solid #ddd; border-top: 1px solid #eee; border-bottom: 1px solid #eee;')
+        span.attrib
+          if user_events.ident.user
+            img(src=absolutize_url('#{user_events.ident.user.icon.tiny}'))
+            = user_events.ident.user.name
+          else
+            i.icon-user
+            = user_events.ident.name || "Unknown user"
+        if user_events.entities.length == 1 && user_events.entities[0].collectives.length == 1 && user_events.entities[0].collectives[0].events.length == 1 && user_events.entities[0].collectives[0].events[0].grammar.length == 1
+          // User only has one event on one entity.
+          - var event = user_events.entities[0].collectives[0].events[0];
+          - var grammar = event.grammar[0];
+          | &ensp;
+          if grammar.image
+            = grammar.verbed
+            a(href=absolutize_url(event.absolute_url), style='color: blue; text-decoration: none;')
+              img(src=absolutize_url(grammar.image), alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : '' ))
+          else
+            | #{grammar.verbed} #{grammar.aspect} #{(grammar.manner ? '(' + grammar.manner + ')' : '' )}
+          a(href=absolutize_url(event.absolute_url), style='color: blue; text-decoration: none;')
+            img(src=absolutize_url(conf.apps[event.application].image),
+                style='width: 32px; height: 32px; vertical-align: middle;')
+            = grammar.entity
+        else
+          // User has more than one entity or more than one event on an entity.
+          each entity in user_events.entities
+            div.user-events(style='padding-top: 0.5em; padding-left: 1em;')
+              if entity.collectives.length == 1
+                a(href=absolutize_url(entity.absolute_url), style='color: blue; text-decoration: none;')
+                  img(src=absolutize_url(conf.apps[entity.application].image),
+                      style='width: 32px; height: 32px; vertical-align: middle;')
+                  = entity.entity_name
+                | :
+                each collective, i in entity.collectives
+                  each event, j in collective.events
+                    each grammar, k in event.grammar
+                      | &ensp; #{grammar.verbed}
+                      if grammar.image
+                        a(href=absolutize_url(event.absolute_url), style='color: blue; text-decoration: none;')
+                          img(src=absolutize_url(grammar.image),
+                              alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : ''))
+                      else
+                        = " " + grammar.aspect + (grammar.manner ? ' (' + grammar.manner + ')' : '')
+                      if i < entity.collectives.length - 1 || j < collective.events.length - 1 || k < event.grammar.length - 1
+                        | ,
+
+              else
+                div.entity
+                  a(href=absolutize_url(entity.absolute_url), style='color: blue; text-decoration: none;')
+                    img(src=absolutize_url(conf.apps[entity.application].image),
+                        style='width: 32px; height: 32px; vertical-align: middle;')
+                    = entity.entity_name
+                table.collected-events
+                  tr
+                  each collective in entity.collectives
+                    th= collective.collective
+                  tr
+                  each collective in entity.collectives
+                    td(style='text-align: center; vertical-align: top; border: 1px solid #ddd;')
+                      each event, i in collective.events
+                        each grammar, j in event.grammar
+                          span.event
+                            if grammar.image
+                              a(href=absolutize_url(event.absolute_url), style='color: blue; text-decoration: none;')
+                                img(src=absolutize_url(grammar.image),
+                                    alt=grammar.aspect + " " + (grammar.manner ? '(' + grammar.manner + ')' : ''))
+                              if i < collective.events.length - 1 || j < event.grammar.length - 1
+                                | ,&ensp;
+                            else
+                              = grammar.verbed + " " + grammar.aspect + (grammar.manner ? ' (' + grammar.manner + ')' : '')
+                              if i < collective.events.length - 1 || j < event.grammar.length - 1
+                                | ,&ensp;

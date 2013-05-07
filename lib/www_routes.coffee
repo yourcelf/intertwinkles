@@ -10,7 +10,7 @@ route = (config, app, sockrooms) ->
   api_methods = require("./api_methods")(config)
   www_methods = require("./www_methods")(config)
   solr = require("./solr_helper")(config)
-  render_notifications = require("./email_notices").load(config).render_notifications
+  email_notices = require("./email_notices").load(config)
 
   #
   # Routes
@@ -184,7 +184,9 @@ route = (config, app, sockrooms) ->
 
       # We don't use 'toObject' or 'toJSON' here, because those methods remove
       # private fields like mobile numbers that we want to display to the
-      # owning user.
+      # owning user.  This safe default is nice to avoid having to clean things
+      # all over the place, but it means we need to manually deconstruct this
+      # when we want those private fields.  Which is only here.
       user = {
         _id: doc.id
         name: doc.name
@@ -447,23 +449,11 @@ route = (config, app, sockrooms) ->
     api_methods.get_event_user_hierarchy {
       start: start
       end: end
-      groups: _.keys(req.session.groups)
+      groups: req.session.groups
+      users: req.session.users
       user_id: req.session.auth.user_id
     }, (err, hierarchy, notices) ->
       return www_methods.handle_error(req, res, err) if err?
-      # Populate groups and users
-      for group in hierarchy
-        group.group = req.session.groups[group.group]
-        for user_events in group.users
-          if user_events.ident.user
-            user_events.ident.user = req.session.users[user_events.ident.user]
-          for entity in user_events.entities
-            for collective in entity.collectives
-              for event in collective.events
-                if event.via_user?
-                  event.via_user = req.session.users[event.via_user]
-                if event.user?
-                  event.user = req.session.users[event.user]
       res.render "home/daily_activity", context(req, {
         title: "Activity for #{req.params.year}-#{req.params.month}-#{req.params.day}"
         start: start
@@ -472,6 +462,7 @@ route = (config, app, sockrooms) ->
         notices: notices
         prev_url: prev_url
         next_url: next_url
+        show_url: req.url
       })
 
   #
@@ -501,7 +492,7 @@ route = (config, app, sockrooms) ->
       recipient = {email: "superhappypants@example.com"}
       if req.query.named
         recipient.name = "Super Happypants"
-      render_notifications require("../emails/invitation"), {
+      email_notices.render_notifications require("../emails/invitation"), {
         group: {name: "The Awesomest Group"}
         sender: {name: "John Dough", email: "johndough@example.com"}
         recipient: recipient
@@ -512,7 +503,7 @@ route = (config, app, sockrooms) ->
         res.render('test_notice', rendered)
 
     app.get '/test/notices/new_proposal/', (req, res) ->
-      render_notifications require("../plugins/resolve/emails/new_proposal"), {
+      email_notices.render_notifications require("../plugins/resolve/emails/new_proposal"), {
         group: {name: "The Awesomest Group"}
         sender: {name: "John Dough"}
         recipient: {name: "Super Happypants"}
@@ -524,7 +515,7 @@ route = (config, app, sockrooms) ->
         res.render("test_notice", rendered)
 
     app.get '/test/notices/proposal_changed/', (req, res) ->
-      render_notifications require("../plugins/resolve/emails/proposal_changed"), {
+      email_notices.render_notifications require("../plugins/resolve/emails/proposal_changed"), {
         group: {name: "The Awesomest Group"}
         sender: {name: "John Dough"}
         recipient: {name: "Super Happypants"}
@@ -538,23 +529,15 @@ route = (config, app, sockrooms) ->
     app.get '/test/notices/daily_summary/', (req, res) ->
       unless utils.is_authenticated(req.session)
         return www_methods.redirect_to_login(req, res)
-
-      date = new Date()
-      start = new Date(date.getTime() - (24 * 60 * 60 * 1000))
-
-      schema.Event.find {
-        group: {$in: _.keys(req.session.groups)},
-        date: {$and: [{$gte: start, $lt: date}]},
-      }, (err, events) ->
+      schema.User.findOne {_id: req.session.auth.user_id}, (err, user) ->
         return www_methods.handle_error(req, res, err) if err?
-        render_notifications require("../emails/activity_summary"), {
-          recipient: req.session.users[req.session.auth.user_id]
-          sender: null
-          url: "/activity/for/#{date.getFullYear()}/#{date.getMonth() + 1}/#{date.getDay()}/"
-          events: events
-          start: date
-          end: date
-        }
+        user.notifications.activity_summaries.sms = true
+        user.notifications.activity_summaries.email = true
+        email_notices.render_daily_activity_summary user, new Date(), (err, formats) ->
+          return www_methods.handle_error(req, res, err) if err?
+          return res.send("formats was undefined. Have no activity?") unless formats?
+          formats.web = ""
+          res.render("test_notice", formats)
 
   return {app}
 

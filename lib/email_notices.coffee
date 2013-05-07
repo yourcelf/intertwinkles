@@ -1,5 +1,6 @@
 _     = require 'underscore'
 async = require 'async'
+utils = require "./utils"
 
 load = (config) ->
   client = require("emailjs").server.connect(config.email)
@@ -73,8 +74,7 @@ load = (config) ->
 
   render_notifications = (view, context, callback) ->
     formats = {}
-    respond = (err) ->
-      callback(err, formats)
+    respond = (err) -> callback(err, formats)
     context = _.extend({
       subscription_settings_link: config.api_url + "/profiles/edit/"
       static_url: config.api_url + "/static/"
@@ -97,7 +97,134 @@ load = (config) ->
     else
       return respond(null, formats)
 
-  return { send_notifications, render_notifications }
+  activity_summary_view = require("../emails/activity_summary")
+  render_daily_activity_summary = (user, date, callback) ->
+    end = date
+    start = start or new Date(end.getTime() - 24 * 60 * 60 * 1000)
+    activity_url = "/activity/for/#{start.getFullYear()}/#{start.getMonth() + 1}/#{start.getDate()}/"
+    prev = new Date(start.getTime() - 23 * 60 * 60 * 1000)
+    prev_url = "/activity/for/#{prev.getFullYear()}/#{prev.getMonth() + 1}/#{prev.getDate()}/"
+    next = new Date(start.getTime() + 26 * 60 * 60 * 1000)
+    next_url = "/activity/for/#{next.getFullYear()}/#{next.getMonth() + 1}/#{next.getDate()}/"
+    async.waterfall [
+      (done) ->
+        api_methods.get_groups(user, done)
+
+      (users_groups, done) ->
+        api_methods.get_event_user_hierarchy {
+          users: users_groups.users
+          groups: users_groups.groups,
+          start: start,
+          end: end,
+          user_id: user.id,
+        }, (err, hierarchy, notices) ->
+          done(err, hierarchy, notices)
+
+      (hierarchy, notices, done) ->
+        return done() unless hierarchy?.length or notices?.length
+        visits = 0
+        edits = 0
+        for g in hierarchy
+          for u in g.users
+            for e in u.entities
+              for c in e.collectives
+                for event in c.events
+                  if event.type == "visit"
+                    visits += 1
+                  else
+                    edits += 1
+
+        context = {
+          recipient: user
+          start: start
+          end: end
+          hierarchy: hierarchy
+          notices: notices
+          todos: notices.length
+          visits: visits
+          edits: edits
+          static_url: config.api_url + "/static/"
+          home_url: config.apps.www.url
+          show_url: config.api_url + activity_url
+          prev_url: prev_url
+          next_url: next_url
+          subscription_settings_link: config.api_url + "/profiles/edit/"
+          absolutize_url: (given_url) ->
+            utils.absolutize_url(config.api_url, given_url)
+          conf: { apps: config.apps }
+        }
+        formats = {}
+        async.parallel [
+          (done) ->
+            return done() unless user.notifications.activity_summaries.sms
+            api_methods.make_short_url activity_url, "www", (err, short) ->
+              return done(err) if err?
+              context.short_url = short.absolute_short_url
+              formats.sms = activity_summary_view.sms(context)
+              done()
+          (done) ->
+            return done() unless user.notifications.activity_summaries.email
+            formats.email = {
+              subject: activity_summary_view.email.subject(context)
+              text: activity_summary_view.email.text(context)
+              html: activity_summary_view.email.html(context)
+            }
+            done()
+        ], (err) ->
+          return done(err) if err?
+          return done(null, formats)
+    ], (err, formats) ->
+      callback(err, formats)
+
+  send_daily_activity_summaries = (callback=(->)) ->
+    # XXX: This is massively inefficient, but it will run in a separate thread
+    # from the web worker, called by cron. It could be optimized 6 ways from
+    # sunday by trying a little, but keeping it simple for now.
+    return callback(err) if err?
+    schema.User.find {$or: [
+      {'notifications.activity_summaries.sms': true}
+      {'notifications.activity_summaries.email': true}
+    ]}, (err, users) ->
+      return callback(err) if err?
+      sent_count = 0
+      date = new Date()
+      async.map users, (user, done) ->
+        render_daily_activity_summary user, date, (err, formats) ->
+          return done(err) if err?
+          return done() unless formats?
+          sent_count += 1
+          async.parallel [
+            # Send sms
+            (done) ->
+              return done() unless formats.sms?
+              send_email({
+                from: config.from_email
+                to: user.sms_address.trim()
+                subject: formats.sms
+                text: " "
+              }, done)
+
+            # Send email
+            (done) ->
+              return done() unless formats.email?
+              send_email({
+                from: config.from_email
+                to: user.email
+                subject: formats.email.subject
+                text: formats.email.text
+                attachment: {
+                  data: formats.email.html
+                  alternative: true
+                }
+              }, done)
+            ], done
+      , (err) ->
+        return callback(err, sent_count)
+
+  return {
+    send_notifications, render_notifications,
+    send_daily_activity_summaries, render_daily_activity_summary
+  }
 
 module.exports = { load }
 

@@ -182,8 +182,8 @@ html_template = _.template("""
 
 module.exports = {
   email: {
-    subject: subject_template
-    text: text_template
-    html: html_template
+    subject_template: subject_template
+    text_template: text_template
+    html_template: html_template
   }
 }

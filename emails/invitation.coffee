@@ -1,11 +1,11 @@
 _ = require "underscore"
 base = require "./base"
 
-sms = _.template("InterTwinkles! Invitation to join <%= group.name %>: <%= short_url %>")
+sms_template = _.template("InterTwinkles! Invitation to join <%= group.name %>: <%= short_url %>")
 
-subject = _.template("Invitation to <%= group.name %> on InterTwinkles")
+subject_template = _.template("Invitation to <%= group.name %> on InterTwinkles")
 
-text = _.template("""
+text_template = _.template("""
 <% if (recipient.name) { %>
 <%= recipient.name %>,
 
@@ -17,7 +17,7 @@ You can accept or decline the invitation here:
 <%= url %>
 """.trim())
 
-html = _.template("""
+html_template = _.template("""
 <% if (recipient.name) { %>
 <p><%- recipient.name %>, </p>
 <% } %>
@@ -40,25 +40,25 @@ html = _.template("""
 <p><a href='<%- url %>'>Accept or Decline the invitation</a></p>
 """.trim())
 
-web = _.template("""
+web_template = _.template("""
 You've been invited to join <%- group.name %>! Please accept
 or refuse the invitation.
 """.trim())
 
 module.exports = {
-  web: web
-  sms: (context) -> return sms(context)
+  web: web_template
+  sms: (context) -> return sms_template(context)
   email: {
     subject: (context) ->
-      context.subject = subject(context)
-      return base.email.subject(context)
+      context.subject = subject_template(context)
+      return base.email.subject_template(context)
 
     text: (context) ->
-      context.body = text(context)
-      return base.email.text(context)
+      context.body = text_template(context)
+      return base.email.text_template(context)
 
     html: (context) ->
-      context.body = html(context)
-      return base.email.html(context)
+      context.body = html_template(context)
+      return base.email.html_template(context)
   }
 }

@@ -427,7 +427,7 @@ module.exports = (config) ->
       (done) ->
         schema.Event.find({
           entity_url: {$exists: false}
-          group: {$in: params.groups}
+          group: {$in: _.keys(params.groups)}
           date: {$lt: params.end, $gt: params.start}
         }).sort('group entity -date').exec (err, events) ->
           done(err, events)
@@ -513,6 +513,19 @@ module.exports = (config) ->
                 ).join(":")
                 e.key = key
                 return key
+      # Populate groups and users
+      for group in hierarchy
+        group.group = params.groups[group.group]
+        for user_events in group.users
+          if user_events.ident.user
+            user_events.ident.user = params.users[user_events.ident.user]
+          for entity in user_events.entities
+            for collective in entity.collectives
+              for event in collective.events
+                if event.via_user?
+                  event.via_user = params.users[event.via_user]
+                if event.user?
+                  event.user = params.users[event.user]
       return callback(null, hierarchy, notices)
 
   _event_timeout_queue = {}

@@ -20,6 +20,7 @@ describe "email", ->
     email_server.stop(done)
 
   it "Has the SMTP server and client wired up right.", (done) ->
+    email_server.outbox.length = 0
     message = {
       subject: "Test text message"
       from: "test1@example.com"
