@@ -48,47 +48,6 @@ block body
   if hierarchy.length == 0
     p No activity found for this day.
   else
-    div.tldr
-      h1 Summary
-      table.summary
-        tr
-          th Group
-          th Name
-          th Worked on
-        - var cur_group = null;
-        each group in hierarchy
-          each user_events in group.users
-            tr
-              if group != cur_group
-                - cur_group = group
-                th(rowspan=group.users.length)
-                  - console.log(group.group.logo)
-                  if group.group.logo && group.group.logo.small
-                    img(src=absolutize_url(group.group.logo.small))
-                    br
-                  = group.group.name
-              th 
-                span.attrib
-                  if user_events.ident.user
-                    img(src=absolutize_url('#{user_events.ident.user.icon.tiny}'))
-                    = user_events.ident.user.name
-                  else
-                    i.icon-user
-                    = user_events.ident.name || "Anonymous"
-              td
-                ul.entity-summary
-                  each entity, i in user_events.entities
-                    li
-                      a(href=absolutize_url(entity.absolute_url))
-                        img(src=absolutize_url(conf.apps[entity.application].image),
-                            style='width: 32px; height: 32px;')
-                        = entity.entity_name
-                      if i < user_events.entities.length - 1
-                        | ,&ensp; 
-                      // > (this line is a syntax highlghting bug workaround)
-                      
-
-    h1 Details
     each group in hierarchy
       h3
         a(href=absolutize_url(group.group.url))
