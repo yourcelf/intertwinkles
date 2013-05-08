@@ -157,7 +157,8 @@ load = (config) ->
         formats = {}
         async.parallel [
           (done) ->
-            return done() unless user.notifications.activity_summaries.sms
+            unless user.notifications.activity_summaries.sms and user.sms_address?
+              return done()
             api_methods.make_short_url activity_url, "www", (err, short) ->
               return done(err) if err?
               context.short_url = short.absolute_short_url
@@ -193,11 +194,11 @@ load = (config) ->
         render_daily_activity_summary user, date, (err, formats) ->
           return done(err) if err?
           return done() unless formats?
-          sent_count += 1
           async.parallel [
             # Send sms
             (done) ->
               return done() unless formats.sms?
+              sent_count += 1
               send_email({
                 from: config.from_email
                 to: user.sms_address.trim()
@@ -208,6 +209,7 @@ load = (config) ->
             # Send email
             (done) ->
               return done() unless formats.email?
+              sent_count += 1
               send_email({
                 from: config.from_email
                 to: user.email
