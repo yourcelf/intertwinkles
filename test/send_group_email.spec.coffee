@@ -23,6 +23,7 @@ describe "Activity summaries", ->
           done()
 
   after (done) ->
+    socket_client.close()
     common.shutDown(@server, done)
 
   it "sends email to groups", (done) ->
