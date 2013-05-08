@@ -1,6 +1,6 @@
 expect       = require 'expect.js'
 email        = require "emailjs"
-email_server = require "../lib/email_server"
+email_server = require "../dev/email_server"
 config       = require './test_config'
 
 smtp_client = null
