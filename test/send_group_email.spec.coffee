@@ -40,6 +40,10 @@ describe "Activity summaries", ->
             )
             expect(mail.outbox[0].subject).to.be("Hey there")
             expect(mail.outbox[0].text.trim()).to.be("Good times")
+            expect(mail.outbox[0].from[0].name).to.be("One (via InterTwinkles)")
+            expect(mail.outbox[0].from[0].address).to.be("notices@example.com")
+            expect(mail.outbox[0].headers["reply-to"]).to.be("one@mockmyid.com")
+            expect(mail.outbox[0].headers.sender).to.be("notices@example.com")
             done()
 
   it "doesn't send invalid email", (done) ->

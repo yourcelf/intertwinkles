@@ -38,7 +38,8 @@ load = (config) ->
 
     send_email({
       sender: config.from_email
-      from: from.email
+      from: "\"#{from.name.replace(/["]/g, "")} (via InterTwinkles)\" <#{config.from_email}>"
+      "reply-to": from.email
       to: recipients.join(", ")
       subject: params.subject.trim()
       text: params.body.trim()
