@@ -100,11 +100,11 @@ load = (config) ->
   activity_summary_view = require("../emails/activity_summary")
   render_daily_activity_summary = (user, date, callback) ->
     end = date
-    start = start or new Date(end.getTime() - 24 * 60 * 60 * 1000)
-    activity_url = "/activity/for/#{start.getFullYear()}/#{start.getMonth() + 1}/#{start.getDate()}/"
-    prev = new Date(start.getTime() - 23 * 60 * 60 * 1000)
+    start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
+    activity_url = "/activity/for/#{end.getFullYear()}/#{end.getMonth() + 1}/#{end.getDate()}/"
+    prev = new Date(end.getTime() - 25 * 60 * 60 * 1000)
     prev_url = "/activity/for/#{prev.getFullYear()}/#{prev.getMonth() + 1}/#{prev.getDate()}/"
-    next = new Date(start.getTime() + 26 * 60 * 60 * 1000)
+    next = new Date(end.getTime() + 25 * 60 * 60 * 1000)
     next_url = "/activity/for/#{next.getFullYear()}/#{next.getMonth() + 1}/#{next.getDate()}/"
     async.waterfall [
       (done) ->
@@ -136,6 +136,7 @@ load = (config) ->
 
         context = {
           recipient: user
+          date: date
           start: start
           end: end
           hierarchy: hierarchy

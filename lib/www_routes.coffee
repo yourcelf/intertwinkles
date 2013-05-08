@@ -456,6 +456,7 @@ route = (config, app, sockrooms) ->
       return www_methods.handle_error(req, res, err) if err?
       res.render "home/daily_activity", context(req, {
         title: "Activity for #{req.params.year}-#{req.params.month}-#{req.params.day}"
+        date: start
         start: start
         end: end
         hierarchy: hierarchy
