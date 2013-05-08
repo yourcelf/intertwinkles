@@ -428,7 +428,7 @@ email_group_modal_template = _.template("""
     <form>
       <div class='modal-header'>
         <button type='button' class='close' data-dismiss='modal' aria-hidden='true'>&times;</button>
-        <h3>Email this to your group</h3>
+        <h3>Send an email to <%- group.name %></h3>
       </div>
       <div class='modal-body'>
         <table class='email-sender'>
@@ -537,13 +537,12 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
       event.preventDefault()
       subject = $.trim($("input[name=subject]", modal).val())
       body = $.trim($("textarea[name=body]", modal).val())
-      console.log subject, body
       unless subject and body
         alert("Please enter a subject and a message.")
         return
       intertwinkles.socket.once "email_sent", (data) ->
         modal.modal("hide")
-        flash.info("Email sent to #{group.members.length} group members.")
+        flash "success", "Email sent to #{group.members.length} group members."
         modal.modal("hide")
       intertwinkles.socket.send "email_group", {
         entity: @model.id

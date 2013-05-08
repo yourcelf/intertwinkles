@@ -34,6 +34,7 @@ build_room_users_list_for_user = (sockrooms, user_session, room, callback) ->
 
 route = (config, sockrooms) ->
   api_methods = require("./api_methods")(config)
+  email_notices = require("./email_notices").load(config)
 
   sockrooms.on 'verify', (socket, session, reqdata) ->
     forceLogout = (err) ->
@@ -126,7 +127,9 @@ route = (config, sockrooms) ->
     }
 
   sockrooms.on "email_group", (socket, session, data) ->
-
+    email_notices.send_custom_group_message session, data, (err) ->
+      return sockrooms.handle_error(socket, err) if err?
+      socket.sendJSON "email_sent", {}
 
   sockrooms.on "join", (data) ->
     {socket, session, room, first} = data

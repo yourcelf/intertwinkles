@@ -36,6 +36,7 @@ load = (config) ->
       return callback("Unknown member in group!") unless recipient?
       recipients.push(recipient.email)
 
+    # From/Sender/Reply-to strategy from http://stackoverflow.com/a/14555043
     send_email({
       sender: config.from_email
       from: "\"#{from.name.replace(/["]/g, "")} (via InterTwinkles)\" <#{config.from_email}>"
