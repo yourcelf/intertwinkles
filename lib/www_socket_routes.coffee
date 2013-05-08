@@ -125,6 +125,9 @@ route = (config, sockrooms) ->
       count: _.size(sockrooms.sessionIdToSockets)
     }
 
+  sockrooms.on "email_group", (socket, session, data) ->
+
+
   sockrooms.on "join", (data) ->
     {socket, session, room, first} = data
     build_room_users_list_for_user sockrooms, session, room, (err, users) ->

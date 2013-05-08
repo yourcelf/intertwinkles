@@ -250,9 +250,9 @@ input.color
   cursor: text
 
 .sharing-settings-button .popover
-  width: 350px
-.pull-right .sharing-settings-button .popover
-  left: -150px !important
+  width: 320px
+  left: auto !important
+  right: 0px !important
   .arrow
     left: 250px !important
 
@@ -260,10 +260,29 @@ ul.sharing-online-group
   
   li
     display: inline-block
-    &:first-child a
+    margin-r
+    a.room-menu
       border-radius: 4px 0px 0px 4px
-    &:last-child a
+    a.open-sharing
       border-radius: 0px 4px 4px 0px
+
+table.email-sender
+  th
+    text-align: right
+    font-weight: normal
+    vertical-align: top
+  td
+    vertical-align: top
+    width: 100%
+  .email-list
+    margin-left: 0
+    li
+      display: inline-block
+      list-style-type: none
+    li + li:before
+      content: ", "
+    li.inline-user
+      border-bottom: 1px dotted #aaa;
 
 /*
   Timeline / events

@@ -312,11 +312,11 @@ intertwinkles.sharing_summary = (sharing) ->
       perms.push("Owned by <acronym title='#{group_list.join(", ")}'>#{group.name}</acronym>.")
     if sharing.public_edit_until?
       if sharing.public_edit_until.getTime() - now.getTime() > 1000 * 60 * 60 * 24 * 365 * 100
-        future = "forever"
+        future = ""
       else
-        future = "until <nobr>#{sharing.public_edit_until.toString("ddd MMM d, h:mmtt")}</nobr>"
+        future = " until <nobr>#{sharing.public_edit_until.toString("ddd MMM d, h:mmtt")}</nobr>"
         short_title = "Public " + future
-      perms.push("Anyone with the URL can edit this #{future}.")
+      perms.push("Anyone with the URL can edit this#{future}.")
       is_public = true
       if sharing.advertise
         short_title = "Public wiki"
@@ -326,10 +326,10 @@ intertwinkles.sharing_summary = (sharing) ->
         icon_class = "icon-share"
     else if sharing.public_view_until?
       if sharing.public_view_until.getTime() - now.getTime() > 1000 * 60 * 60 * 24 * 365 * 100
-        future = "forever"
+        future = ""
       else
         future = "until #{sharing.public_view_until.toString("ddd MMM d, h:mmtt")}"
-      perms.push("Anyone with the link can view this #{future}.")
+      perms.push("Anyone with the link can view this#{future}.")
       is_public = true
       if sharing.advertise
         short_title = "Public on the web"
@@ -396,7 +396,11 @@ intertwinkles.normalize_sharing = (sharing) ->
 
 sharing_settings_button_template = _.template("""
   <div class='sharing-settings-button'>
-    <a class='btn btn-success open-sharing'><i class='<%- icon_class %>'></i> Sharing</a>
+    <% if (can_email) { %>
+      <a class='btn btn-success email-group'>
+        <i class='icon-envelope'></i> Email Group
+      </a><% } %><a
+        class='btn btn-success open-sharing'><i class='<%- icon_class %>'></i> Sharing</a>
   </div>
 """)
 sharing_settings_modal_template = _.template("""
@@ -419,13 +423,63 @@ sharing_settings_modal_template = _.template("""
   </div>
 """)
 
+email_group_modal_template = _.template("""
+  <div class='modal hide fade email-group'>
+    <form>
+      <div class='modal-header'>
+        <button type='button' class='close' data-dismiss='modal' aria-hidden='true'>&times;</button>
+        <h3>Email this to your group</h3>
+      </div>
+      <div class='modal-body'>
+        <table class='email-sender'>
+          <tr>
+            <th>To:</th>
+            <td>
+              <ul class='email-list'>
+                <% for (var i = 0; i < group.members.length; i++) { %>
+                  <li class='inline-user'
+                    title="<%- intertwinkles.users[group.members[i].user].email %>"
+                    data-placement="bottom">
+                      <%= intertwinkles.inline_user(group.members[i].user, null, "tiny") %>
+                  </li>
+                <% } %>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <th>Subject:</th>
+            <td><input type='text' name='subject' value='<%- $("title").html() %>' style='width: 95%;'/></td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <textarea name='body' rows=7 cols=60 style='width: 95%;'>Hey <%- group.name %>,
+
+  Check this out!
+  <%- window.location.href %>
+
+  In cooperation,
+  <%- intertwinkles.user.get("name") %></textarea>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class='modal-footer'>
+        <a class='btn close pull-left' data-dismiss='modal' href='#'>Close</a>
+        <input type='submit' class='btn btn-primary btn-large' value='Send Email' />
+      </div>
+    </form>
+  </div>
+""")
+
 class intertwinkles.SharingSettingsButton extends Backbone.View
   # A control that briefly summarizes the sharing preferences for a document,
   # and invokes a form to edit them.
   template: sharing_settings_button_template
-  modalTemplate: sharing_settings_modal_template
+  sharingSettingsModalTemplate: sharing_settings_modal_template
+  emailGroupModalTemplate: email_group_modal_template
   events:
-    'click .open-sharing': 'renderModal'
+    'click .open-sharing': 'sharingSettingsModal'
+    'click .email-group': 'emailGroupModal'
 
   initialize: (options={}) ->
     @model = options.model
@@ -434,10 +488,14 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
 
   render: =>
     @read_only = not intertwinkles.can_change_sharing(@model)
+    @can_email = !!intertwinkles.groups[@model.get("sharing")?.group_id]
     summary = intertwinkles.sharing_summary(intertwinkles.normalize_sharing(
       @model.get("sharing")
     ))
-    @$el.html(@template(icon_class: summary.icon_class))
+    @$el.html(@template({
+      icon_class: summary.icon_class
+      can_email: @can_email
+    }))
     popover_content = summary.content
     if @read_only
       @$(".open-sharing").addClass("disabled")
@@ -453,17 +511,48 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
         trigger: "hover"
       })
 
-  renderModal: (event) =>
+  sharingSettingsModal: (event) =>
     event.preventDefault()
     return if @read_only
-    @modal = $(@modalTemplate())
-    $("body").append(@modal)
-    @modal.modal('show').on('hidden', => @modal.remove())
+    @modal?.modal("hide")
+    modal = $(@sharingSettingsModalTemplate())
+    $("body").append(modal)
+    modal.modal('show').on('hidden', -> modal.remove())
     @sharing = new intertwinkles.SharingFormControl(sharing: @model.get("sharing"))
-    $(".sharing-controls", @modal).html(@sharing.el)
+    $(".sharing-controls", modal).html(@sharing.el)
     @sharing.render()
-    $("form", @modal).on "submit", @save
+    $("form", modal).on "submit", @save
     @sharing.on "resize", -> $(window).resize()
+    @modal = modal
+
+  emailGroupModal: (event) =>
+    event.preventDefault()
+    return unless @can_email
+    @modal?.modal("hide")
+    group = intertwinkles.groups[@model.get("sharing").group_id]
+    modal = $(@emailGroupModalTemplate({group: group}))
+    $("body").append(modal)
+    modal.modal('show').on('hidden', -> modal.remove())
+    modal.find("form").on "submit", (event) =>
+      event.preventDefault()
+      subject = $.trim($("input[name=subject]", modal).val())
+      body = $.trim($("textarea[name=body]", modal).val())
+      console.log subject, body
+      unless subject and body
+        alert("Please enter a subject and a message.")
+        return
+      intertwinkles.socket.once "email_sent", (data) ->
+        modal.modal("hide")
+        flash.info("Email sent to #{group.members.length} group members.")
+        modal.modal("hide")
+      intertwinkles.socket.send "email_group", {
+        entity: @model.id
+        group_id: @model.get("sharing").group_id
+        subject: subject
+        body: body
+      }
+      modal.find("input[type=submit]").attr("disabled", true).addClass("loading")
+    @modal = modal
 
   close: =>
     @modal.modal('hide')

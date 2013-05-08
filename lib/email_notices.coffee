@@ -13,11 +13,36 @@ load = (config) ->
       if newline_chars.test(params[key])
         return false
     return true
+
   send_email = (params, callback) ->
     if validate_headers(params)
       client.send(params, callback)
     else
       callback("Invalid header found")
+
+  send_custom_group_message = (session, params, callback) ->
+    return callback("Not authenticated") unless utils.is_authenticated(session)
+    for key in ["group_id", "subject", "body"]
+      return callback("Missing param #{key}") unless params[key]?
+    from = session.users[session.auth.user_id]
+    return "Unknown sender" unless from
+    unless session?.groups?[params.group_id]
+      return callback("Unauthorized group")
+    unless params.subject.trim() and params.body.trim()
+      return callback("Missing subject or body")
+    recipients = []
+    for member in session.groups[params.group_id].members
+      recipient = session.users[member.user]
+      return callback("Unknown member in group!") unless recipient?
+      recipients.push(recipient.email)
+
+    send_email({
+      sender: config.from_email
+      from: from.email
+      to: recipients.join(", ")
+      subject: params.subject.trim()
+      text: params.body.trim()
+    }, callback)
 
   send_notifications = (callback=(->)) ->
     schema.Notification.findSendable {}, (err, docs) ->
@@ -50,7 +75,7 @@ load = (config) ->
                   text: " "
                 }
                 send_email(params, done)
-              , done
+            , done
 
           # Send email
           (done) ->
@@ -228,9 +253,11 @@ load = (config) ->
       , (err) ->
         return callback(err, sent_count)
 
+
   return {
     send_notifications, render_notifications,
-    send_daily_activity_summaries, render_daily_activity_summary
+    send_daily_activity_summaries, render_daily_activity_summary,
+    send_custom_group_message
   }
 
 module.exports = { load }
