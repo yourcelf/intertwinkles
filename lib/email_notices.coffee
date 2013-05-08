@@ -121,7 +121,11 @@ load = (config) ->
           done(err, hierarchy, notices)
 
       (hierarchy, notices, done) ->
-        return done() unless hierarchy?.length or notices?.length
+        # We don't want to send bare invites; this is spam. No linked-in-ish-ness.
+        notice_types = _.uniq(n.type for n in notices)
+        only_invite = notice_types.length == 1 and notice_types[0] == "invitation"
+        unless (hierarchy?.length or (notices?.length and not only_invite))
+          return done()
         visits = 0
         edits = 0
         for g in hierarchy

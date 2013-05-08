@@ -6,6 +6,7 @@ common = require './common'
 schema = require('../lib/schema').load(config)
 email_notices = require("../lib/email_notices").load(config)
 api_methods = require("../lib/api_methods")(config)
+email_invitation_view = require("../emails/invitation")
 
 describe "Activity summaries", ->
   mail = null
@@ -115,3 +116,35 @@ describe "Activity summaries", ->
                 ["1234567890@tmomail.net", "two@mockmyid.com"]
               )
               done()
+  
+  it "doesn't send bare invitations", (done) ->
+    # We don't want to spam users who have been invited (perhaps without their
+    # desire) any more than once ever. By default, a new user will get an email
+    # when they are invited to join a group.  That should be the last email
+    # they receive until they accept the invite.
+    mail.outbox.length = 0
+    schema.Event.remove {}, (err) ->
+      schema.Group.findOne {slug: "three-members"}, (err, group) ->
+        schema.User.findOne {email: "one@mockmyid.com"}, (err, sender) ->
+          schema.User.findOne {email: "four@mockmyid.com"}, (err, recipient) ->
+            email_notices.render_notifications email_invitation_view, {
+              group: group
+              sender: sender
+              recipient: recipient
+              url: config.api_url + "/groups/join/#{group.slug}"
+              application: "www"
+            }, (err, rendered) ->
+              api_methods.post_notifications [{
+                application: "www"
+                type: "invitation"
+                entity: group.id
+                recipient: recipient.id
+                url: "/groups/join/#{group.slug}"
+                sender: sender.id
+                formats: rendered
+              }], (err, notices) ->
+                email_notices.send_daily_activity_summaries (err, count) ->
+                  expect(err).to.be(null)
+                  expect(count).to.be(0)
+                  expect(mail.outbox.length).to.be(0)
+                  done()
