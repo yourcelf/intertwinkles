@@ -46,6 +46,7 @@ describe "www methods", ->
       www_methods.get_dash_events @session, (err, events) =>
         expect(events.length).to.be(1)
         evt = events[0]
+        console.log evt
         delete evt._id
         delete evt.__v
         evt.user = evt.user.toString()
@@ -54,7 +55,7 @@ describe "www methods", ->
           id: evt.id,
           absolute_url: "http://localhost:#{config.port}/groups/hey"
           verbed: 'tested'
-          title: "Groups"
+          title: "Home"
           grammar: null
         }, event_params)
         expect(evt).to.eql(result_params)
