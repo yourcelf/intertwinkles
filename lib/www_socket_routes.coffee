@@ -128,7 +128,7 @@ route = (config, sockrooms) ->
 
   sockrooms.on "email_group", (socket, session, data) ->
     email_notices.send_custom_group_message session, data, (err) ->
-      return sockrooms.handle_error(socket, err) if err?
+      return sockrooms.handleError(socket, err) if err?
       socket.sendJSON "email_sent", {}
 
   sockrooms.on "join", (data) ->

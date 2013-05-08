@@ -6,15 +6,21 @@ common = require './common'
 schema = require('../lib/schema').load(config)
 email_notices = require("../lib/email_notices").load(config)
 api_methods = require("../lib/api_methods")(config)
+log4js = require("log4js")
+logger = log4js.getLogger("socket_server")
+logger.setLevel(log4js.levels.FATAL)
 
 describe "Activity summaries", ->
   mail = null
+  socket_client = null
   before (done) ->
     common.startUp (server) =>
       @server = server
       common.startMailServer (mailserver) ->
         mail = mailserver
-        done()
+        common.identifiedSockjsClient server, {}, "one@mockmyid.com", (client) ->
+          socket_client = client
+          done()
 
   after (done) ->
     common.shutDown(@server, done)
@@ -102,3 +108,34 @@ describe "Activity summaries", ->
                 expect(err).to.not.be(null)
                 expect(mail.outbox.length).to.be(0)
                 done()
+
+  it "sends with a socket message", (done) ->
+    mail.outbox.length = 0
+    schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
+      schema.Group.findOne {slug: "three-members"}, (err, group) ->
+        schema.Group.findOne {slug: "not-one-members"}, (err, badgroup) ->
+          socket_client.writeJSON {
+            route: "email_group",
+            body: {
+              group_id: group.id
+              subject: "Hey there"
+              body: "Good times"
+            }
+          }
+          socket_client.onceJSON (data) ->
+            expect(mail.outbox.length).to.be(1)
+            expect(data.route).to.eql("email_sent")
+
+            mail.outbox.length = 0
+            socket_client.writeJSON {
+              route: "email_group",
+              body: {
+                group_id: badgroup.id
+                subject: "Hey there"
+                body: "Good times"
+              }
+            }
+            socket_client.onceJSON (data2) ->
+              expect(mail.outbox.length).to.be(0)
+              expect(data2.route).to.be("error")
+              done()
