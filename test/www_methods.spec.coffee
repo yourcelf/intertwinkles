@@ -46,7 +46,6 @@ describe "www methods", ->
       www_methods.get_dash_events @session, (err, events) =>
         expect(events.length).to.be(1)
         evt = events[0]
-        console.log evt
         delete evt._id
         delete evt.__v
         evt.user = evt.user.toString()
