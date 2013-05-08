@@ -488,7 +488,7 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
 
   render: =>
     @read_only = not intertwinkles.can_change_sharing(@model)
-    @can_email = !!intertwinkles.groups[@model.get("sharing")?.group_id]
+    @can_email = !!intertwinkles.groups?[@model.get("sharing")?.group_id]
     summary = intertwinkles.sharing_summary(intertwinkles.normalize_sharing(
       @model.get("sharing")
     ))

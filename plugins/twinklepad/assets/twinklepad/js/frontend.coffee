@@ -164,7 +164,7 @@ class TwinklePadView extends intertwinkles.BaseView
       @model.save => sharingButton.close()
     sharingButton.render()
     @$("li.sharing").html(sharingButton.el)
-    @resize()
+    $("iframe").load(@resize)
 
   renderName: =>
     @$(".name, title").html(_.escape(@model.get("title")))

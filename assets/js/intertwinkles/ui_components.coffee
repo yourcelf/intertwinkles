@@ -213,8 +213,6 @@ class intertwinkles.Toolbar extends Backbone.View
     for label, app of INTERTWINKLES_APPS
       menu_app = _.extend {}, app
       menu_app.class = if label == @applabel then "active" else ""
-      if label == "www" and not intertwinkles.is_authenticated()
-        menu_app.name = "Home"
       apps.push(menu_app)
 
     @$el.html @template({

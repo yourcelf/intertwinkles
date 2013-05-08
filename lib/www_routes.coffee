@@ -60,7 +60,7 @@ route = (config, app, sockrooms) ->
       res.render 'home/dashboard', context(req, {
         title: "InterTwinkles"
       }, {
-        active_name: "Groups",
+        active_name: "Home",
         events: events,
         groups_docs: groups_docs
       })

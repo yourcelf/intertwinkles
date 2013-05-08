@@ -46,7 +46,7 @@ config = {
   # Installed apps.
   apps: {
     www: {
-      name: "Groups"
+      name: "Home"
       about: "Recent activity from all your groups"
       url: base_url
       image: "#{base_url}/static/img/groups.png"
