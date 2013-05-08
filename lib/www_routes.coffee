@@ -464,6 +464,7 @@ route = (config, app, sockrooms) ->
         prev_url: prev_url
         next_url: next_url
         show_url: req.url
+        subscription_settings_link: config.api_url + "/profiles/edit/"
       })
 
   #
