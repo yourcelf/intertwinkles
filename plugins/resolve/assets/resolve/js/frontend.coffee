@@ -197,14 +197,6 @@ class ProposalHistoryView extends intertwinkles.BaseModalFormView
     intertwinkles.sub_vars(@$el)
     @$("[rel=popover]").popover()
 
-class OpinionHistoryView extends intertwinkles.BaseModalFormView
-  template: _.template $("#opinionHistoryViewTemplate").html()
-  initialize: (options) ->
-    @context = {
-      opinion: options.opinion
-      vote_defs: options.vote_defs
-    }
-
 class ShowProposalView extends intertwinkles.BaseView
   template: _.template($("#showProposalTemplate").html())
   opinionTemplate: _.template($("#opinionTemplate").html())
@@ -371,9 +363,6 @@ class ShowProposalView extends intertwinkles.BaseView
           new Date(resolve.model.get("revisions")[0].date)
         )
       }))
-      $(".show-opinion-history", rendered).on "click", (event) =>
-        event.preventDefault()
-        new OpinionHistoryView({opinion: opinion, vote_defs: @votes}).render()
 
       if not @_renderedOpinions[opinion._id]?
         $(".opinions").prepend(rendered)
