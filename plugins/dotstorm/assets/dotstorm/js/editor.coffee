@@ -34,6 +34,7 @@ class ds.IdeaCanvas extends Backbone.View
     setTimeout (=> @delegateEvents()), 100
   
   redraw: =>
+    @lastTool = null
     for action in @actions
       @drawAction(action)
 
@@ -363,6 +364,7 @@ class ds.EditIdea extends Backbone.View
 
   handleChangeBackgroundColor: (event) =>
     @changeBackgroundColor $(event.currentTarget).css("background-color")
+    @canvas.redraw()
     return false
 
   changeBackgroundColor: (color) =>
