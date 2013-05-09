@@ -11,13 +11,29 @@ block body
     div.row-fluid
       h1 Groups
     div.row-fluid
-      div.span3
+      div.span3.hidden-phone
+        <div class='dash-app-list-holder'></div>
         // This will contain howto/guide stuff?
       div.span6.groups
       div.span2
         div.pull-right
           a.btn(href='/groups/new/') Add Group
     div.personal-events
+
+  script#appList(type='text/template').
+    <h4 style='font-weight: normal; text-align: center; font-style: italic;'>Apps</h4>
+    <ul class='dash-app-list'>
+    <% _.each(apps, function(app, i) { %>
+      <li class='<%- app.class %>'>
+        <a href='<%- app.url + "/" %>'>
+          <img src='<%- app.image %>' alt='<%- app.name %>' /><br />
+          <%- app.name %>
+        </a>
+      </li>
+    <% }); %>
+          
+
+      
 
   script#emptyGroup(type='text/template').
     <div class='group'>

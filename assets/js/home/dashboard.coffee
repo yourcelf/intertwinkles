@@ -47,12 +47,15 @@ class GroupDocumentList extends Backbone.View
       @$(".groups").append(@emptyGroupDocListTemplate({group}))
     this
 
+dash_app_list_template = _.template($("#appList").html())
+
 intertwinkles.connect_socket ->
   intertwinkles.build_toolbar($("header"), {applabel: "www"})
   intertwinkles.build_footer($("footer"))
   list = new GroupDocumentList()
   $("#dashboard").html(list.el)
   list.render()
-
-
+  $(".dash-app-list-holder").html(dash_app_list_template( {
+    apps: (app for label,app of INTERTWINKLES_APPS when label != "www")
+  }))
 

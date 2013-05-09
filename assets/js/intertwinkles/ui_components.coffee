@@ -15,8 +15,6 @@ user_menu_template = _.template("""
     <b class='caret'></b>
   </a>
   <ul class='dropdown-menu' role='menu'>
-    <li><a tabindex='-1' href='<%- INTERTWINKLES_APPS.www.url %>'><i class='icon icon-th'></i> Dashboard</a></li>
-    <li class='divider'></li>
     <li><a tabindex='-1' href='<%- INTERTWINKLES_APPS.www.url %>/profiles/edit'><i class='icon icon-cog'></i> Settings</a></li>
     <li class='divider'></li>
     <li><a tabindex='-1' href='<%- INTERTWINKLES_APPS.www.url %>/feedback/'><i class='icon-gift'></i> Feedback</a></li>
@@ -133,55 +131,64 @@ toolbar_template = _.template("""
     <div class='navbar-inner'>
       <div class='container-fluid'>
         <ul class='nav pull-right'>
-          <li class='search-menu dropdown'>
-            <a href='#' title='search' data-toggle='dropdown' class='search-menu-trigger'>
-              <i class='icon-search'></i>
-              <span class='hidden-phone'>Search</span>
-            </a>
-            <ul class='dropdown-menu search' role='menu' aria-labeledby='dlogo'>
-              <li class='linkless'>
-                <form class='form-search'
-                      action='<%- INTERTWINKLES_APPS.www.url %>/search/'
-                      method='GET'>
-                  <div class='input-append'>
-                    <input class='input-medium search-query' type='text' name='q' />
-                    <button class='btn' type='submit'>
-                      <i class='icon-search' title='Search'></i>
-                    </button>
-                  </div>
-                </form>
-              </li>
-            </ul>
-          </li>
           <li class='notifications dropdown'></li>
           <li class='user-menu dropdown'></li>
           <li class='auth_button'>
             <a href='#' class='sign-in'><img src='/static/img/sign_in_blue.png' /></a>
           </li>
         </ul>
-        <a class='brand appmenu-toggle' href='#' role='button' id='dlogo'>
-          <span class='visible-phone'>
-            <img src='/static/img/star-icon.png' alt='IT' style='max-height: 24px;'/>
-            <span style='font-size: 12px;'><%- active_name %></span>
-          </span>
-          <span class='hidden-phone'>
-            Inter<span class='intertwinkles'>Twinkles</span>:
-            <span class='appname'><%- active_name %></span>
-            <b class='caret'></b>
-            <span class='label' style='font-size: 50%;'>BETA</span>
-          </span>
-        </a>
+        <div class='home-link pull-left'>
+          <a class='brand' href='/' role='button' id='dlogo'>
+            <span class='visible-phone'>
+              <img src='/static/img/star-icon.png' alt='IT' style='max-height: 24px;'/>
+              <span class='label' style='font-size: 50%;'>BETA</span>
+            </span>
+            <span class='hidden-phone'>
+              Inter<span class='intertwinkles'>Twinkles</span>
+              <span class='label' style='font-size: 50%;'>BETA</span>
+            </span>
+          </a>
+        </div>
         <div class='appmenu'>
-          <ul class='nav'>
-            <% _.each(apps, function(app, i) { %>
-              <li class='<%- app.class %>'>
-                <a href='<%- app.url + "/" %>'>
-                  <img src='<%- app.image %>' alt='<%- app.name %>' /><br />
-                  <%- app.name %>
-                </a>
-              </li>
-            <% }); %>
-          </ul>
+          <div class='appmenu-content'>
+            <div class='form'>
+              <form class='form-search'
+                    action='<%- INTERTWINKLES_APPS.www.url %>/search/'
+                    method='GET'>
+                <div class='input-append'>
+                  <input class='input-medium search-query' type='text' name='q' />
+                  <button class='btn' type='submit'>
+                    <i class='icon-search' title='Search'></i>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <% if (intertwinkles.is_authenticated()) { %>
+              <div class='document-list-holder-holder'>
+                <em>Recent things</em><br />
+                <div class='documents-list loading'></div>
+                <a class='more' href='/'>More...</a>
+              </div>
+            <% } else { %>
+              Sign in to see your group's stuff.
+            <% } %>
+            <div style='clear: both;'></div>
+            <hr>
+            <ul class='nav'>
+              <% _.each(apps, function(app, i) { %>
+                <li class='<%- app.class %>'>
+                  <a href='<%- app.url + "/" %>'>
+                    <img src='<%- app.image %>' alt='<%- app.name %>' /><br />
+                    <%- app.name %>
+                  </a>
+                </li>
+              <% }); %>
+            </ul>
+          </div>
+        </div>
+        <div class='appmenu-toggle' title='Documents, search, and apps'>
+          <i class='icon-th-list'></i><i class='icon-search'></i>
         </div>
       </div>
     </div>
@@ -194,11 +201,17 @@ class intertwinkles.Toolbar extends Backbone.View
     'click .sign-in':  'signIn'
     'click      .appmenu-toggle': 'toggleAppmenu'
     'touchstart .appmenu-toggle': 'toggleAppmenu'
+    'click                input': 'stopPropagation'
+    'touchstart           input': 'stopPropagation'
 
   initialize: (options={}) ->
     @applabel = options.applabel
     @active_name = options.active_name or INTERTWINKLES_APPS[@applabel].name
     $('html').on('click.dropdown.data-api', @_hideAppmenu)
+    @listenTo intertwinkles.socket, "recent_docs", @updateDocs
+
+  stopPropagation: (event) ->
+    event.stopPropagation()
 
   remove: =>
     @user_menu?.remove()
@@ -212,7 +225,8 @@ class intertwinkles.Toolbar extends Backbone.View
     for label, app of INTERTWINKLES_APPS
       menu_app = _.extend {}, app
       menu_app.class = if label == @applabel then "active" else ""
-      apps.push(menu_app)
+      if label != "www"
+        apps.push(menu_app)
 
     @$el.html @template({
       apps: apps
@@ -229,7 +243,23 @@ class intertwinkles.Toolbar extends Backbone.View
     @$(".notifications").replaceWith(@notification_menu.el)
     @notification_menu.render()
 
+    unless @doc_list?
+      @doc_list = new intertwinkles.DocumentList({docs: @_docs})
+    @$(".documents-list").html(@doc_list.el)
+    @updateDocs()
     this
+
+  updateDocs: (data) =>
+    if data?.docs?
+      @_docs = data.docs
+    if @doc_list?
+      @doc_list.docs = @_docs
+      @doc_list.render()
+      @$(".documents-list").removeClass("loading")
+
+  fetchDocs: =>
+    if intertwinkles.is_authenticated()
+      intertwinkles.socket.send "get_recent_docs"
 
   setAuthFrameVisibility: =>
     @user_menu.setAuthFrameVisibility()
@@ -250,6 +280,7 @@ class intertwinkles.Toolbar extends Backbone.View
       event.preventDefault()
       event.stopPropagation()
       menu.show()
+      @fetchDocs()
 
   _hideAppmenu: (event) =>
     @$(".appmenu").hide()

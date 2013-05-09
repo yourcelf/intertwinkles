@@ -35,6 +35,7 @@ build_room_users_list_for_user = (sockrooms, user_session, room, callback) ->
 route = (config, sockrooms) ->
   api_methods = require("./api_methods")(config)
   email_notices = require("./email_notices").load(config)
+  schema = require("./schema").load(config)
 
   sockrooms.on 'verify', (socket, session, reqdata) ->
     forceLogout = (err) ->
@@ -130,6 +131,21 @@ route = (config, sockrooms) ->
     email_notices.send_custom_group_message session, data, (err) ->
       return sockrooms.handleError(socket, err) if err?
       socket.sendJSON "email_sent", {}
+
+  sockrooms.on "get_recent_docs", (socket, session, data) ->
+    respond = (err, docs) ->
+      return sockrooms.handleError(socket, err) if err?
+      socket.sendJSON "recent_docs", {
+        docs: docs
+      }
+    return respond(null, []) unless utils.is_authenticated(session)
+    utils.list_group_documents(
+      schema.SearchIndex, session, respond, {}, "-modified", 0, 5, true,
+    )
+
+  #
+  # Joining / leaving
+  #
 
   sockrooms.on "join", (data) ->
     {socket, session, room, first} = data

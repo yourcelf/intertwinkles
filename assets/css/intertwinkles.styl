@@ -153,22 +153,55 @@ it-color = #ff0287
 /*
   App menu
 */
-.appmenu-toggle:focus
-  outline: none
+.appmenu-toggle
+  text-align: center
+  overflow: hidden
+  cursor: pointer
+  padding: 0.6em
+  &:hover, &.active
+    background-color: yellow
+    background: #E5E5E5
+  &:focus
+    outline: none
 .appmenu
   display: none
   position: absolute
-  left: 20px
-  margin-right: 20px
+  width: 100%
   top: 48px
-  white-grain()
-  padding: 1em
-  border: 0px 1px 1px 1px solid rgba(100, 100, 100, 0.8)
+  left: 0
+  text-align: center
   z-index: 10000
-  box-shadow: 0px 2px 2px #AAA
-  li
-    text-align: center
-    font-size: 14px
+  .appmenu-content
+    display: inline-block
+    .document-list-holder-holder
+      display: inline-block
+      li
+        text-align: left
+      a
+        &.more
+          display: block
+          font-style: italic
+        &:hover
+          a
+            color: white
+          background-color: #acf
+
+    white-grain()
+    padding: 1em
+    border: 0px 1px 1px 1px solid rgba(100, 100, 100, 0.8)
+    box-shadow: 0px 2px 2px #AAA
+    .nav
+      float: none
+      display: inline-block
+      text-align: center
+      li
+        text-align: center
+        font-size: 14px
+      div.form
+        text-align: center
+        form
+          display: inline-block
+
 @media (max-width: 384px)
   .appmenu li
     width: 128px
@@ -502,12 +535,6 @@ table.email-sender
   font-size: 0.8em
   color: black
   white-space: nowrap
-
-.search-menu.dropdown form
-  margin: 0px
-.search.dropdown-menu
-  right: -150px
-
 
 /*
   Lightbox-esque modal close link
