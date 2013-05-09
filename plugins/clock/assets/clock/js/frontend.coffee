@@ -731,7 +731,10 @@ class Router extends Backbone.Router
     $(".sharing-online-group .room-users").replaceWith(@room_view.el)
     @room_view.render()
 
-    @sharing_view = new intertwinkles.SharingSettingsButton(model: @model)
+    @sharing_view = new intertwinkles.SharingSettingsButton({
+      model: @model
+      application: "clock"
+    })
     $(".sharing-online-group .sharing").html(@sharing_view.el)
     @sharing_view.render()
     @sharing_view.on "save", (sharing_settings) =>

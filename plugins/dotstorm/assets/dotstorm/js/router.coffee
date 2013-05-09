@@ -109,7 +109,10 @@ ds.joinRoom = (newModel) ->
   $(".sharing-online-group .room-users").replaceWith(ds.room_view.el)
   ds.room_view.render()
 
-  ds.sharing_view = new intertwinkles.SharingSettingsButton(model: newModel)
+  ds.sharing_view = new intertwinkles.SharingSettingsButton({
+    model: newModel
+    application: "dotstorm"
+  })
   $(".sharing-online-group .sharing").html(ds.sharing_view.el)
   ds.sharing_view.render()
   ds.sharing_view.on "save", (sharing_settings) =>

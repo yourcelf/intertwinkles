@@ -158,7 +158,10 @@ class TwinklePadView extends intertwinkles.BaseView
       model: @model.toJSON()
       embed_url: embed_url
     }))
-    sharingButton = new intertwinkles.SharingSettingsButton(model: @model)
+    sharingButton = new intertwinkles.SharingSettingsButton({
+      model: @model
+      application: "twinklepad"
+    })
     sharingButton.on "save", (sharing_settings) =>
       @model.set({sharing: sharing_settings})
       @model.save => sharingButton.close()

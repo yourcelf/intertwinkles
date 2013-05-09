@@ -324,7 +324,7 @@ class ShowFirestarter extends Backbone.View
 
     @sharingButton = new intertwinkles.SharingSettingsButton({
       model: fire.model,
-      read_only: not intertwinkles.can_change_sharing(fire.model)
+      application: "firestarter"
     })
     @$(".sharing").html(@sharingButton.el)
     @sharingButton.render()

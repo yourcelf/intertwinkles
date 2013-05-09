@@ -133,7 +133,6 @@ toolbar_template = _.template("""
     <div class='navbar-inner'>
       <div class='container-fluid'>
         <ul class='nav pull-right'>
-          <li class='invite-helper dropdown'></li>
           <li class='search-menu dropdown'>
             <a href='#' title='search' data-toggle='dropdown' class='search-menu-trigger'>
               <i class='icon-search'></i>
@@ -229,10 +228,6 @@ class intertwinkles.Toolbar extends Backbone.View
     @notification_menu = new intertwinkles.NotificationMenu()
     @$(".notifications").replaceWith(@notification_menu.el)
     @notification_menu.render()
-
-    invite_helper = new intertwinkles.InviteHelper()
-    @$(".invite-helper").replaceWith(invite_helper.el)
-    invite_helper.render()
 
     this
 
@@ -482,10 +477,6 @@ class intertwinkles.GroupChoice extends Backbone.View
     @$el.html(@template())
     this
 
-#
-# Invite helper
-#
-
 intertwinkles.get_short_url = (params, callback) ->
   socket_callback = "short_url_#{Math.random()}"
   intertwinkles.socket.once socket_callback, (data) ->
@@ -493,101 +484,9 @@ intertwinkles.get_short_url = (params, callback) ->
       callback(data.error, null)
     else
       callback(null, data.short_url)
-
-
   intertwinkles.socket.send "get_short_url", {
     callback: socket_callback, application: params.application, path: params.path
   }
-
-invite_helper_template = _.template("
-<a href='#' class='dropdown-toggle invite-helper'
-   data-toggle='dropdown'
-   title='Barcodes and short URLs' >
-     <span class='visible-phone'>
-      <i class='icon-share'></i>
-     </span>
-     <span class='hidden-phone'>
-       share <i class='caret'></i>
-     </span>
-</a>
-<ul class='dropdown-menu invite-helper-menu' role='menu'>
-  <li class='linkless'>
-    <%- message %><br />
-    <input readonly type='text' value='<%- url %>' />
-    <br />
-    <a class='barcode' data-url='<%- url %>' href='#'>Get barcode</a><br />
-    <a class='short-url'
-       data-url='<%- url %>'
-       data-application='<%- application %>'
-       href='#'>Get short URL</a>
-  </li>
-</ul>
-")
-
-class intertwinkles.InviteHelper extends Backbone.View
-  tagName: "li"
-  template: invite_helper_template
-  events:
-    'click .barcode': 'getBarcode'
-    'click .short-url': 'getShortUrl'
-    'click input': 'selectText'
-    'click .dropdown-toggle': 'checkLocation'
-
-  initialize: (options) ->
-    @message = options?.message or "Invite others with this link:"
-    @url = options?.url or window.location.href
-    @application = options?.application or INITIAL_DATA.application
-    @current_location = window.location.href
-
-  checkLocation: (event) =>
-    if window.location.href != @current_location
-      event.preventDefault()
-      @render()
-      @current_location = window.location.href
-      setTimeout (=> @$(".dropdown-toggle").click()), 1
-      return
-
-  selectText: (event) =>
-    $(event.currentTarget).select()
-    event.stopPropagation()
-    event.preventDefault()
-
-  render: =>
-    @$el.addClass("invite-helper dropdown")
-    if @application? and @url?
-      @$el.html(@template({
-        url: @url
-        application: @application
-        message: @message
-      }))
-    else
-      @$el.html("")
-
-  getBarcode: (event) =>
-    event.preventDefault()
-    event.stopPropagation()
-    loading = $("<span></span>").html("<img src='/static/img/spinner.gif' /> ...")
-    qrcode = $("<div></div>")
-    @$(".barcode").replaceWith(qrcode)
-    url = $(event.currentTarget).attr("data-url")
-    qrcode.qrcode({width: 150, height: 150, text: url})
-
-  getShortUrl: (event) =>
-    event.preventDefault()
-    event.stopPropagation()
-    orig = $(event.currentTarget)
-    url = orig.attr("data-url")
-    application = orig.attr("data-application")
-
-    loading = $("<span></span>").html("<img src='/static/img/spinner.gif' /> ...")
-    @$(".short-url").replaceWith(loading)
-    intertwinkles.get_short_url { path: url, application: application }, (err, result) ->
-      if err?
-        console.error(err)
-        flash "error", "Server error!... sorrrrrry."
-        loading.replaceWith(orig)
-      else
-        loading.replaceWith("Short URL:<br /><input type='text' readonly value='#{result}' />")
 
 document_list_template = _.template("""
   <% _.each(docs, function(doc) { %>

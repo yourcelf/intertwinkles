@@ -398,7 +398,7 @@ sharing_settings_button_template = _.template("""
   <div class='sharing-settings-button'>
     <% if (can_email) { %>
       <a class='btn btn-success email-group'>
-        <i class='icon-envelope'></i> Email Group
+        <i class='icon-envelope'></i> Email<span class='hidden-phone'> Group</span>
       </a><% } %><a
         class='btn btn-success open-sharing'><i class='<%- icon_class %>'></i> Sharing</a>
   </div>
@@ -415,9 +415,16 @@ sharing_settings_modal_template = _.template("""
       </div>
       <div class='modal-footer'>
         <div class='url-to-share pull-left'>
-          Share this: <input readonly type='text' class='url' value='<%- window.location.href %>' />
+          Share this:
+          <div style='display: inline-block; vertical-align: top; position: relative;'>
+            <input readonly type='text' class='url' value='<%- window.location.href %>' /><br/>
+            <a href='#' class='pull-left shrink-link' title='Shorten URL'>shorten</a>
+            <a href='#' class='show-qrcode' title='Show barcode'>qrcode</a>
+            <div class='qrcode'></div>
+          </div>
+
         </div>
-        <input type='submit' class='btn btn-primary' value='Save' />
+        <input type='submit' class='btn btn-primary btn-large' value='Save' />
       </div>
     </form>
   </div>
@@ -483,6 +490,7 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
 
   initialize: (options={}) ->
     @model = options.model
+    @application = options.application
     @listenTo @model, "change:sharing", @render
     @listenTo intertwinkles.user, "change", @render
 
@@ -522,6 +530,44 @@ class intertwinkles.SharingSettingsButton extends Backbone.View
     $(".sharing-controls", modal).html(@sharing.el)
     @sharing.render()
     $("form", modal).on "submit", @save
+    $(".shrink-link", modal).on 'click', (event) =>
+      event.preventDefault()
+      input = modal.find("input.url")
+      if input.hasClass("short")
+        $(event.currentTarget).html("shorten")
+        input.val(input.attr("data-long-url")).removeClass("short")
+      else
+        $(event.currentTarget).html("unshorten")
+        input.attr("data-long-url", input.val()).addClass("short")
+        if input.attr("data-short-url")
+          input.val(input.attr("data-short-url"))
+        else
+          input.addClass("loading")
+          intertwinkles.get_short_url {
+            path: input.val(),
+            application: @application
+          }, (err, result) ->
+            input.removeClass("loading")
+            if err?
+              console.error(err)
+              flash "error", "Server error!  oh noes.."
+            else
+              input.attr("data-short-url", result).val(result)
+
+    $(".qrcode", modal).qrcode({
+      width: 150, height: 150, text: $("input.url", modal).val()
+    }).css({
+      width: "150px"
+      height: "150px"
+      position: "absolute"
+      right: "0px"
+      bottom: "24px"
+      display: "none"
+    })
+    $(".show-qrcode", modal).on "click", (event) ->
+      event.preventDefault()
+      $(".qrcode", modal).toggle()
+      
     @sharing.on "resize", -> $(window).resize()
     @modal = modal
 

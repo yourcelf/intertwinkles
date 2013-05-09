@@ -248,7 +248,10 @@ class ShowProposalView extends intertwinkles.BaseView
     })
     @addView ".room-users", @roomUsersMenu
 
-    sharingButton = new intertwinkles.SharingSettingsButton(model: resolve.model)
+    sharingButton = new intertwinkles.SharingSettingsButton({
+      model: resolve.model
+      application: "resolve"
+    })
     # Handle changes to sharing settings.
     sharingButton.on "save", (sharing_settings) =>
       resolve.socket.once "proposal_saved", (data) =>
