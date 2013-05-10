@@ -1,12 +1,12 @@
 _    = require "underscore"
 base = require "../../../emails/base"
 
-sms = _.template("A <%= group.name %> proposal changed, please confirm your vote. <%= short_url %>: ")
-subject = _.template("<%= group.name %> proposal changed, please confirm your vote")
+sms = _.template("A <%= group.name %> proposal changed, please confirm or change your vote. <%= short_url %>: ")
+subject = _.template("<%= group.name %> proposal changed, please confirm or change your vote")
 text = _.template("""
 <%= recipient.name %>,
 
-<%= sender.name %> changed a proposal that you had already voted on in <%= group.name %> on InterTwinkles.  Please confirm your vote:
+<%= sender.name %> changed a proposal that you had already voted on in <%= group.name %> on InterTwinkles.  Please confirm or change your vote:
 
 <%= url %>
 
@@ -23,7 +23,7 @@ html = _.template("""
   <b><%- group.name %></b> on <a href='<%- home_url %>'>InterTwinkles</a>.
 </p>
 
-<p><a href='<%- url %>'>Please confirm your vote</a>.</p>
+<p><a href='<%- url %>'>Please confirm or change your vote</a>.</p>
 
 <p><b>Current revision:</b></p>
 
@@ -32,7 +32,7 @@ html = _.template("""
 """.trim())
 
 web = _.template("""<b><%- group.name %></b> proposal has changed;
-                    please confirm your vote.""")
+                    please confirm or change your vote.""")
 
 module.exports = {
   web: web
