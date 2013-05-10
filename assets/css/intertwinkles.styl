@@ -113,6 +113,7 @@ it-color = #ff0287
   font-size: 80%
   color: #aaa
   font-family: sans-serif
+  white-space: nowrap
 
 .form-hint
   font-size: 80%
@@ -458,16 +459,15 @@ table.email-sender
   li
     list-style-type: none
     display: table-row
-    .icon, .title, .date
+    .document-app-icon, .title, .date
       display: table-cell
-      padding-left: 0.5em
-      padding-right: 0.5em
     &:hover
       a
         color: white
       background-color: #acf
 
 .document-app-icon
+  min-width: 32px
   img
     width: 24px
     height: 24px

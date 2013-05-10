@@ -528,7 +528,7 @@ document_list_template = _.template("""
       <a class='title' href='<%- doc.absolute_url %>'>
         <%- doc.title %>
       </a>
-      <span class='date'><%= intertwinkles.simple_date(doc.modified) %>
+      <span class='date'><%= intertwinkles.simple_date(doc.modified) %></span>
     </li>
   <% }); %>
 """)
