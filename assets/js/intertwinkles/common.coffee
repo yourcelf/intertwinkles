@@ -97,7 +97,7 @@ intertwinkles.now = () ->
   return d
 
 intertwinkles.parse_date = (date) ->
-  return new Date() unless date?
+  return intertwinkles.now() unless date?
   return new Date(date.getTime()) if _.isDate(date)
   return new Date(date) if _.isNumber(date)
   if _.isString(date) and date.indexOf('Z') != -1

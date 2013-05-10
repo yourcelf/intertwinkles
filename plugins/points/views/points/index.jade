@@ -83,7 +83,10 @@ block postapp
   script(type='text/template', id='pointsetTemplate')
     div.hover-edit(style='text-align: center;')
       h1 <%- model.name %>
-      <a class='edit-link softnav' href='/points/u/<%- model.slug %>/edit/'>edit</a>
+      | <% console.log(intertwinkles.can_edit(model), model.sharing); %>
+      | <% if (intertwinkles.can_edit(model)) { %>
+      |   <a class='edit-link softnav' href='/points/u/<%- model.slug %>/edit/'>edit</a>
+      | <% } %>
     ul.points.two-col
     hr
 
