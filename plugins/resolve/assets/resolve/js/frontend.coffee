@@ -5,7 +5,7 @@ class Proposal extends Backbone.Model
 class ProposalCollection extends Backbone.Collection
   model: Proposal
   comparator: (p) ->
-    return new Date(p.get("revisions")[0].date).getTime()
+    return intertwinkles.parse_date(p.get("revisions")[0].date).getTime()
 
 resolve.model = new Proposal()
 
@@ -328,7 +328,7 @@ class ShowProposalView extends intertwinkles.BaseView
     @_opinionRevs or= {}
 
     opinions = resolve.model.get("opinions").slice()
-    opinions = _.sortBy opinions, (o) -> new Date(o.revisions[0].date).getTime()
+    opinions = _.sortBy opinions, (o) -> intertwinkles.parse_date(o.revisions[0].date).getTime()
     
     # Handle deletions
     deleted = _.difference _.keys(@_renderedOpinions), _.map(opinions, (o) -> o._id)
@@ -362,8 +362,8 @@ class ShowProposalView extends intertwinkles.BaseView
         rendered_text: intertwinkles.markup(opinion.revisions[0].text)
         is_non_voting: if is_non_voting then true else false
         stale: (
-          new Date(opinion.revisions[0].date) <
-          new Date(resolve.model.get("revisions")[0].date)
+          intertwinkles.parse_date(opinion.revisions[0].date) <
+          intertwinkles.parse_date(resolve.model.get("revisions")[0].date)
         )
       }))
 
@@ -393,8 +393,8 @@ class ShowProposalView extends intertwinkles.BaseView
     ownOpinion = @_getOwnOpinion()
     is_stale = (
       ownOpinion? and
-      new Date(ownOpinion.revisions[0].date) <
-      new Date(resolve.model.get("revisions")[0].date)
+      intertwinkles.parse_date(ownOpinion.revisions[0].date) <
+      intertwinkles.parse_date(resolve.model.get("revisions")[0].date)
     )
     @$(".edit-proposal, .finalize-proposal").toggle(can_edit and (not resolved))
     @$(".reopen-proposal").toggle(can_edit)
@@ -435,7 +435,7 @@ class ShowProposalView extends intertwinkles.BaseView
         if show_non_voting and not _.find(group.members, (m) -> m.user == opinion.user_id)?.voting
           non_voting.push(rendered)
         else
-          if new Date(opinion.revisions[0].date) < new Date(resolve.model.get("revisions")[0].date)
+          if intertwinkles.parse_date(opinion.revisions[0].date) < intertwinkles.parse_date(resolve.model.get("revisions")[0].date)
             stale.push(rendered)
           else
             current.push(rendered)
@@ -539,7 +539,7 @@ class ShowProposalView extends intertwinkles.BaseView
       @_saveProposal {reopened: true, message: form.$("#id_message").val()}, form.remove
 
   _saveProposal: (changes, done) =>
-    callback = "update_proposal"+ new Date().getTime()
+    callback = "update_proposal"+ intertwinkles.now().getTime()
 
     resolve.socket.once callback, (data) =>
       if data.error?
@@ -653,7 +653,7 @@ class ShowProposalView extends intertwinkles.BaseView
       resolve.socket.once callback, (data) =>
         collection = new intertwinkles.EventCollection()
         for event in data.events
-          event.date = new Date(event.date)
+          event.date = intertwinkles.parse_date(event.date)
           collection.add new intertwinkles.Event(event)
         intertwinkles.build_timeline @$(".timeline-holder"), collection, (event) ->
           user = intertwinkles.users?[event.user]

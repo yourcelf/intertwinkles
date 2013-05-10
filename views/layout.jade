@@ -45,6 +45,7 @@ html
       != "flash('info', '" + msg + "');"
     for msg in (flash.success || [])
       != "flash('success', '" + msg + "');"
+    != "intertwinkles.BROWSER_CLOCK_SKEW = INITIAL_DATA.time ? INITIAL_DATA.time - new Date().getTime() : 0;"
     </script>
     // Page-specific scripts
     block postscripts

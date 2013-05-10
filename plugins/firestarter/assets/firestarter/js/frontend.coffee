@@ -7,7 +7,7 @@ class Response extends Backbone.Model
 class ResponseCollection extends Backbone.Collection
   model: Response
   comparator: (r) ->
-    return (new Date(r.get("created")).getTime())
+    return (intertwinkles.parse_date(r.get("created")).getTime())
 
 
 class SplashView extends Backbone.View
@@ -51,7 +51,7 @@ class SplashView extends Backbone.View
     for key in ["group", "public"]
       if INITIAL_DATA.listed_firestarters[key]?.length > 0
         @$(".#{key}-doc-list").html("")
-        docs = _.sortBy(INITIAL_DATA.listed_firestarters[key], (d) -> new Date(d.modified).getTime()).reverse()
+        docs = _.sortBy(INITIAL_DATA.listed_firestarters[key], (d) -> intertwinkles.parse_date(d.modified).getTime()).reverse()
         for doc in docs
           item = $(@itemTemplate({
             doc: doc
@@ -264,7 +264,7 @@ class ShowFirestarter extends Backbone.View
     @$(".firestarter-name").html(_.escape(fire.model.get("name")))
     @$(".firestarter-prompt").html(intertwinkles.markup(fire.model.get("prompt")))
     @$(".firestarter-date").html(
-      new Date(fire.model.get("created")).toString("htt dddd, MMMM dd, yyyy")
+      intertwinkles.parse_date(fire.model.get("created")).toString("htt dddd, MMMM dd, yyyy")
     )
 
   showAddResponseForm: (event) =>
@@ -343,7 +343,7 @@ class ShowFirestarter extends Backbone.View
 
   buildTimeline: =>
     if fire.model.id
-      callback = "events_" + new Date().getTime()
+      callback = "events_" + intertwinkles.now().getTime()
       fire.socket.once callback, (data) =>
         collection = intertwinkles.buildEventCollection(data.events)
         summary = new intertwinkles.EventsSummary({collection: collection.deduplicate()})
@@ -356,11 +356,11 @@ class ShowFirestarter extends Backbone.View
 
   oldBuildTimeline: =>
     if fire.model.id
-      callback = "events_" + new Date().getTime()
+      callback = "events_" + intertwinkles.now().getTime()
       fire.socket.once callback, (data) =>
         collection = new intertwinkles.EventCollection()
         for event in data.events
-          event.date = new Date(event.date)
+          event.date = intertwinkles.parse_date(event.date)
           collection.add new intertwinkles.Event(event)
         intertwinkles.build_timeline @$(".timeline-holder"), collection, (event) ->
           user = intertwinkles.users?[event.user]

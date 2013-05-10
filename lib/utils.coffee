@@ -156,6 +156,7 @@ utils.get_initial_data = (session, config) ->
     groups: session?.groups or {}
     users: session?.users or {}
     anon_id: session?.anon_id
+    time: new Date().getTime()
   }
   if config.alpha_cookie_domain
     initial_data.ALPHA_COOKIE_DOMAIN = config.alpha_cookie_domain

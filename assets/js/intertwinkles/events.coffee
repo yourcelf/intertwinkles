@@ -107,7 +107,7 @@ class intertwinkles.EventCollection extends Backbone.Collection
     out.anonVisitors = _.unique(out.anonVisitors, false, _key)
     out.editors = _.uniq(out.editors, false, _key)
     out.current = _.uniq(out.current, false, _key)
-    out.start = @at(@length - 1)?.get("date") or new Date()
+    out.start = @at(@length - 1)?.get("date") or intertwinkles.now()
     return out
 
 intertwinkles.buildEventCollection = (events) ->
@@ -169,7 +169,7 @@ class intertwinkles.EventsSummary extends Backbone.View
       days = 0
       if stats.lastEdit
         days = Math.ceil(
-          (new Date().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
+          (intertwinkles.now().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
         )
       @$el.html(@template({stats: stats, days: days, groupCount: @groupCount}))
     this
@@ -213,7 +213,7 @@ class intertwinkles.RecentEventsSummary extends Backbone.View
     if @coll?.length > 0
       stats = @coll.summarize()
       days = Math.ceil(
-        (new Date().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
+        (intertwinkles.now().getTime() - stats.start.getTime()) / (1000 * 60 * 60 * 24)
       )
       @$el.html(@template({stats: stats, days: days}))
     this

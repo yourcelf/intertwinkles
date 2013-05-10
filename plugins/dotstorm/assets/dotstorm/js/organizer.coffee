@@ -609,7 +609,7 @@ class ds.Organizer extends Backbone.View
     activeWidth = active.outerWidth(true)
     activeHeight = active.outerHeight(true)
     @dragState = {
-      startTime: new Date().getTime()
+      startTime: intertwinkles.now().getTime()
       active: active
       offset: active.position()
       targetDims: []
@@ -737,5 +737,5 @@ class ds.Organizer extends Backbone.View
         Math.pow(state.lastPos.x - state.startPos.x, 2) +
         Math.pow(state.lastPos.y - state.startPos.y, 2)
     )
-    elapsed = new Date().getTime() - state.startTime
+    elapsed = intertwinkles.now().getTime() - state.startTime
     return distance < 20 and elapsed < 400

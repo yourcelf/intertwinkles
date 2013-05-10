@@ -8,7 +8,7 @@ _get_sharing = (model) ->
 intertwinkles.can_view = (model) ->
   return true if intertwinkles.can_edit(model)
   sharing = _get_sharing(model)
-  return true if intertwinkles.parse_date(sharing.public_view_until) > new Date()
+  return true if intertwinkles.parse_date(sharing.public_view_until) > intertwinkles.now()
   return true if _.find(sharing.extra_viewers or [], (e) ->
     e == intertwinkles.user.get("email"))
 
@@ -17,7 +17,7 @@ intertwinkles.can_edit = (model) ->
   # No group? Everyone can edit.
   return true if not sharing.group_id?
   # Even with a group, it might be marked public.
-  return true if intertwinkles.parse_date(sharing.public_edit_until) > new Date()
+  return true if intertwinkles.parse_date(sharing.public_edit_until) > intertwinkles.now()
   # Otherwise, must be logged in.
   return false if not intertwinkles.is_authenticated()
   # All good if we're in the owning group.
@@ -160,7 +160,7 @@ class intertwinkles.SharingFormControl extends Backbone.View
       @$("select[name=public_edit_or_view]").val("view")
     public_until = @sharing.public_edit_until or @sharing.public_view_until
     if public_until
-      diff = public_until - new Date().getTime()
+      diff = public_until - intertwinkles.now().getTime()
       if diff > 1000 * 60 * 60 * 24 * 365
         @$("select[name=public_until]").val("-1")
       else if diff > 1000 * 60 * 60 * 24
@@ -233,7 +233,7 @@ class intertwinkles.SharingFormControl extends Backbone.View
       if val == -1
         # 1000 years in the future should be good enough for 'forever'.
         val = 1000 * 60 * 60 * 24 * 365 * 1000
-      future = new Date(new Date().getTime() + val)
+      future = new Date(intertwinkles.now().getTime() + val)
       switch @$("select[name=public_edit_or_view]").val()
         when 'edit'
           @sharing.public_edit_until = future
@@ -304,7 +304,7 @@ intertwinkles.sharing_summary = (sharing) ->
       icon_class = "icon-share"
       perms.push("Anyone with the link can edit, but it won't show up in search results.")
   else
-    now = new Date()
+    now = intertwinkles.now()
     is_public = false
     group = intertwinkles.groups?[sharing.group_id]
     if group?
@@ -371,7 +371,7 @@ intertwinkles.sharing_summary = (sharing) ->
 intertwinkles.normalize_sharing = (sharing) ->
   # Normalize sharing
   return {} if not sharing?
-  now = new Date()
+  now = intertwinkles.now()
   if sharing.public_edit_until?
     # Remove stale public edit until
     sharing.public_edit_until = intertwinkles.parse_date(sharing.public_edit_until)

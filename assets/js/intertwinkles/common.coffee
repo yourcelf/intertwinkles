@@ -92,6 +92,10 @@ intertwinkles.BaseEvents = {
   'click .softnav': 'softNav'
 }
 
+intertwinkles.now = () ->
+  d = new Date(new Date().getTime() + (intertwinkles.BROWSER_CLOCK_SKEW or 0))
+  return d
+
 intertwinkles.parse_date = (date) ->
   return new Date() unless date?
   return new Date(date.getTime()) if _.isDate(date)

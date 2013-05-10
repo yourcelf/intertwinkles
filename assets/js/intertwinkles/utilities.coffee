@@ -17,10 +17,10 @@ class intertwinkles.AutoUpdatingDate extends Backbone.View
   render: =>
     clearTimeout(@timeout) if @timeout?
     #N.B. Duplicates logic below in simple_date
-    now = new Date()
+    now = intertwinkles.now()
     date = @date
     if now.getFullYear() != date.getFullYear()
-      str = date.toString("MMM d, YYYY")
+      str = date.toString("MMM d, yyyy")
     else if now.getMonth() != date.getMonth() or now.getDate() != date.getDate()
       str = date.toString("MMM d")
     else
@@ -33,11 +33,41 @@ class intertwinkles.AutoUpdatingDate extends Backbone.View
         str = parseInt(seconds / 60) + "m"
         @timeout = setTimeout @render, 60000
       else
-        str = parseInt(seconds) + "s"
+        if parseInt(seconds) < 0
+          str = "now"
+        else
+          str = parseInt(seconds) + "s"
         @timeout = setTimeout @render, 15000
     @$el.attr("title", date.toString("dddd, MMMM dd, yyyy h:mm:ss tt"))
     @$el.html(str)
     this
+
+intertwinkles.simple_date = (date, bare=false) ->
+  #N.B. duplicates logic above in AutoUpdatingDate
+  date = intertwinkles.parse_date(date)
+  now = intertwinkles.now()
+  if now.getFullYear() != date.getFullYear()
+    str = date.toString("MMM d, YYYY")
+  else if now.getMonth() != date.getMonth() or now.getDate() != date.getDate()
+    str = date.toString("MMM d")
+  else
+    diff = now.getTime() - date.getTime()
+    seconds = diff / 1000
+    if seconds > (60 * 60)
+      str = parseInt(seconds / 60 / 60) + "h"
+    else if seconds > 60
+      str = parseInt(seconds / 60) + "m"
+    else if seconds < 0
+      str = "now"
+    else
+      str = parseInt(seconds) + "s"
+
+  if bare
+    return str
+  return """<span class='date' title='#{date.toString("dddd, MMMM dd, yyyy h:mm:ss tt")}'>
+      #{str}
+    </span>"""
+
 
 intertwinkles.user_icon = (user_id, name, size="small") ->
   user = intertwinkles.users?[user_id]
@@ -53,30 +83,6 @@ intertwinkles.inline_user = (user_id, name, size="small") ->
     return "<img src='#{_.escape(user.icon[size])}' /> #{_.escape(user.name)}"
   else
     return "<span style='width: 32px;'><i class='icon icon-user'></i></span> #{user?.name or name}"
-
-intertwinkles.simple_date = (date, bare=false) ->
-  #N.B. duplicates logic above in AutoUpdatingDate
-  date = intertwinkles.parse_date(date)
-  now = new Date()
-  if now.getFullYear() != date.getFullYear()
-    str = date.toString("MMM d, YYYY")
-  else if now.getMonth() != date.getMonth() or now.getDate() != date.getDate()
-    str = date.toString("MMM d")
-  else
-    diff = now.getTime() - date.getTime()
-    seconds = diff / 1000
-    if seconds > (60 * 60)
-      str = parseInt(seconds / 60 / 60) + "h"
-    else if seconds > 60
-      str = parseInt(seconds / 60) + "m"
-    else
-      str = parseInt(seconds) + "s"
-
-  if bare
-    return str
-  return """<span class='date' title='#{date.toString("dddd, MMMM dd, yyyy h:mm:ss tt")}'>
-      #{str}
-    </span>"""
 
 intertwinkles.markup = (text) ->
   if text
@@ -271,7 +277,7 @@ intertwinkles.instasearch = (form_selector, results_selector, callback) ->
             history.replaceState({}, "", "?" + $(form_selector).formSerialize())
             callback?()
           error: (data) ->
-            console.log("error", data)
+            console.info("error", data)
             alert("Server error!")
             callback?("error")
         }

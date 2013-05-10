@@ -253,7 +253,7 @@ class MembershipTable extends Backbone.View
         role: role
         voting: voting
         invited_by: @user.id
-        invited_on: new Date()
+        invited_on: intertwinkles.now()
       }
       @$("#add_email").val("")
       @$("#add_role").val("")

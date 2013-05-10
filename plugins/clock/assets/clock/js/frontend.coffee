@@ -120,7 +120,7 @@ class ClockModel extends Backbone.Model
     max = Number.MIN_VALUE
     for cat in @get("categories") or []
       if cat.times.length > 0
-        end = cat.times[cat.times.length - 1].stop or new Date()
+        end = cat.times[cat.times.length - 1].stop or @_now()
         max = Math.max(max, intertwinkles.parse_date(end).getTime())
     if max == Number.MIN_VALUE
       return null
@@ -485,7 +485,7 @@ class CurrentTimeView extends ClockBaseView
     go = =>
       @$el.html(
         # Remove seconds
-        new Date().toLocaleTimeString().replace(/0?(\d+:\d+)(:\d+)(.*)/, "$1$3")
+        intertwinkles.now().toLocaleTimeString().replace(/0?(\d+:\d+)(:\d+)(.*)/, "$1$3")
       )
     go()
     clearInterval(@goer) if @goer?
