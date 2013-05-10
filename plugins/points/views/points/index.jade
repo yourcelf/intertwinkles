@@ -15,28 +15,40 @@ block preapp
 
 block postapp
   script(type='text/template', id='splashTemplate')
+    h1 Poitns of Unity
     div.row-fluid
       div.span6.offset3(style='text-align: center')
-        :markdown
-          # Points of Unity
-          Develop a set of shared values or principles with your group.
-
-    div(style='text-align: center;')
-      a.btn.btn-large.btn-primary.softnav.add-new-pointset(href='/points/add/').
-        New Board
+        p(style='font-size: 18px').
+          Develop a set of shared values or principles with your&nbsp;group.
+        p(style='text-align: center;')
+          a.btn.btn-large.btn-primary.softnav(href='/points/add/') New Board
+        p(style='text-align: center;')
+          See <a href='/dashboard/'>existing points of unity</a> from your groups.
 
     div.row-fluid
-      div.span6
-        h3(style='text-align: left;') Public boards
-        div.public-pointsets Nothing here yet.
-      div.span6
-        h3(style='text-align: left;') From your groups
-        div.group-pointsets.
-          <% if (intertwinkles.is_authenticated()) { %>
-            Nothing here yet.
-          <% } else { %>
-            Sign in to see your groups' boards.
-          <% } %>
+      div.span6.offset3
+        :markdown
+          Points of Unity is a collaborative voting tool to see what your group
+          agrees on.  Use it to identify a short list of things that everyone
+          agrees to.  Some examples might include:
+
+          * What are the ground rules for communication in meetings?
+          * What principles should go into your manifesto?
+          * What songs belong on the next party's playlist?
+          * What strategies should the group adopt to combat the moth problem in the pantry?
+
+        p
+          em Example:
+          a(href='/points/p/demo/')
+            img.example(src='/static/points/img/poudash.png', style='opacity: 0.7')
+
+        :markdown
+          Everyone participating can add points, vote on them, and move them around.  Once a point gets enough support, you can "adopt" it, which will pin it to the top of the page.  (You can always "retire" a point if you change your mind).
+
+          Need further help?  Read more [on the wiki](http://project.intertwinkles.org/projects/consensus/wiki/Points_of_Unity) or [contact us](mailto:support@intertwinkles.org).
+          
+          
+
 
   script(type='text/template', id='splashItemTemplate')
     li.
