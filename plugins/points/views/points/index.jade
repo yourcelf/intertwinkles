@@ -139,7 +139,7 @@ block postapp
           div.text.
             <%= intertwinkles.markup(point.revisions[0].text) %>
           div.edit-line
-            <% if (!approved) { %>
+            <% if (!approved && intertwinkles.can_edit(model)) { %>
             a.mark-approved.pull-left(href='#') adopt
             <% } %>
             ul.group.pull-right
@@ -150,7 +150,7 @@ block postapp
                   history
                 </a>
               <% } %>
-              <% if (approved) { %>
+              <% if (approved && intertwinkles.can_edit(model)) { %>
               li
                 a.mark-approved(href='#') retire
               <% } %>
