@@ -4,6 +4,11 @@
 # Utilities
 #
 
+if INITIAL_DATA.time
+  intertwinkles.BROWSER_CLOCK_SKEW = INITIAL_DATA.time - new Date().getTime()
+else
+  intertwinkles.BROWSER_CLOCK_SKEW = 0
+
 class intertwinkles.AutoUpdatingDate extends Backbone.View
   tagName: "span"
   initialize: (options) ->
