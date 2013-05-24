@@ -155,8 +155,11 @@ toolbar_template = _.template("""
               <form class='form-search'
                     action='<%- INTERTWINKLES_APPS.www.url %>/search/'
                     method='GET'>
+                <% if (window.location.pathname != "/") { %>
+                <a href='/'>&larr; Groups</a>
+                <% } %>
                 <div class='input-append'>
-                  <input class='input-medium search-query' type='text' name='q' />
+                  <input class='input-medium search-query' type='text' name='q' placeholder='Search'/>
                   <button class='btn' type='submit'>
                     <i class='icon-search' title='Search'></i>
                   </button>
