@@ -163,23 +163,40 @@ module.exports = (config) ->
         ds.post_search_index doc, (err, si) ->
           callback(err, doc, si)
 
-  ds.get_dotstorm = (session, data, callback) ->
+  ds.edit_group_label = (session, data, callback) ->
     return callback("Missing dotstorm._id") unless data?.dotstorm?._id
-    async.parallel [
-      (done) ->
-        schema.Dotstorm.findOne {_id: data.dotstorm._id}, (err, doc) ->
-          return done(err) if err?
-          return done("Not found") unless doc?
-          return done("Permission denied") unless utils.can_view(session, doc)
-          done(null, doc)
-      (done) ->
-        schema.Idea.findLight {dotstorm_id: doc.dotstorm_id}, (err, ideas) ->
-          return done(err, ideas)
-    ], (err, results) ->
+    unless data?.group?._id and data?.group?.label
+      return callback("Missing group fields")
+    schema.Dotstorm.findOne {_id: data.dotstorm._id}, 'sharing', (err, doc) ->
       return callback(err) if err?
-      [dotstorm, light_ideas] = results
-      ds.post_event session, dotstorm, "visit", {}, 60 * 1000 * 5, (err, event) ->
-        callback(err, dotstorm, ideas, event)
+      return callback("Not found") unless doc?
+      return callback("Permission denied") unless utils.can_edit(session, doc)
+      schema.Dotstorm.findOneAndUpdate {
+        _id: data.dotstorm._id,
+        'groups._id': data.group._id
+      }, {
+        $set: {'groups.$.label': data.group.label}
+      }, (err, doc) ->
+        return callback(err) if err?
+        return callback("Not found") unless doc?
+        return callback(null, doc)
+
+  ds.get_dotstorm = (session, data, callback) ->
+    unless data?.dotstorm?._id or data?.dotstorm?.slug
+      return callback("Missing dotstorm")
+    query = {}
+    query._id = data.dotstorm._id if data.dotstorm._id
+    query.slug = data.dotstorm.slug if data.dotstorm.slug
+
+    schema.Dotstorm.findOne query, (err, doc) ->
+      return callback(err) if err?
+      return callback("Not found") unless doc?
+      return callback("Permission denied") unless utils.can_view(session, doc)
+      schema.Idea.findLight {dotstorm_id: doc._id}, (err, light_ideas) ->
+        return callback(err) if err?
+        light_ideas or= []
+        ds.post_event session, doc, "visit", {}, 60 * 1000 * 5, (err, event) ->
+          callback(err, doc, light_ideas, event)
 
   #
   # Ideas
@@ -229,7 +246,7 @@ module.exports = (config) ->
             (done) ->
               ds.post_search_index dotstorm, (err, si) -> done(err, si)
             (done) ->
-              schema.Dotstorm.withLightIdeas {_id: dotstorm._id}, (err, doc) ->
+              schema.Dotstorm.findOne {_id: dotstorm._id}, (err, doc) ->
                 done(err, doc)
           ], (err, results) ->
             return callback(err) if err?

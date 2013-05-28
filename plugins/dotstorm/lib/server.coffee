@@ -141,11 +141,17 @@ start = (config, app, sockrooms) ->
   broadcast_dotstorm = (err, socket, session, doc) ->
     return sockrooms.handleError(socket, err) if err?
     orig_sharing = doc.sharing
+    # Must broadcast back to socket directly, in case we're creating, and thus
+    # haven't joined yet.
+    doc.sharing = utils.clean_sharing(session, doc)
+    socket.sendJSON "dotstorm:dotstorm", {dotstorm: doc}
+
     # Sanitize sharing for broadcast individually.
-    sockrooms.roomSocketSessionMap "dotstorm/#{dotstorm.id}", (err, socket, sess) ->
+    sockrooms.roomSocketSessionMap "dotstorm/#{doc.id}", (err, socket, sess) ->
       return logger.error(err) if err?
-      doc.sharing = utils.clean_sharing(sess, {sharing: orig_sharing})
-      socket.sendJSON "dotstorm:dotstorm", {dotstorm: doc}
+      if sess.sid != session.sid
+        doc.sharing = utils.clean_sharing(sess, {sharing: orig_sharing})
+        socket.sendJSON "dotstorm:dotstorm", {dotstorm: doc}
  
   broadcast_idea = (err, socket, session, doc) ->
     return sockrooms.handleError(socket, err) if err?
@@ -175,14 +181,14 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on 'dotstorm/get_idea', (socket, session, data) ->
     dslib.get_idea session, data, (err, dotstorm, idea) ->
-      socket.sendJSON(data.callback or "dotstorm/ideas", {ideas: [idea]})
+      socket.sendJSON(data.callback or "dotstorm:ideas", {ideas: [idea]})
 
   sockrooms.on 'dotstorm/get_dotstorm', (socket, session, data) ->
     dslib.get_dotstorm session, data, (err, dotstorm, light_ideas) ->
       return sockrooms.handleError(socket, err) if err?
       dotstorm.sharing = utils.clean_sharing(session, dotstorm)
       socket.sendJSON("dotstorm:ideas", {ideas: light_ideas})
-      socket.sendJSON("dotstorm:dotstorm", {dotstorm: doc})
+      socket.sendJSON("dotstorm:dotstorm", {dotstorm: dotstorm})
 
   sockrooms.on 'dotstorm/create_idea', (socket, session, data) ->
     dslib.create_idea session, data, (err, dotstorm, idea) ->
