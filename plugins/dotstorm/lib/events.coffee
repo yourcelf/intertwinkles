@@ -25,7 +25,6 @@ module.exports = (config) ->
         logger.error(error)
         return callback?(error)
 
-
       schema.Dotstorm.withLightIdeas {_id: doc._id}, (err, dotstorm) ->
         if err?
           logger.error(err)

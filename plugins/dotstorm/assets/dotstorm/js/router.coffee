@@ -1,3 +1,6 @@
+#
+# Dotstorm router
+#
 class ds.Router extends Backbone.Router
   routes:
     'dotstorm/d/:slug/add/':      'dotstormAddIdea'
@@ -8,8 +11,8 @@ class ds.Router extends Backbone.Router
     'dotstorm/new/':              'newDotstorm'
     'dotstorm/':                  'intro'
 
-  intro: ->
-    ds.leaveRoom()
+  intro: =>
+    @leaveRoom()
     intro = new ds.Intro()
     intro.on "open", (slug, name) =>
       @open slug, name, =>
@@ -86,42 +89,76 @@ class ds.Router extends Backbone.Router
         ds.ideas.add new ds.Idea(idea)
       ds.model = new ds.Dotstorm(INITIAL_DATA.dotstorm)
       fixLinks()
-      ds.joinRoom(ds.model)
+      @joinRoom(ds.model)
       callback()
     else
       fixLinks()
 
     return false
 
-ds.room_view = null
-ds.sharing_view = null
-ds.leaveRoom = ->
-  ds.room_view?.remove()
-  ds.sharing_view?.remove()
-  $(".dotstorm-read-only-link").hide()
-  ds.room_view = null
-  ds.sharing_view = null
+  joinRoom: (newModel) =>
+    @room_view?.remove()
+    @sharing_view?.remove()
+    $(".dotstorm-read-only-link").hide()
+    @room_view = null
+    @sharing_view = null
 
-ds.joinRoom = (newModel) ->
-  ds.leaveRoom()
+  leaveRoom: =>
+    @leaveRoom()
+    @room_view = new intertwinkles.RoomUsersMenu(room: "dotstorm/" + newModel.id)
+    $(".sharing-online-group .room-users").replaceWith(@room_view.el)
+    @room_view.render()
 
-  ds.room_view = new intertwinkles.RoomUsersMenu(room: "dotstorm/" + newModel.id)
-  $(".sharing-online-group .room-users").replaceWith(ds.room_view.el)
-  ds.room_view.render()
+    @sharing_view = new intertwinkles.SharingSettingsButton({
+      model: newModel
+      application: "dotstorm"
+    })
+    $(".sharing-online-group .sharing").html(@sharing_view.el)
+    @sharing_view.render()
+    @sharing_view.on "save", (sharing_settings) =>
+      ds.model.save {sharing: sharing_settings}, {
+        error: (model, err) =>
+          console.info(err)
+          flash "error", "Server error!"
+          ds.model.set(model)
+      }
+      @sharing_view.close()
 
-  ds.sharing_view = new intertwinkles.SharingSettingsButton({
-    model: newModel
-    application: "dotstorm"
-  })
-  $(".sharing-online-group .sharing").html(ds.sharing_view.el)
-  ds.sharing_view.render()
-  ds.sharing_view.on "save", (sharing_settings) =>
-    ds.model.save {sharing: sharing_settings}, {
-      error: (model, err) =>
-        console.info(err)
-        flash "error", "Server error!"
-        ds.model.set(model)
-    }
-    ds.sharing_view.close()
+    $(".dotstorm-read-only-link").show()
 
-  $(".dotstorm-read-only-link").show()
+$("a.soft").on 'touchend click', (event) ->
+  event.preventDefault()
+  ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
+  return false
+
+# 
+# Socket data
+#
+intertwinkles.connect_socket (socket) ->
+  intertwinkles.build_toolbar($("header"), {applabel: "dotstorm"})
+  intertwinkles.build_footer($("footer"))
+
+  ds.app = intertwinkles.app = new ds.Router
+  Backbone.history.start pushState: true, hashChange: false
+
+  # Re-fetch models if we get disconnected.
+  intertwinkles.socket.on "reconnected", ->
+    intertwinkles.socket.once "identified", ->
+      console.log "re-fetching..."
+      if ds.model?
+        ds.model.fetch {
+          query: {_id: ds.model.id}
+          success: (model) -> console.log "re-fetched", model
+        }
+      if ds.ideas?
+        ds.ideas.fetch {
+          query: {dotstorm_id: ds.model.id}
+          fields: drawing: 0
+          success: (coll) -> console.log "re-fetched", coll
+        }
+      if ds.app.room_view?
+        ds.app.room_view.connect()
+
+
+  intertwinkles.twunklify("#app")
+  intertwinkles.modalvidify("#app")

@@ -7,6 +7,7 @@ start = (config, app, sockrooms) ->
   events = require('./events')(config)
   schema = require('./schema').load(config)
   www_methods = require("../../../lib/www_methods")(config)
+  dslib = require("./dslib")(config)
 
   sockrooms.addChannelAuth "dotstorm", (session, room, callback) ->
     name = room.split("/")[1]
@@ -16,8 +17,6 @@ start = (config, app, sockrooms) ->
         callback(null, true)
       else
         callback(null, false)
-
-  require('./socket-connector').attach(config, sockrooms)
 
   #
   # Routes
@@ -132,5 +131,66 @@ start = (config, app, sockrooms) ->
         group_id: req.params.group_id
         layout: false
       })
+
+  sockrooms.on "dotstorm/check_slug", (socket, session, data) ->
+    return sockrooms.handleError(socket, "Missing slug") unless data.slug?
+    schema.Dotstorm.findOne {slug: data.slug}, '_id', (err, doc) ->
+      return sockrooms.handleError(socket, err) if err?
+      socket.sendJSON(data.callback or "dotstorm:check_slug", {available: not doc?})
+
+  broadcast_dotstorm = (err, socket, session, doc) ->
+    return sockrooms.handleError(socket, err) if err?
+    orig_sharing = doc.sharing
+    # Sanitize sharing for broadcast individually.
+    sockrooms.roomSocketSessionMap "dotstorm/#{dotstorm.id}", (err, socket, sess) ->
+      return logger.error(err) if err?
+      doc.sharing = utils.clean_sharing(sess, {sharing: orig_sharing})
+      socket.sendJSON "dotstorm:dotstorm", {dotstorm: doc}
+ 
+  broadcast_idea = (err, socket, session, doc) ->
+    return sockrooms.handleError(socket, err) if err?
+    idea_json = doc.serialize()
+    delete idea_json.drawing
+    sockrooms.broadcast(
+      "dotstorm/" + doc.dotstorm_id,
+      "dotstorm:ideas",
+      {ideas: [idea_json]},
+    )
+
+  sockrooms.on 'dotstorm/create_dotstorm', (socket, session, data) ->
+    dslib.create_dotstorm session, data, (err, dotstorm) ->
+      broadcast_dotstorm(err, socket, session, dotstorm)
+
+  sockrooms.on 'dotstorm/edit_dotstorm', (socket, session, data) ->
+    dslib.edit_dotstorm session, data, (err, dotstorm) ->
+      broadcast_dotstorm(err, socket, session, dotstorm)
+
+  sockrooms.on 'dotstorm/edit_group_label', (socket, session, data) ->
+    dslib.edit_group_label session, data, (err, dotstorm) ->
+      broadcast_dotstorm(err, socket, session, dotstorm)
+
+  sockrooms.on 'dotstorm/rearrange', (socket, session, data) ->
+    dslib.rearrange session, data, (err, dotstorm) ->
+      broadcast_dotstorm(err, socket, session, dotstorm)
+
+  sockrooms.on 'dotstorm/get_idea', (socket, session, data) ->
+    dslib.get_idea session, data, (err, dotstorm, idea) ->
+      socket.sendJSON(data.callback or "dotstorm/ideas", {ideas: [idea]})
+
+  sockrooms.on 'dotstorm/get_dotstorm', (socket, session, data) ->
+    dslib.get_dotstorm session, data, (err, dotstorm, light_ideas) ->
+      return sockrooms.handleError(socket, err) if err?
+      dotstorm.sharing = utils.clean_sharing(session, dotstorm)
+      socket.sendJSON("dotstorm:ideas", {ideas: light_ideas})
+      socket.sendJSON("dotstorm:dotstorm", {dotstorm: doc})
+
+  sockrooms.on 'dotstorm/create_idea', (socket, session, data) ->
+    dslib.create_idea session, data, (err, dotstorm, idea) ->
+      broadcast_idea(err, socket, session, idea)
+      broadcast_dotstorm(err, socket, session, dotstorm)
+
+  sockrooms.on 'dotstorm/edit_idea', (socket, session, data) ->
+    dslib.edit_idea session, data, (err, dotstorm, idea) ->
+      broadcast_idea(err, socket, session, idea)
 
 module.exports = { start }

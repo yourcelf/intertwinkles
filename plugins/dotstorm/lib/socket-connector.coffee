@@ -1,22 +1,20 @@
-_             = require 'underscore'
 logger        = require './logging'
-thumbnails    = require './thumbnails'
 utils         = require '../../../lib/utils'
 
-
 #
-# Connect the plumbing for backbone models coming over the socket to mongoose
-# models.  Rebroadcast data to rooms as appropriate.
+# Connect the plumbing for backbone schema coming over the socket to mongoose
+# schema.  Rebroadcast data to rooms as appropriate.
 #
 attach = (config, sockrooms) ->
-  models = require('./schema').load(config)
-  events = require('./events')(config)
+  schema = require('./schema').load(config)
 
-  sockrooms.on "dotstorm/check_slug", (socket, session, data) ->
-    return sockrooms.handleError(socket, "Missing slug") unless data.slug?
-    models.Dotstorm.findOne {slug: data.slug}, '_id', (err, doc) ->
-      return sockrooms.handleError(socket, err) if err?
-      socket.sendJSON(data.callback or "dotstorm:check_slug", {available: not doc?})
+###
+  #XXX OLD ||
+  #        \/
+
+  _             = require 'underscore'
+  thumbnails    = require './thumbnails'
+  events        = require('./events')(config)
 
   sockrooms.on 'dotstorm/backbone', (socket, session, data) ->
     errorOut = (error, level="error") ->
@@ -43,7 +41,7 @@ attach = (config, sockrooms) ->
           idea[key] = data.model[key]
       if not data.model.tags? and data.model.taglist?
         idea.taglist = data.model.taglist
-      models.Dotstorm.findOne {_id: idea.dotstorm_id}, (err, dotstorm) ->
+      schema.Dotstorm.findOne {_id: idea.dotstorm_id}, (err, dotstorm) ->
         return errorOut(err) if err?
         return errorOut("Unknown dotstorm", "warn") unless dotstorm?
         return errorOut("Permission denied", "warn") unless utils.can_edit(session, dotstorm)
@@ -95,10 +93,10 @@ attach = (config, sockrooms) ->
       when "Idea"
         switch data.signature.method
           when "create"
-            doc = new models.Idea()
+            doc = new schema.Idea()
             saveIdeaAndRespond(doc, "create")
           when "update"
-            models.Idea.findOne {_id: data.model._id}, (err, doc) ->
+            schema.Idea.findOne {_id: data.model._id}, (err, doc) ->
               if err? then return errorOut(err)
               saveIdeaAndRespond(doc, "update")
           when "delete"
@@ -121,7 +119,7 @@ attach = (config, sockrooms) ->
               method = "findLight"
             else
               method = "findOne"
-            models.Idea[method] query, (err, doc) ->
+            schema.Idea[method] query, (err, doc) ->
               return errorOut(err) if err?
               return errorOut("Idea not found", "warn") unless doc?
               if query.dotstorm_id?
@@ -130,7 +128,7 @@ attach = (config, sockrooms) ->
                 dotstorm_query = {_id: data.model.dotstorm_id}
               else
                 return errorOut("Unknown dotstorm_id", "warn")
-              models.Dotstorm.findOne dotstorm_query, 'name sharing', (err, dotstorm) ->
+              schema.Dotstorm.findOne dotstorm_query, 'name sharing', (err, dotstorm) ->
                 return errorOut("Dotstorm not found", "warn") unless dotstorm?
                 unless utils.can_view(session, dotstorm)?
                   return errorOut("Permission denied", "warn")
@@ -142,16 +140,16 @@ attach = (config, sockrooms) ->
       when "Dotstorm"
         switch data.signature.method
           when "create"
-            dotstorm = new models.Dotstorm()
+            dotstorm = new schema.Dotstorm()
             saveDotstormAndRespond(dotstorm, "create")
           when "update"
-            models.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->
+            schema.Dotstorm.findOne {_id: data.model._id}, (err, doc) ->
               saveDotstormAndRespond(doc, "update")
           when "delete"
             return errorOut("Unsupported method `delete`", "warn")
           when "read"
             query = data.signature.query or data.model
-            models.Dotstorm.find query, (err, docs) ->
+            schema.Dotstorm.find query, (err, docs) ->
               for doc in docs
                 unless utils.can_view(session, doc)
                   return errorOut("Permission denied", "warn")
@@ -161,5 +159,6 @@ attach = (config, sockrooms) ->
                 respond(docs?[0] or {})
               if docs?.length > 0
                 events.post_event(session, docs[0], "visit", {}, 60 * 1000 * 5)
+###
 
 module.exports = { attach }
