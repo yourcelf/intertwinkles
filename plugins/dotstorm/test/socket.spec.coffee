@@ -22,15 +22,10 @@ describe "Socket dotstorms", ->
           common.identifiedSockjsClient server, session, "one@mockmyid.com", (theclient) ->
             client = theclient
             done()
-        (done) ->
-          common.identifiedSockjsClient server, session2, "two@mockmyid.com", (theclient) ->
-            client2 = theclient
-            done()
       ], done
 
   after (done) ->
     client.close()
-    client2.close()
     common.shutDown(server, done)
 
 
