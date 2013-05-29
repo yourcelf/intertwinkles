@@ -1,110 +1,101 @@
 #
 # Dotstorm router
 #
+
 class ds.Router extends Backbone.Router
   routes:
-    'dotstorm/d/:slug/add/':      'dotstormAddIdea'
-    'dotstorm/d/:slug/edit/:id/': 'dotstormEditIdea'
-    'dotstorm/d/:slug/tag/:tag/': 'dotstormShowTag'
-    'dotstorm/d/:slug/:id/':      'dotstormShowIdeas'
-    'dotstorm/d/:slug/':          'dotstormShowIdeas'
+    'dotstorm/d/:slug/add/':      'addIdea'
+    'dotstorm/d/:slug/edit/:id/': 'editIdea'
+    'dotstorm/d/:slug/tag/:tag/': 'organizerTag'
+    'dotstorm/d/:slug/:id/':      'organizer'
+    'dotstorm/d/:slug/':          'organizer'
     'dotstorm/new/':              'newDotstorm'
     'dotstorm/':                  'intro'
 
-  intro: =>
-    @leaveRoom()
-    intro = new ds.Intro()
-    intro.on "open", (slug, name) =>
-      @open slug, name, =>
-        @navigate "/dotstorm/d/#{slug}/"
-        @dotstormShowIdeas(slug)
-    $("#app").html intro.el
-    intro.render()
+  initialize: ->
+    # Set a persistent dotstorm model and ideas collection, which we clear or
+    # load as needed.
+    @dotstorm = new ds.Dotstorm(INITIAL_DATA.dotstorm or {})
+    @ideas = new ds.IdeaList()
+    @ideas.reset(new ds.Idea(idea) for idea in INITIAL_DATA.ideas or [])
 
-  newDotstorm: =>
-    view = new ds.EditDotstorm()
-    view.on "save", (model) =>
-      ds.model = model
-      ds.ideas = new ds.IdeaList()
-      @navigate "/dotstorm/d/#{model.get("slug")}/", {trigger: true}
-    $("#app").html view.el
+    # Listeners persist as long as this router is active.  Rely on @joinRoom or
+    # @leaveRoom to prevent receiving data at the wrong time.
+    @listenTo intertwinkles.socket, "dotstorm:ideas", @ideas.load
+    @listenTo intertwinkles.socket, "dotstorm:dotstorm", @dotstorm.load
+
+  _check_slug: (slug, callback) =>
+    if @dotstorm?.get("slug") == slug
+      room = "dotstorm/" + @dotstorm.id
+      console.log room
+      @joinRoom(@dotstorm) unless @room_view?.room == room
+      return callback()
+    else
+      @leaveRoom()
+      @dotstorm.clear()
+      @ideas.reset()
+      intertwinkles.socket.send "dotstorm/get_dotstorm", {dotstorm: {slug: slug}}
+      @dotstorm.once "load", =>
+        @joinRoom(@dotstorm)
+        callback()
+
+  _display: (view) =>
+    @view?.remove()
+    @view = view
+    $("#app").html(view.el)
     view.render()
 
-  dotstormShowIdeas: (slug, id, tag) =>
-    @open slug, =>
-      $("#app").html new ds.Organizer({
-        model: ds.model
-        ideas: ds.ideas
+  intro: =>
+    @leaveRoom()
+    @dotstorm.clear()
+    @ideas.reset()
+    @_display(new ds.Intro())
+
+  newDotstorm: =>
+    @leaveRoom()
+    @dotstorm.clear()
+    @ideas.reset()
+    @_display(new ds.EditDotstorm({dotstorm: @dotstorm}))
+
+  organizer: (slug, id, tag) =>
+    @_check_slug slug, =>
+      @_display(new ds.Organizer({
+        dotstorm: @dotstorm
+        ideas: @ideas
         showId: id
         showTag: tag
-      }).render().el
-    return false
+      }))
 
-  dotstormShowTag: (slug, tag) =>
-    @dotstormShowIdeas(slug, null, tag)
+  organizerTag: (slug, tag) =>
+    @dotstormOrganizer(slug, null, tag)
 
-  dotstormAddIdea: (slug) =>
-    @open slug, ->
-      view = new ds.EditIdea
-        idea: new ds.Idea
-        dotstorm: ds.model
-        cameraEnabled: ds.cameraEnabled
-      if ds.cameraEnabled
-        view.on "takePhoto", =>
-          flash "info", "Calling camera..."
-          handleImage = (event) ->
-            if event.origin == "file://" and event.data.image?
-              view.setPhoto(event.data.image)
-            window.removeEventListener "message", handleImage, false
-          window.addEventListener 'message', handleImage, false
-          window.parent.postMessage('camera', 'file://')
-      $("#app").html view.el
-      view.render()
-    return false
+  addIdea: (slug) =>
+    @_check_slug slug, =>
+      @_display(new ds.EditIdea({idea: new ds.Idea, dotstorm: @dotstorm, ideas: @ideas}))
 
-  dotstormEditIdea: (slug, id) =>
-    @open slug, ->
-      idea = ds.ideas.get(id)
+  editIdea: (slug, id) =>
+    @_check_slug slug, =>
+      idea = @ideas.get(id)
       if not idea?
         flash "error", "Idea not found.  Check the URL?"
       else
         # Re-fetch to pull in deferred fields.
-        idea.fetch {
-          success: (idea) =>
-            view = new ds.EditIdea(idea: idea, dotstorm: ds.model)
-            $("#app").html view.el
-            view.render()
-        }
-    return false
+        intertwinkles.socket.send "dotstorm/get_idea", {idea: {_id: id}}
+        idea.once "load", =>
+          @_display(new ds.EditIdea({idea: idea, dotstorm: @dotstorm, ideas: @ideas}))
 
-  open: (slug, callback) =>
-    return callback() if ds.model?.get("slug") == slug
+  #
+  # Room management
+  #
 
-    fixLinks = ->
-      $("a.dotstorm-read-only-link").attr("href", "/dotstorm/e/#{ds.model.get("embed_slug")}")
-
-    if (not ds.model?) and INITIAL_DATA.dotstorm?.slug == slug
-      ds.ideas = new ds.IdeaList()
-      for idea in INITIAL_DATA.ideas
-        ds.ideas.add new ds.Idea(idea)
-      ds.model = new ds.Dotstorm(INITIAL_DATA.dotstorm)
-      fixLinks()
-      @joinRoom(ds.model)
-      callback()
-    else
-      fixLinks()
-
-    return false
-
-  joinRoom: (newModel) =>
+  leaveRoom: =>
     @room_view?.remove()
     @sharing_view?.remove()
     $(".dotstorm-read-only-link").hide()
     @room_view = null
     @sharing_view = null
 
-  leaveRoom: =>
-    @leaveRoom()
+  joinRoom: (newModel) =>
     @room_view = new intertwinkles.RoomUsersMenu(room: "dotstorm/" + newModel.id)
     $(".sharing-online-group .room-users").replaceWith(@room_view.el)
     @room_view.render()
@@ -116,24 +107,15 @@ class ds.Router extends Backbone.Router
     $(".sharing-online-group .sharing").html(@sharing_view.el)
     @sharing_view.render()
     @sharing_view.on "save", (sharing_settings) =>
-      ds.model.save {sharing: sharing_settings}, {
-        error: (model, err) =>
-          console.info(err)
-          flash "error", "Server error!"
-          ds.model.set(model)
+      intertwinkles.socket.send "dotstorm/edit_dotstorm", {
+        dotstorm: {_id: @dotstorm.id, sharing: sharing_settings}
       }
-      @sharing_view.close()
+      @dotstorm.once "load", =>
+        @sharing_view.close()
+    $("a.dotstorm-read-only-link").show().attr(
+      "href", "/dotstorm/e/#{newModel.get("embed_slug")}"
+    )
 
-    $(".dotstorm-read-only-link").show()
-
-$("a.soft").on 'touchend click', (event) ->
-  event.preventDefault()
-  ds.app.navigate $(event.currentTarget).attr('href'), trigger: true
-  return false
-
-# 
-# Socket data
-#
 intertwinkles.connect_socket (socket) ->
   intertwinkles.build_toolbar($("header"), {applabel: "dotstorm"})
   intertwinkles.build_footer($("footer"))
@@ -145,20 +127,9 @@ intertwinkles.connect_socket (socket) ->
   intertwinkles.socket.on "reconnected", ->
     intertwinkles.socket.once "identified", ->
       console.log "re-fetching..."
-      if ds.model?
-        ds.model.fetch {
-          query: {_id: ds.model.id}
-          success: (model) -> console.log "re-fetched", model
-        }
-      if ds.ideas?
-        ds.ideas.fetch {
-          query: {dotstorm_id: ds.model.id}
-          fields: drawing: 0
-          success: (coll) -> console.log "re-fetched", coll
-        }
       if ds.app.room_view?
         ds.app.room_view.connect()
-
-
-  intertwinkles.twunklify("#app")
-  intertwinkles.modalvidify("#app")
+      if ds.app.dotstorm.id
+        intertwinkles.socket.send "dotstorm/get_dotstorm", {
+          dotstorm: {_id: ds.app.dotstorm.id}
+        }

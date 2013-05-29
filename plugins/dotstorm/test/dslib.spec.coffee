@@ -11,7 +11,7 @@ dslib   = require("../lib/dslib")(config)
 
 timeoutSet = (a, b) -> setTimeout(b, a)
 
-describe "pointslib", ->
+describe "dslib", ->
   all_users = {}
   all_groups = {}
   session = {}
@@ -152,7 +152,7 @@ describe "pointslib", ->
   it "fetches a dotstorm", (done) ->
     ds_schema.Dotstorm.findOne {}, (err, docy) ->
       _no_err_args([err, docy])
-      dslib.get_dotstorm session, {dotstorm: {_id: docy._id}}, (err, doc, event) ->
+      dslib.get_dotstorm session, {dotstorm: {_id: docy._id}}, (err, doc, light_ideas, event) ->
         _no_err_args([err, doc, light_ideas, event])
         expect(doc.id).to.be(docy.id)
 
@@ -188,7 +188,7 @@ describe "pointslib", ->
       
         expect(dotstorm.groups.length).to.be(1)
         expect(dotstorm.groups[0].ideas.length).to.be(1)
-        expect(dotstorm.groups[0].ideas[0]._id).to.eql(idea._id)
+        expect(dotstorm.groups[0].ideas[0]).to.eql(idea._id)
 
         expect(idea.background).to.be('#ff9033')
         expect(idea.drawing.length).to.be(1)
@@ -232,7 +232,7 @@ describe "pointslib", ->
         _no_err_args([err, dotstorm, idea, event, si])
 
         expect(dotstorm.groups.length).to.be(2)
-        expect(dotstorm.groups[0].ideas[0]._id).to.eql(idea._id)
+        expect(dotstorm.groups[0].ideas[0]).to.eql(idea._id)
 
         expect(fs.existsSync(idea.getPhotoPath('small'))).to.be(true)
         expect(idea.photoVersion > 0).to.be(true)

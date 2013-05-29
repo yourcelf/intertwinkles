@@ -1,6 +1,7 @@
 express       = require 'express'
 _             = require 'underscore'
 utils         = require '../../../lib/utils'
+logger        = require('log4js').getLogger()
 
 # See Cakefile for config definitions and defaults
 start = (config, app, sockrooms) ->
@@ -138,18 +139,18 @@ start = (config, app, sockrooms) ->
       return sockrooms.handleError(socket, err) if err?
       socket.sendJSON(data.callback or "dotstorm:check_slug", {available: not doc?})
 
-  broadcast_dotstorm = (err, socket, session, doc) ->
+  broadcast_dotstorm = (err, socket, session, doc, address) ->
     return sockrooms.handleError(socket, err) if err?
     orig_sharing = doc.sharing
     # Must broadcast back to socket directly, in case we're creating, and thus
     # haven't joined yet.
     doc.sharing = utils.clean_sharing(session, doc)
-    socket.sendJSON "dotstorm:dotstorm", {dotstorm: doc}
+    socket.sendJSON address or "dotstorm:dotstorm", {dotstorm: doc}
 
     # Sanitize sharing for broadcast individually.
     sockrooms.roomSocketSessionMap "dotstorm/#{doc.id}", (err, socket, sess) ->
       return logger.error(err) if err?
-      if sess.sid != session.sid
+      if sess.session_id != session.session_id
         doc.sharing = utils.clean_sharing(sess, {sharing: orig_sharing})
         socket.sendJSON "dotstorm:dotstorm", {dotstorm: doc}
  
@@ -165,7 +166,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on 'dotstorm/create_dotstorm', (socket, session, data) ->
     dslib.create_dotstorm session, data, (err, dotstorm) ->
-      broadcast_dotstorm(err, socket, session, dotstorm)
+      broadcast_dotstorm(err, socket, session, dotstorm, data.callback)
 
   sockrooms.on 'dotstorm/edit_dotstorm', (socket, session, data) ->
     dslib.edit_dotstorm session, data, (err, dotstorm) ->
@@ -181,6 +182,7 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on 'dotstorm/get_idea', (socket, session, data) ->
     dslib.get_idea session, data, (err, dotstorm, idea) ->
+      return sockrooms.handleError(socket, err) if err?
       socket.sendJSON(data.callback or "dotstorm:ideas", {ideas: [idea]})
 
   sockrooms.on 'dotstorm/get_dotstorm', (socket, session, data) ->

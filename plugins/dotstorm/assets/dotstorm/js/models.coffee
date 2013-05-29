@@ -11,36 +11,24 @@ class ds.Idea extends Backbone.Model
 
 class ds.IdeaList extends Backbone.Collection
   model: ds.Idea
-
-  addSocketHandlers: =>
-    @listenTo intertwinkles.socket, "dotstorm:ideas", @_load
-
-  removeSocketHandlers: =>
-    @stopListening intertwinkles.socket, "dotstorm:ideas", @_load
-
-  _load: (data) => @set([data.idea])
+  load: (data) =>
+    if data?
+      @add(data.ideas, {merge: true})
+      @trigger "load", this
+      for idea_json in data.ideas
+        if idea_json?
+          @get(idea_json._id).trigger "load"
+    else
+      @trigger "load", this
 
 class ds.Dotstorm extends Backbone.Model
   defaults: { groups: [] }
   slugify: (name) -> return name.toLowerCase().replace(/[^a-z0-9_\.]/g, '-')
 
-  addSocketHandlers: =>
-    @listenTo intertwinkles.socket, "dotstorm:dotstorm", @_load
-
-  removeSocketHandlers: =>
-    @stopListening intertwinkles.socket, "dotstorm:dotstorm", @_load
-
-  _load: (data) =>
-    set = {}
-    # Only load params that have changed. 'set()' should trigger updates.
-    for key in ["_id", "slug", "emed_slug", "name", "topic"]
-      if data.dotstorm[key]? and data.dotstorm[key] != @get(key)
-        set[key] = data.dotstorm[key]
-    for key in ["groups", "trash", "sharing"]
-      unless _.isEqual(data.dotstorm[key], @get(key))
-        set[key] = key
-    if _.keys(set).length > 0
-      @set(set)
+  load: (data) =>
+    console.log "dotstorm load", data
+    @set(data.dotstorm)
+    @trigger "load", this
 
   validate: (attrs) ->
     if attrs.slug?.length < 4

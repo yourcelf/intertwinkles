@@ -65,6 +65,8 @@ module.exports = (config) ->
           sharing: dotstorm.sharing
         }
         api_methods.add_search_index(search_data, callback)
+      else
+        callback(null, null)
 
   ds.post_event_and_search = (session, doc, event_type, event_data, callback) ->
 

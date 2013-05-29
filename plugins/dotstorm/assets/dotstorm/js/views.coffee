@@ -18,6 +18,8 @@ class ds.Intro extends intertwinkles.BaseView
     'click .softnav': 'softNav'
   render: =>
     @$el.html(@template())
+    intertwinkles.twunklify(@el)
+    intertwinkles.modalvidify(@el)
     this
 
 class ds.EditDotstorm extends intertwinkles.BaseView
@@ -35,7 +37,7 @@ class ds.EditDotstorm extends intertwinkles.BaseView
     randomChar = =>
       @chars.substr parseInt(Math.random() * @chars.length), 1
     @randomSlug = (randomChar() for i in [0...12]).join("")
-    @model = options.model or new ds.Dotstorm()
+    @dotstorm = options.dotstorm or new ds.Dotstorm()
 
   validate: =>
     return @validateFields "form", [
@@ -49,7 +51,7 @@ class ds.EditDotstorm extends intertwinkles.BaseView
     ]
 
   render: =>
-    @$el.html @template(model: @model.toJSON(), randomSlug: @randomSlug)
+    @$el.html @template(model: @dotstorm.toJSON(), randomSlug: @randomSlug)
     @sharingControl?.remove()
     @sharingControl = new intertwinkles.SharingFormControl()
     @addView("#sharingControl", @sharingControl)
@@ -64,12 +66,20 @@ class ds.EditDotstorm extends intertwinkles.BaseView
     event.preventDefault()
     cleaned_data = @validate()
     if cleaned_data
-      #FIXME
-      @model.save({
-        name: cleaned_data.name
-        slug: cleaned_data.slug
-        sharing: cleaned_data.sharing
-      }, (err, model) -> @trigger("save", model))
+      if @dotstorm.id
+        dest = "dotstorm/edit_dotstorm"
+      else
+        dest = "dotstorm/create_dotstorm"
+      intertwinkles.socket.send dest, {
+        dotstorm: {
+          _id: @dotstorm.id or undefined
+          name: cleaned_data.name or ""
+          slug: cleaned_data.slug
+          sharing: cleaned_data.sharing
+        }
+      }
+      @dotstorm.once "load", =>
+        ds.app.navigate "/dotstorm/d/#{@dotstorm.get("slug")}/", {trigger: true}
 
   changeName: (event) =>
     unless @_slugIsCustom
@@ -85,7 +95,7 @@ class ds.EditDotstorm extends intertwinkles.BaseView
   checkSlug: (val) =>
     val or= @randomSlug
     @$(".slug-val").html("#{encodeURIComponent(val)}")
-    if val and val != @model.get("slug")
+    if val and val != @dotstorm.get("slug")
       parent = @$("[name=slug]").closest(".control-group")
       intertwinkles.socket.send "dotstorm/check_slug", {slug: val}
       intertwinkles.socket.once "dotstorm:check_slug", (data) =>
@@ -122,23 +132,24 @@ class ds.Topic extends Backbone.View
     'touchend                 .cancel': 'cancel'
 
   initialize: (options) ->
-    @model = options.model
-    @listenTo @model, "change", @render
+    @dotstorm = options.dotstorm
+    @listenTo @dotstorm, "change", @render
     @listenTo intertwinkles.user, "change", @render
 
   render: =>
-    #console.debug "render topic"
     @$el.html @template
-      name: @model.get("name")
-      topic: @model.get("topic") or "Click to edit topic..."
-      embed_slug: @model.get("embed_slug")
+      name: @dotstorm.get("name")
+      topic: @dotstorm.get("topic") or "Click to edit topic..."
+      embed_slug: @dotstorm.get("embed_slug")
       url: window.location.href
-    unless intertwinkles.can_edit(@model)
+    unless intertwinkles.can_edit(@dotstorm)
       @$(".clickToEdit").removeClass("clickToEdit")
     this
 
   editName: (event) =>
-    $(event.currentTarget).replaceWith @inputEditorTemplate text: @model.get("name")
+    $(event.currentTarget).replaceWith(
+      @inputEditorTemplate(text: @dotstorm.get("name"))
+    )
     @$("input[text]").select()
     return false
 
@@ -146,25 +157,29 @@ class ds.Topic extends Backbone.View
     event.stopPropagation()
     event.preventDefault()
     val = @$(".nameEdit input[type=text]").val()
-    if val == @model.get("name")
+    if val == @dotstorm.get("name")
       @render()
     else
-      #FIXME
-      @model.save({name: val})
+      intertwinkles.socket.send "dotstorm/edit_dotstorm", {
+        dotstorm: {_id: @dotstorm.id, name: val}
+      }
     return false
 
   editTopic: (event) =>
-    $(event.currentTarget).hide().after @textareaEditorTemplate text: @model.get("topic")
-    @$("textarea").select()
-    return false
+    event.preventDefault()
+    $(event.currentTarget).hide().after(
+      @textareaEditorTemplate(text: @dotstorm.get("topic"))
+    )
+    #@$("textarea").select()
 
   saveTopic: (event) =>
     val = @$(".topicEdit textarea").val()
-    if val == @model.get("topic")
+    if val == @dotstorm.get("topic")
       @render()
     else
-      #FIXME
-      @model.save({topic: val})
+      intertwinkles.socket.send "dotstorm/edit_dotstorm", {
+        dotstorm: {_id: @dotstorm.id, topic: val}
+      }
     return false
 
   cancel: (event) =>
@@ -214,7 +229,7 @@ class ds.Organizer extends Backbone.View
 
   initialize: (options) ->
     #console.debug 'Dotstorm: NEW DOTSTORM'
-    @dotstorm = options.model
+    @dotstorm = options.dotstorm
     # ID of a single note to show, popped out
     @showId = options.showId
     # name of a tag to show, popped out
@@ -249,7 +264,7 @@ class ds.Organizer extends Backbone.View
   softNav: (event) =>
     event.stopPropagation()
     event.preventDefault()
-    ds.app.navigate $(event.currentTarget).attr("href"), trigger: true
+    ds.app.navigate $(event.currentTarget).attr("href"), {trigger: true}
     return false
 
   nothing: (event) =>
@@ -278,16 +293,16 @@ class ds.Organizer extends Backbone.View
       linkedGroups.push(desc)
     return linkedGroups
 
-  showBig: (model) =>
+  showBig: (idea) =>
     # For prev/next navigation, we assume that 'prev' and 'next' have been set
     # on the model for ordering, linked-list style.  This is done by @sortGroups.
     # Without this, prev and next nav buttons just won't show up.
-    ds.app.navigate "/dotstorm/d/#{@dotstorm.get("slug")}/#{model.id}/"
-    if model.prev?
-      model.showPrev = => @showBig(model.prev)
-    if model.next?
-      model.showNext = => @showBig(model.next)
-    big = new ds.ShowIdeaBig model: model
+    ds.app.navigate "/dotstorm/d/#{@dotstorm.get("slug")}/#{idea.id}/"
+    if idea.prev?
+      idea.showPrev = => @showBig(idea.prev)
+    if idea.next?
+      idea.showNext = => @showBig(idea.next)
+    big = new ds.ShowIdeaBig({idea: idea, dotstorm: @dotstorm})
     big.on "close", => @showId = null
     @$el.append big.el
     big.render()
@@ -354,7 +369,7 @@ class ds.Organizer extends Backbone.View
     $(window).on "mouseup", @stopDrag
     @$el.html @template
       sorting: true
-      slug: @model.get("slug")
+      slug: @dotstorm.get("slug")
     @$el.addClass "sorting"
     @renderTagCloud()
     @renderTopic()
@@ -387,13 +402,13 @@ class ds.Organizer extends Backbone.View
       @$(".tag-links").append($("<a/>").attr({
           class: 'tag'
           "data-tag": tag
-          href: "/dotstorm/d/#{@model.get("slug")}/tag/#{encodeURIComponent(tag)}"
+          href: "/dotstorm/d/#{@dotstorm.get("slug")}/tag/#{encodeURIComponent(tag)}"
           style: "font-size: #{minPercent + ((max-(max-(count-min)))*(maxPercent - minPercent) / (max-min))}%"
         }).html( "<nobr>#{_.escape tag}</nobr>" ), " "
       )
 
   renderTopic: =>
-    @$(".topic").html new ds.Topic(model: @dotstorm).render().el
+    @$(".topic").html new ds.Topic(dotstorm: @dotstorm).render().el
 
   renderGroups: =>
     #console.debug "render groups"
@@ -409,13 +424,13 @@ class ds.Organizer extends Backbone.View
           ideaViews: (@getIdeaView(idea) for idea in group.ideas)
         @$("#organizer").append groupView.el
         groupView.render()
-        groupView.on "change:label", (group) =>
-          @dotstorm.get("groups")[i].label = group.label
-          #FIXME
-          @dotstorm.save null,
-            error: (model, err) =>
-              console.log("error", err)
-              flash "error", "Error saving: #{err}"
+        groupView.on "change:label", (groupChange) =>
+          group = @dotstorm.get("groups")[i]
+          group.label = groupChange.label
+          intertwinkles.socket.send "dotstorm/edit_group_label", {
+            dotstorm: {_id: @dotstorm.id}
+            group: {_id: group._id, label: group.label}
+          }
           groupView.render()
 
     @$("#organizer").append("<div style='clear: both;'></div>")
@@ -438,14 +453,14 @@ class ds.Organizer extends Backbone.View
 
   getIdeaView: (idea) =>
     unless @smallIdeaViews[idea.id]
-      view = new ds.ShowIdeaSmall(model: idea)
+      view = new ds.ShowIdeaSmall({idea: idea, dotstorm: @dotstorm})
       @smallIdeaViews[idea.id] = view
     return @smallIdeaViews[idea.id]
 
   renderOverlay: =>
     if @showId?
-      model = @ideas.get(@showId)
-      if model? then @showBig model
+      idea = @ideas.get(@showId)
+      if idea? then @showBig idea
     else if @showTag?
       @filterByTag(@showTag)
     return this
@@ -576,10 +591,9 @@ class ds.Organizer extends Backbone.View
               # Always specify a target ideaPos, even if we are a group and it
               # would thus be null.  This results in a "combine" action rather
               # than "move before".
-              @dotstorm.move(
-                groupPos, ideaPos,
-                dim.groupPos, dim.ideaPos or 0
-              )
+              movement = [groupPos, ideaPos, dim.groupPos, dim.ideaPos, 0]
+              @dotstorm.move.apply(this, movement)
+              return movement
 
     # add handlers for consolidated targets for moving.
     moveTargets = {}
@@ -708,9 +722,9 @@ class ds.Organizer extends Backbone.View
                   if not _.contains ["adjacent", "join"], @dragState.currentTarget?.type
                     @dragState.dropline.hide()
               onDrop: (sourceGroupPos, sourceIdeaPos) =>
-                @dotstorm.move(
-                  sourceGroupPos, sourceIdeaPos, groupPos, ideaPos
-                )
+                movement = [sourceGroupPos, sourceIdeaPos, groupPos, ideaPos, 0]
+                @dotstorm.move.apply(this, movement)
+                return movement
 
     # Trash
     trash = @$(".trash")
@@ -735,7 +749,10 @@ class ds.Organizer extends Backbone.View
           trash.removeClass("active")
       onDrop: (groupPos, ideaPos) =>
         unless groupPos == null
-          @dotstorm.move(groupPos, ideaPos, null, null)
+          movement = [groupPos, ideaPos, null, null, 0]
+          @dotstorm.move.apply(this, movement)
+          return movement
+        return null
     }
     # Drag out of trash (but not into another explicit target)
     targets.trashOut.push {
@@ -751,7 +768,8 @@ class ds.Organizer extends Backbone.View
       hide: ->
       onDrop: (groupPos, ideaPos, idea_id) =>
         end = 0 #@dotstorm.get("groups").length + 1
-        @dotstorm.move(groupPos, ideaPos, end, null)
+        movement = [groupPos, ideaPos, end, null, 0]
+        @dotstorm.move.apply(this, movement)
         $(".smallIdea[data-id=#{idea_id}]").css({
           "outline-width": "12px"
           "outline-style": "solid"
@@ -766,6 +784,7 @@ class ds.Organizer extends Backbone.View
             "outline-style": ""
             "outline-color": ""
         )
+        return movement
     }
     return targets
 
@@ -894,15 +913,26 @@ class ds.Organizer extends Backbone.View
       return false
 
     if state.currentTarget?
-      state.currentTarget.onDrop(state.groupPos, state.ideaPos,
+      # Get a snapshot of the current positions for our atomic update.
+      current = {_id: @dotstorm.id, groups: [], trash: []}
+      for group in @dotstorm.get("groups")
+        copy = {_id: group._id, ideas: []}
+        for idea in group.ideas
+          copy.ideas.push(idea)
+        current.groups.push(copy)
+      for idea in @dotstorm.get("trash")
+        current.trash.push(idea)
+      # Execute the movement on our local copy.
+      movement = state.currentTarget.onDrop(state.groupPos, state.ideaPos,
                                  state.active.attr("data-id"))
-      @dotstorm.trigger("change:groups")
-      #FIXME
-      @dotstorm.save null, {
-        error: (model, err) =>
-          console.log("error", model, err)
-          flash "error", "Error saving: #{err}"
+      # Transmit that movement to the server.  If the movement fails (e.g.
+      # because we're out of sync), we should get a new copy of the dotstorm to
+      # bring us back into sync.
+      intertwinkles.socket.send "dotstorm/rearrange", {
+        dotstorm: current
+        movement: movement
       }
+      @dotstorm.trigger("change:groups")
     return false
 
   checkForClick: (state) =>
@@ -977,26 +1007,28 @@ class ds.ShowIdeaGroup extends Backbone.View
 class ds.ShowIdeaSmall extends Backbone.View
   template: _.template $("#dotstormSmallIdea").html() or ""
   initialize: (options) ->
-    @model = options.model
+    @idea = options.idea
+    @dotstorm = options.dotstorm
     @size = options.size or "medium"
-    @listenTo @model, "change:tags", @render
-    @listenTo @model, "change:imageVersion", @render
-    @listenTo @model, "change:description", @render
-    @listenTo @model, "change:photo", @render
+    @listenTo @idea, "change:tags", @render
+    @listenTo @idea, "change:imageVersion", @render
+    @listenTo @idea, "change:description", @render
+    @listenTo @idea, "change:photo", @render
 
   render: =>
     args = _.extend
       tags: []
       description: ""
-    , @model.toJSON()
+    , @idea.toJSON()
     @$el.html @template args
-    @$el.attr("data-id", @model.id)
+    @$el.attr("data-id", @idea.id)
     @$el.addClass("smallIdea")
     @renderVotes()
 
   renderVotes: =>
     @$(".votes").html new ds.VoteWidget({
-      idea: @model
+      idea: @idea
+      dotstorm: @dotstorm
       readOnly: true
       hideOnZero: true
     }).render().el
@@ -1027,23 +1059,23 @@ class ds.ShowIdeaBig extends Backbone.View
     'touchstart .note': 'nothing'
 
   initialize: (options) ->
-    @model = options.model
-    @listenTo @model, "change:description", @render
-    @listenTo @model, "change:tags", @render
-    @listenTo @model, "change:background", @render
-    @listenTo @model, "change:drawing", @render
-    @listenTo @model, "change:photo", @render
-    @listenTo @model, "change:sharing", @render
+    @idea = options.idea
+    @dotstorm = options.dotstorm
+    @listenTo @idea, "change:description", @render
+    @listenTo @idea, "change:tags", @render
+    @listenTo @idea, "change:background", @render
+    @listenTo @idea, "change:drawing", @render
+    @listenTo @idea, "change:photo", @render
+    @listenTo @idea, "change:sharing", @render
     @listenTo intertwinkles.user, "change", @render
 
   render: =>
-    #console.debug "render big", @model.get "imageVersion"
     args = _.extend {
       tags: []
       description: ""
-      hasNext: @model.showNext?
-      hasPrev: @model.showPrev?
-    }, @model.toJSON()
+      hasNext: @idea.showNext?
+      hasPrev: @idea.showPrev?
+    }, @idea.toJSON()
     @$el.html @template args
     @$el.addClass("bigIdea")
     resize = =>
@@ -1057,13 +1089,16 @@ class ds.ShowIdeaBig extends Backbone.View
     resize()
     @renderVotes()
     $(window).on "resize", resize
-    unless intertwinkles.can_edit(ds.model)
+    unless intertwinkles.can_edit(@dotstorm)
       @$(".clickToEdit").removeClass("clickToEdit")
       @$(".toolbar .edit").hide()
     this
 
   renderVotes: =>
-    @$(".vote-widget").html new ds.VoteWidget(idea: @model).render().el
+    @$(".vote-widget").html new ds.VoteWidget({
+      idea: @idea
+      dotstorm: @dotstorm
+    }).render().el
 
   close: (event) =>
     if event?
@@ -1071,7 +1106,7 @@ class ds.ShowIdeaBig extends Backbone.View
       event.stopPropagation()
     @trigger "close", this
     @$el.remove()
-    ds.app.navigate "/dotstorm/d/#{ds.model.get("slug")}/"
+    ds.app.navigate "/dotstorm/d/#{@dotstorm.get("slug")}/"
     return false
 
   nothing: (event) =>
@@ -1081,33 +1116,36 @@ class ds.ShowIdeaBig extends Backbone.View
   next: (event) =>
     event.stopPropagation()
     @close()
-    @model.showNext() if @model.showNext?
+    @idea.showNext() if @idea.showNext?
     return false
 
   prev: (event) =>
     event.stopPropagation()
     @close()
-    @model.showPrev() if @model.showPrev?
+    @idea.showPrev() if @idea.showPrev?
     return false
 
   edit: (event) =>
     event.stopPropagation()
     event.preventDefault()
-    ds.app.navigate "/dotstorm/d/#{ds.model.get("slug")}/edit/#{@model.id}/",
+    ds.app.navigate "/dotstorm/d/#{@dotstorm.get("slug")}/edit/#{@idea.id}/", {
       trigger: true
+    }
     return false
 
   editTags: (event) =>
     event.stopPropagation()
     @$(event.currentTarget).replaceWith @editorTemplate
-      text: (@model.get("tags") or []).join(", ")
+      text: (@idea.get("tags") or []).join(", ")
     @$("input[type=text]").select()
     return false
 
   saveTags: (event) =>
     val = @$(".tags input[type=text]").val()
-    #FIXME
-    @model.save({tags: @model.cleanTags(val)})
+    @idea.set({tags: @idea.cleanTags(val)})
+    intertwinkles.socket.send "dotstorm/edit_idea", {
+      idea: {_id: @idea.id, tags: @idea.get("tags")}
+    }
     return false
 
 class ds.IdeaCanvas extends Backbone.View
@@ -1302,6 +1340,7 @@ class ds.EditIdea extends Backbone.View
   initialize: (options) ->
     @idea = options.idea
     @dotstorm = options.dotstorm
+    @ideas = options.ideas
     @canvas = new ds.IdeaCanvas {idea: @idea}
     @cameraEnabled = not not (navigator.getUserMedia or navigator.webkitGetUserMedia or
       navigator.mozGetUserMedia or navigator.msGetUserMedia)
@@ -1388,9 +1427,27 @@ class ds.EditIdea extends Backbone.View
       "src", prefix + imageData
     ).css({width: "100%"})
 
+  goHomeAndHighlight: (idea) =>
+    ds.app.navigate "/dotstorm/d/#{@dotstorm.get("slug")}/", {trigger: true}
+    setTimeout ->
+      $(".smallIdea[data-id=#{idea.id}]").css({
+        "outline-width": "12px"
+        "outline-style": "solid"
+        "outline-color": "rgba(255, 200, 0, 1.0)"
+      }).animate({
+        "outline-width": "12px"
+        "outline-style": "solid"
+        "outline-color": "rgb(255, 255, 255, 0.0)"
+      }, 5000, ->
+        $(this).css
+          "outline-width": ""
+          "outline-style": ""
+          "outline-color": ""
+      )
+    , 50
+
   saveIdea: (event) =>
     @$("input[type=submit]").addClass("loading")
-    ideaIsNew = not @idea.id?
     attrs = {
       dotstorm_id: @dotstorm.id
       description: $("#id_description").val()
@@ -1401,41 +1458,19 @@ class ds.EditIdea extends Backbone.View
       editor: intertwinkles.user?.id
       photoData: @photo
     }
-    #FIXME
-    @idea.save(attrs, {
-      success: (model) =>
-        @$("input[type=submit]").removeClass("loading")
-        if ideaIsNew
-          @dotstorm.addIdea(model, silent: true)
-          #FIXME
-          @dotstorm.save null, {
-            error: (model, err) =>
-              console.error "error", err
-              flash "error", "Error saving: #{err}"
-          }
-          ds.ideas.add(model)
-        ds.app.navigate "/dotstorm/d/#{@dotstorm.get("slug")}/", trigger: true
-        $(".smallIdea[data-id=#{@idea.id}]").css({
-          "outline-width": "12px"
-          "outline-style": "solid"
-          "outline-color": "rgba(255, 200, 0, 1.0)"
-        }).animate({
-          "outline-width": "12px"
-          "outline-style": "solid"
-          "outline-color": "rgb(255, 255, 255, 0.0)"
-        }, 5000, ->
-          $(this).css
-            "outline-width": ""
-            "outline-style": ""
-            "outline-color": ""
-        )
+    # Set attrs to our local copy.
+    @idea.set(attrs)
 
-      error: (model, err) ->
-        @$("input[type=submit]").removeClass("loading")
-        console.log("error", err)
-        str = err.error?.message
-        flash "error", "Error saving: #{str}. See log for details."
-    })
+    # Send data
+    dest = if @idea.id then "dotstorm/edit_idea" else "dotstorm/create_idea"
+    intertwinkles.socket.send dest, {
+      dotstorm: {_id: @dotstorm.id}
+      idea: _.extend({_id: @idea.id or undefined}, attrs)
+    }
+    if @idea.id
+      @idea.once "change", (idea) => @goHomeAndHighlight(idea)
+    else
+      @ideas.once "add", (idea) => @goHomeAndHighlight(idea)
     return false
 
   changeTool: (event) =>
@@ -1493,20 +1528,21 @@ class ds.VoteWidget extends Backbone.View
     'mousedown  .downvote': 'downVote'
   initialize: (options) ->
     @idea = options.idea
+    @dotstorm = options.dotstorm
     @listenTo @idea, "change:votes", @update
     @readOnly = options.readOnly
     @hideOnZero = options.hideOnZero
     if @readOnly
       @undelegateEvents()
     @listenTo intertwinkles.user, "change", @render
-    @listenTo ds.model, "change:sharing", @render
+    @listenTo @dotstorm, "change:sharing", @render
 
   render: =>
     #console.debug "render votewidget", @idea.id
     @$el.addClass("vote-widget")
     @$el.html @template(readOnly: @readOnly)
     @update()
-    unless intertwinkles.can_edit(ds.model)
+    unless intertwinkles.can_edit(@dotstorm)
       @$(".upvote, .downvote").hide()
     this
 
