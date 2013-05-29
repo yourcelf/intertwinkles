@@ -10,22 +10,58 @@ block body
         h1 Resolve
         div(style='text-align: center')
           p.
-            Decide something, together. This tool is for finalizing decisions.
-            Think of it as "doodle for deliberation".
+            Resolve is a tool for making, editing, approving, and rejecting
+            proposals.
           a.btn.btn-primary.btn-large.softnav(href='/resolve/new/') New Proposal
+
+          p.
+            See <a href='/dashboard/'>existing proposals</a> from your groups.
+
     div.row-fluid
       div.span6
-        h3 Public
-        ul.public-proposals
-          li Nothing here yet.
+        img(src='/static/resolve/img/resolve-splash.png',
+            style='box-shadow: 0px 0px 5px #999; border-radius: 5px; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; -ms-box-sizing: border-box; box-sizing: border-box; padding: 1em;')
+
       div.span6
-        h3 For your groups
-        ul.group-proposals
-          <% if (!intertwinkles.is_authenticated()) { %>
-          li Sign in &#8599; to see your group's proposals.
-          <% } else { %>
-          li Nothing here yet.
-          <% } %>
+        h3 When to use Resolve
+        p.
+          Your group has already discussed an issue, researched opinions, and
+          heard various points of view.  Now it's time to see if there is a
+          proposal that you can all live with.  The proposal will help you know
+          that you are done, and that the issue is <em>resolved</em> one way or
+          another.
+
+        h3 What can you do with resolve?
+        p.
+          Float a proposal or two out there.  Invite others to post proposals,
+          comment on yours, and vote on the proposals.  Group members can
+          participate when it's most convenient for them, and members who are
+          not online can requrest that other members post their views.
+
+        p.
+          Using resolve, you can learn which ideas have the most support, learn
+          about the concerns of other members, and move toward something that
+          meets everyone's needs. Resolve offers:
+        ul
+          li A single place to look at the most recent version of a proposal, and a single place to make and propose changes.
+          li A history of people's changing opinions that can be displayed alongside the history of the proposal itself.
+          li An easy way to see who has yet to respond
+          li A way to bug people to get their votes in.
+          li A way to record opinions on behalf of other people in your group.
+
+        h3 When not to use resolve
+
+        ul
+          li.
+            Don't use resolve if your group has not already built relationships
+            and trust with each other.
+          li.
+            Resolve is for finalizing a proposal, not brainstorming or
+            discussion.  It intentionally doesn't offer ways to
+            <em>discuss</em> &ndash; discussion is left to your group's
+            mailing list.  For brainstorming, consider using
+            <a href='/dotstorm'>Dotstorm</a>.  For text editing of an early-stage
+            proposal, consider using <a href='/twinklepad/'>twinklepad</a>.
 
   script(type='text/template', id='listedProposalTemplate')
     li.listed-proposal.
