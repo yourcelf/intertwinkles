@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 head
   title Test Notification Rendering
-  style(type='text/css')
+  style(type='text/css').
     td { vertical-align: top; border: 1px solid #999; }
 
 body
@@ -29,7 +29,7 @@ body
   script#email_html(type='text/template')
     != email.html
 
-  script(type='text/javascript')
+  script(type='text/javascript').
     var content = document.getElementById("email_html").innerHTML;
     var frame = document.getElementById('target');
     frame.onload = function() {
