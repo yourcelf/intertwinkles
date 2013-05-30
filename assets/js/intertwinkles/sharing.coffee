@@ -202,11 +202,15 @@ class intertwinkles.SharingFormControl extends Backbone.View
       next()
 
     @$("#id_group").on "change", =>
+      orig_group_id = @sharing.group_id
       @sharing.group_id = @$("#id_group").val()
       if @sharing.group_id
         @sharing.group_id = @sharing.group_id
         @$("select[name=public_until]").attr("disabled", false)
         @$("select[name=public_edit_or_view]").attr("disabled", false)
+        # If switching from no group to group, default to private.
+        if not orig_group_id
+          @$("select[name=public_edit_or_view]").val("").change()
         @$("input[name=advertise]").attr("disabled", false)
         @$(".extra-options").toggle(@$(".public-options").is(":visible"))
         @$(".public-group-hint").hide()
