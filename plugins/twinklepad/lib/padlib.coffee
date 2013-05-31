@@ -75,7 +75,6 @@ module.exports = (config) ->
       }, timeout, callback
 
   pl.create_pad = (session, data, callback) ->
-    console.log data.twinklepad
     pad = new schema.TwinklePad(data.twinklepad)
     unless utils.can_change_sharing(session, pad)
       return callback("Permission denied")
@@ -86,10 +85,12 @@ module.exports = (config) ->
           pl.post_twinklepad_event(session, doc, "create", {}, 0, done)
         (done) ->
           pl.create_pad_session_cookie(session, doc, done)
+        (done) ->
+          pl.post_search_index(doc, 0, done)
       ], (err, results) ->
         return callback(err) if err?
-        [event, cookie] = results
-        callback(err, doc, {session_cookie: cookie}, event)
+        [event, cookie, si] = results
+        callback(err, doc, {session_cookie: cookie}, event, si)
 
   pl.save_pad = (session, data, callback) ->
     unless data.twinklepad?._id?

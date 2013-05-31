@@ -116,6 +116,18 @@ describe "padlib", ->
         expect(si.title).to.be("tptest_1")
         done()
 
+  it "immediately posts search index on creation", (done) ->
+    return done() if skip_tests
+    padlib.create_pad {}, {twinklepad: {pad_name: "tptest_3"}}, (err, doc, cookie, event, si) ->
+      expect(err).to.be(null)
+      expect(doc).to.not.be(null)
+      expect(doc.pad_name).to.be("tptest_3")
+      expect(cookie.session_cookie).to.not.be(null)
+      expect(event).to.not.be(null)
+      expect(si).to.not.be(null)
+      expect(si.entity).to.be(doc.id)
+      done()
+
   it "cannot create a pad via url", (done) ->
     return done() if skip_tests
     browser = common.fetchBrowser()
