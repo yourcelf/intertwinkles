@@ -212,6 +212,7 @@ class intertwinkles.Toolbar extends Backbone.View
     @active_name = options.active_name or INTERTWINKLES_APPS[@applabel].name
     $('html').on('click.dropdown.data-api', @_hideAppmenu)
     @listenTo intertwinkles.socket, "recent_docs", @updateDocs
+    @listenTo intertwinkles.user, "login", @render
 
   stopPropagation: (event) ->
     event.stopPropagation()
