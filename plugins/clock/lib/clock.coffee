@@ -141,7 +141,7 @@ module.exports = (config) ->
           # Check for future, far past, or incoherent times.
           prev = category.times[category.times.length - 1]
           if (start_t <= now_t and start_t >= cutoff_t and
-              (not prev or prev.stop.getTime() < start_t))
+              (not prev or (prev.stop and prev.stop.getTime() < start_t)))
             category.times.push {start: new Date(start_t), stop: null}
             return save_and_return()
           else

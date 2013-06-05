@@ -99,7 +99,8 @@ start = (config, app, sockrooms) ->
 
   sockrooms.on "clock/set_time", (socket, session, data) ->
     clock.set_time session, data, (err, doc) ->
-      return socket.sendJSON("clock", {model:doc}) if err == "Out of sync"
+      if err == "Out of sync" or err == "Bad time"
+        return socket.sendJSON("clock", {model:doc})
       return socket.sendJSON("error", {error: err}) if err?
       sockrooms.broadcast("clock/#{doc.id}", "clock:time", {
         category: data.category
