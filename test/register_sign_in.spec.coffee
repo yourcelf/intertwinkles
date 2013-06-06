@@ -21,7 +21,7 @@ describe "registration", ->
       done()
 
   it "logs out", (done) ->
-    @browser.evaluate("intertwinkles.onlogout()")
+    @browser.evaluate("intertwinkles._onlogout()")
     common.await =>
       if @browser.evaluate("intertwinkles.user && intertwinkles.user.get('email') == null")
         done()

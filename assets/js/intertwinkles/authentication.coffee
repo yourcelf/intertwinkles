@@ -2,10 +2,52 @@ class intertwinkles.User extends Backbone.Model
   idAttribute: "id"
 
 #
-# User authentication state
+# API methods
 #
-intertwinkles.load_initial_data = ->
-  console.log "load initial data"
+
+# Request logout
+intertwinkles.request_logout = ->
+  navigator.id.logout()
+
+# Request login
+intertwinkles.request_login = ->
+  opts = {
+    siteName: "InterTwinkles"
+    returnTo: "/"
+  }
+  if window.location.protocol == "https:"
+    opts.termsOfService = "/about/terms/"
+    opts.privacyPolicy = "/about/privacy/"
+    opts.siteLogo = "/static/img/star-icon.png"
+  navigator.id.request(opts)
+
+# Check for authentication state
+intertwinkles.is_authenticated = ->
+  return intertwinkles.user.get("email")?
+
+# Refresh maps of users and groups.
+intertwinkles.refresh_session = ->
+  return if window.INTERTWINKLES_AUTH_LOGOUT
+  if not intertwinkles.socket?
+    console.info "refresh_session awaiting socket"
+    intertwinkles.SOCKET_TIMEOUT_COUNT += 1
+    if intertwinkles.SOCKET_TIMEOUT_COUNT > 100
+      console.error "Socket fail; can't handle refresh_session request"
+      return
+    return setTimeout(intertwinkles.refresh_session, 100)
+  console.info "refresh session"
+  intertwinkles.socket.once "groups", (data) ->
+    intertwinkles.users = data.users
+    intertwinkles.groups = data.groups
+    intertwinkles.user.set(_.find(intertwinkles.users, (e) -> e.email == data.email))
+  intertwinkles.socket.send("refresh_session")
+
+#
+# Set up User authentication state
+#
+do ->
+  console.info "load initial data"
+  # Load initial data.
   intertwinkles.user = new intertwinkles.User()
   intertwinkles.users = null  # map of intertwinkles user_id to user data
   intertwinkles.groups = null # list of groups
@@ -15,38 +57,27 @@ intertwinkles.load_initial_data = ->
     intertwinkles.users = INITIAL_DATA.users
     user = _.find intertwinkles.users, (e) -> e.email == INITIAL_DATA.email
     if user? then intertwinkles.user.set(user)
-intertwinkles.load_initial_data()
+  # Refresuh users/groups.
+  if intertwinkles.is_authenticated()
+    intertwinkles.refresh_session()
 
 #
 # Persona handlers
 #
 
-intertwinkles.request_logout = ->
-  navigator.id.logout()
-
-intertwinkles.request_login = ->
-  opts = {
-    siteName: "InterTwinkles"
-    termsOfService: "/about/terms/"
-    privacyPolicy: "/about/privacy/"
-    returnTo: "/"
-  }
-  if window.location.protocol == "https:"
-    opts.siteLogo = "/static/img/star-icon.png"
-  navigator.id.request(opts)
-
+# On login handler
 intertwinkles.SOCKET_TIMEOUT_COUNT = 0
-intertwinkles.onlogin = (assertion) ->
+intertwinkles._onlogin = (assertion) ->
   if window.INTERTWINKLES_AUTH_LOGOUT?
     return intertwinkles.request_logout()
 
   if not intertwinkles.socket?
-    console.log "onlogin awaiting socket"
+    console.info "onlogin awaiting socket"
     intertwinkles.SOCKET_TIMEOUT_COUNT += 1
     if intertwinkles.SOCKET_TIMEOUT_COUNT > 100
       console.error "Socket fail; can't handle onlogin request."
       return
-    return setTimeout((-> intertwinkles.onlogin(assertion)), 100)
+    return setTimeout((-> intertwinkles._onlogin(assertion)), 100)
 
   console.info "onlogin"
 
@@ -88,7 +119,8 @@ intertwinkles.onlogin = (assertion) ->
   intertwinkles.socket.send "verify", {callback: "login", assertion: assertion}
   intertwinkles.socket.on "force_logout", -> navigator.id.logout()
 
-intertwinkles.onlogout = (count) ->
+# On logout handler
+intertwinkles._onlogout = (count) ->
   intertwinkles.users = null
   intertwinkles.groups = null
   if not intertwinkles.socket?
@@ -96,9 +128,9 @@ intertwinkles.onlogout = (count) ->
       console.error("Socket connection failed.")
       return
     count ?= 0
-    #console.info "onlogout awaiting socket #{count}..."
+    console.info "onlogout awaiting socket #{count}..."
     return setTimeout( ->
-      intertwinkles.onlogout(count + 1)
+      intertwinkles._onlogout(count + 1)
     , 100)
   console.info "onlogout"
   intertwinkles.socket.once "logout", ->
@@ -110,9 +142,9 @@ intertwinkles.onlogout = (count) ->
       window.location.pathname = window.INTERTWINKLES_AUTH_LOGOUT_REDIRECT or "/"
   intertwinkles.socket.send "logout", {callback: "logout"}
 
-intertwinkles.is_authenticated = -> return intertwinkles.user.get("email")?
-
+# Set up watch.
 navigator.id.watch({
-  onlogin: intertwinkles.onlogin
-  onlogout: intertwinkles.onlogout
+  loggedInUser: intertwinkles.user.get("email") or null
+  onlogin: intertwinkles._onlogin
+  onlogout: intertwinkles._onlogout
 })

@@ -155,7 +155,7 @@ c.stubAuthenticate = (browser, email, callback) ->
 
   authenticate = () ->
     c.stubBrowserID({email: email})
-    browser.evaluate("intertwinkles.onlogin('mock assertion')")
+    browser.evaluate("intertwinkles._onlogin('mock assertion')")
     c.await ->
       user_done = """intertwinkles.user && intertwinkles.user.get('email') == '#{email}'"""
       if browser.evaluate(user_done)

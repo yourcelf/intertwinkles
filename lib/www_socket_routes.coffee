@@ -32,6 +32,17 @@ build_room_users_list_for_user = (sockrooms, user_session, room, callback) ->
       room_list.push(info)
     callback(null, { room: room, list: room_list })
 
+update_room_user_lists = (sockrooms, session, socket) ->
+  rooms = sockrooms.getRoomsForSessionId(session.session_id)
+  _.each rooms, (room) ->
+    build_room_users_list_for_user sockrooms, session, room, (err, users) ->
+      socket.sendJSON "room_users", users
+      sockrooms.broadcast(room, "room_users", users, socket.sid)
+
+    sockrooms.joinWithoutAuth socket, session, session.auth.user_id, {
+      silent: true
+    }
+
 route = (config, sockrooms) ->
   api_methods = require("./api_methods")(config)
   email_notices = require("./email_notices").load(config)
@@ -56,13 +67,20 @@ route = (config, sockrooms) ->
         })
 
         # Update all room's user lists to include our logged-in name
-        rooms = sockrooms.getRoomsForSessionId(session.session_id)
-        _.each rooms, (room) ->
-          build_room_users_list_for_user sockrooms, session, room, (err, users) ->
-            socket.sendJSON "room_users", users
-            sockrooms.broadcast(room, "room_users", users, socket.sid)
+        update_room_user_lists(sockrooms, session, socket)
 
-        sockrooms.joinWithoutAuth socket, session, session.auth.user_id, {silent: true}
+  sockrooms.on "refresh_session", (socket, session, data) ->
+    unless utils.is_authenticated(session)
+      return sockrooms.handleError(socket, "Not authenticated")
+    api_methods.get_groups session.auth.user_id, (err, data) ->
+      return sockrooms.handleError(socket, err) if err?
+      session.users = data.users
+      session.groups = data.groups
+      sockrooms.saveSession session, (err) ->
+        return forceLogout(err) if err?
+        data.email = session.auth.email
+        socket.sendJSON "groups", data
+        update_room_user_lists(sockrooms, session, socket)
 
   sockrooms.on "logout", (socket, session, data) ->
     if utils.is_authenticated(session)
