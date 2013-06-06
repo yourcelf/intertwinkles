@@ -1566,8 +1566,10 @@ class ds.VoteWidget extends Backbone.View
     # Must copy array; otherwise change events don't fire properly.
     if @timeoutFor == controlSelector
       return false
-    #FIXME
-    @idea.save {votes: Math.max(0, (@idea.get("votes") or 0) + direction)}
+    @idea.set({votes: Math.max(0, (@idea.get("votes") or 0) + direction)})
+    intertwinkles.socket.send "dotstorm/edit_idea", {
+      idea: {_id: @idea.id, votes: @idea.get("votes")}
+    }
     selectorList = [".vote-count"]
     if controlSelector? then selectorList.push(controlSelector)
     selectors = selectorList.join(", ")
