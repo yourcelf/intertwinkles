@@ -147,6 +147,7 @@ class RoomManager extends events.EventEmitter
       type: "socket message error", error: err, message: message or "",
       remoteAddress: socket.remoteAddress, headers: socket.headers,
       protocol: socket.protocol
+      date: new Date().toString()
     })
     if socket?
       @socketEmit socket, "error", {error: err}

@@ -122,7 +122,9 @@ module.exports = (config) ->
 
   api.authenticate = (session, assertion, callback) ->
     api.verify_assertion assertion, (err, persona_response) ->
-      return callback(err) if err?
+      if err?
+        err.assertion = assertion
+        return callback(err)
       api.get_authenticating_user persona_response.email, (err, data) ->
         return callback(err) if err?
         { user, message } = data
