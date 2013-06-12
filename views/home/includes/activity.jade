@@ -33,7 +33,7 @@ else
     each user_events in group.users
       div.user(style='margin: 1em; padding: 0.5em; border-left: 6px solid #ddd; border-top: 1px solid #eee; border-bottom: 1px solid #eee;')
         span.attrib
-          if user_events.ident.user
+          if user_events.ident.user && user_events.ident.user.icon
             img(src=absolutize_url('#{user_events.ident.user.icon.tiny}'))
             = user_events.ident.user.name
           else
