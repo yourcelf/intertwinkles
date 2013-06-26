@@ -26,6 +26,7 @@ start = (config) ->
       cert: config.https.cert
       # mitigate BEAST
       honorCipherOrder: true
+      # May want to add: ECDHE-RSA-RC4-SHA, ECDHE-RSA-AES128-SHA (https://www.imperialviolet.org/2012/03/02/ieecdhe.html / https://www.imperialviolet.org/2011/11/22/forwardsecret.html) -- consult https://www.openssl.org/docs/apps/ciphers.html#CIPHER_LIST_FORMAT
       ciphers: "ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH"
     }
 

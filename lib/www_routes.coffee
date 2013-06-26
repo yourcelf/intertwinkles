@@ -135,13 +135,14 @@ route = (config, app, sockrooms) ->
       (done) -> schema.User.count (err, len) -> done(err, len)
       (done) -> schema.Group.count (err, len) -> done(err, len)
       (done) -> schema.SearchIndex.count (err, len) -> done(err, len)
+      (done) -> schema.Event.count (err, len) -> done(err, len)
     ], (err, results) ->
       return www_methods.handle_error(req, res, err) if err?
-      [total_users, total_groups, total_documents] = results
+      [total_users, total_groups, total_documents, total_events] = results
       online_now = _.size(sockrooms.sessionIdToSockets)
       title = "Stats"
       res.render 'home/about/stats', context(req, {
-        title, total_users, total_groups, total_documents, online_now
+        title, total_users, total_groups, total_documents, total_events, online_now
       }, {active_name: "Stats"})
 
   #
