@@ -3,8 +3,10 @@ async         = require 'async'
 url           = require 'url'
 icons         = require './icons'
 email_notices = require './email_notices'
-logger        = require('log4js').getLogger()
 persona       = require './persona_consumer'
+utils         = require './utils'
+logger        = require('log4js').getLogger()
+deletion_notice_view = require("../emails/request_to_delete")
 
 module.exports = (config) ->
   schema = require("./schema").load(config)
@@ -12,11 +14,16 @@ module.exports = (config) ->
   grammar_getters = {
     www: require("./www_events_grammar")
   }
-  # Avoid putting 'key' in global namespace.
+  deletion_handlers = {}
+
+  # Use 'do' to avoid putting 'key' in global namespace.
   do ->
     for key in _.keys(config.apps)
       continue if key == "www"
       grammar_getters[key] = require("../plugins/#{key}/lib/events_grammar")
+      try
+        deletion_handlers[key] = require("../plugins/#{key}/lib/deletion_handler")(config)
+      catch e
 
   # Private
   get_user = (query, callback) ->
@@ -178,6 +185,277 @@ module.exports = (config) ->
       })
       short_doc.save (err, short_doc) ->
         callback(err, short_doc)
+
+  #
+  # Deletion
+  #
+  _delete_entity = (params, callback) ->
+    handler = deletion_handlers[params.application]
+
+    handler.delete_entity params, ->
+      query = {
+        application: params.application
+        entity: params.entity
+      }
+      async.parallel [
+        (done) -> schema.Event.find(query).remove (err) -> done(err)
+        (done) -> schema.SearchIndex.find(query).remove (err) -> done(err)
+        (done) -> schema.Notification.find(query).remove (err) -> done(err)
+        (done) -> schema.Twinkle.find(query).remove (err) -> done(err)
+      ], (err) ->
+        callback(err)
+
+  _queue_deletion = (session, params, callback) ->
+    schema.DeletionRequest.findOne {
+      application: params.application, entity: params.entity
+    }, (err, obj) ->
+      return callback(err) if err?
+      return callback(null, obj) if obj?
+      handler = deletion_handlers[params.application]
+
+      dr = new schema.DeletionRequest {
+        application: params.application
+        entity: params.entity
+        entity_url: params.url
+        group: params.group
+        title: params.title
+        start_date: new Date()
+        # TODO: un-hardcode 3 day deletion window
+        end_date: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 3)
+        confirmers: [session.auth.user_id]
+      }
+      async.parallel [
+        (done) ->
+          dr.save (err, dr) ->
+            done(err, dr)
+        (done) ->
+          api.trash_entity session, {
+            application: params.application, entity: params.entity,
+            group: params.group, trash: true
+          }, done
+
+
+        (done) ->
+          api.post_event {
+            application: dr.application
+            entity: dr.entity
+            type: "deletion"
+            url: dr.entity_url
+            date: new Date()
+            user: session.auth.user_id
+            group: dr.group
+            data: {
+              end_date: dr.end_date
+              entity_name: dr.title
+            }
+          }, (err, event) ->
+            done(err, event)
+
+      ], (err, results) ->
+        return callback(err) if err?
+        [dr, trashing, event] = results
+        _update_deletion_notifications session, dr, (err, notices) ->
+          return callback(null, dr, trashing, event, notices)
+
+  _update_deletion_notifications = (session, dr, callback) ->
+    {render_notifications} = email_notices.load(config)
+    schema.Group.findOne {_id: dr.group}, (err, group) ->
+      return callback(err) if err?
+      async.series [
+        (done) ->
+          api.clear_notifications {
+            entity: dr.entity
+            type: "deletion"
+          }, (err, notifications) ->
+            return done(err) if err?
+            return done(null, notifications or [])
+
+        (done) ->
+          member_ids = (m.user.toString() for m in group.members)
+          confirmed = (id.toString() for id in dr.confirmers)
+          needed = _.difference(member_ids, confirmed)
+
+          render_notice = (user_id, cb) ->
+            render_notifications deletion_notice_view, {
+              group: dr.group
+              sender: session.users[dr.confirmers[0]] or "A user"
+              recipient: session.users[user_id]
+              url: dr.url
+              deletion_request: dr
+            }, (err, rendered) ->
+              return cb(err) if err?
+              cb(null, {
+                type: "deletion"
+                entity: dr.entity
+                recipient: user_id
+                url: dr.url
+                sender: dr.confirmers[0]
+                application: "www"
+                formats: rendered
+              })
+          async.map(needed, render_notice, done)
+
+      ], (err, results) ->
+        return callback(err) if err?
+        [ clear_notices, new_notices ] = results
+        return callback(null, clear_notices) if new_notices.length == 0
+        api.post_notifications new_notices, (err, notifications) ->
+          return callback(err) if err?
+          return callback(null, clear_notices.concat(notifications))
+
+  api.request_deletion = (session, params, callback) ->
+    unless utils.is_authenticated(session)
+      return callback("Permission denied")
+    for key in ["group", "application", "entity", "url", "title"]
+      unless params[key]
+        return callback("Missing param #{key}")
+    handler = deletion_handlers[params.application]
+    return callback("Missing handler") unless handler?
+    handler.can_delete session, params, (err, can_delete) ->
+      return callback(err) if err?
+      if can_delete == "delete"
+        _delete_entity(params, callback)
+      else if can_delete == "queue"
+        _queue_deletion(session, params, callback)
+      else
+        return callback("Permission denied")
+
+  api.trash_entity = (session, params, callback) ->
+    unless utils.is_authenticated(session)
+      return callback("Permission denied")
+    for key in ["group", "application", "entity", "trash"]
+      unless params[key]?
+        return callback("Missing param #{key}")
+    handler = deletion_handlers[params.application]
+    return callback("Missing handler") unless handler?
+    handler.can_trash session, params, (err, can_trash) ->
+      return callback("Permission denied") unless can_trash
+      schema.SearchIndex.findOne {
+          application: params.application
+          entity: params.entity
+        }, (err, si) ->
+          return callback(err) if err?
+          return callback("Not found") unless si?
+          if !!si.trash != !!params.trash
+            si.trash = !!params.trash
+            async.parallel [
+              (done) ->
+                api.post_event {
+                  application: si.application
+                  entity: si.entity
+                  type: if params.trash then "trash" else "untrash"
+                  url: si.url
+                  date: new Date()
+                  user: session.auth.user_id
+                  group: si.sharing.group_id
+                  data: {
+                    entity_name: si.title
+                  }
+                }, (err, event) ->
+                  done(err, event)
+
+              (done) ->
+                si.save (err, si) -> done(err, si)
+
+              (done) ->
+                handler.trash_entity(session, params, done)
+
+            ], (err, results) ->
+              return callback(err) if err?
+              [event, si, handler_res] = results
+              return callback(null, event, si, handler_res)
+          else
+            return callback(null)
+      
+  api.cancel_deletion = (session, deletion_request_id, callback) ->
+    unless utils.is_authenticated(session)
+      return callback("Permission denied")
+    schema.DeletionRequest.findOne {_id: deletion_request_id}, (err, dr) ->
+      return callback(err) if err?
+      return callback("Not found") unless dr?
+
+      handler = deletion_handlers[dr.application]
+      return callback("Missing handler") unless handler?.can_delete
+      handler.can_delete session, dr.entity, (err, can_delete) ->
+        return callback(err) if err?
+        return callback("Permission denied") unless can_delete
+        query = {entity: dr.entity, application: dr.application}
+        update = {trash: false}
+        async.parallel [
+          # Post event.
+          (done) ->
+            #TODO: post event
+            api.post_event {
+              application: dr.application
+              entity: dr.entity
+              type: "undeletion"
+              url: dr.entity_url
+              date: new Date()
+              user: session.auth.user_id
+              group: dr.group
+              data: { entity_name: dr.title }
+            }, (err, event) ->
+              done(err, event)
+
+          # Untrash
+          (done) ->
+            api.trash_entity {
+              group: dr.group,
+              entity: dr.entity,
+              application: dr.application,
+              trash: false
+            }, done
+
+          # Remove deletion notifications
+          (done) -> schema.Notification.find({
+              entity: dr.entity
+              type: "deletion"
+            }).remove (err) ->
+              done(err)
+
+          # Update search index.
+          (done) -> schema.SearchIndex.findOneAndUpdate {
+              entity: dr.entity
+              application: dr.application
+            }, {trash: false}, (err, si) ->
+              done(err, si)
+
+          # Remove deletion request
+          (done) ->
+            dr.remove (err) -> done(err)
+
+        ], (err, results) ->
+          return callback(err) if err?
+          [event, untrashing, blank, si, blank] = results
+          return callback(null, event, si, untrashing)
+
+  api.confirm_deletion = (session, deletion_request_id, callback) ->
+    unless utils.is_authenticated(session)
+      return callback("Permission denied")
+    schema.DeletionRequest.findOne {_id: deletion_request_id}, (err, dr) ->
+      return callback(err) if err?
+      return callback("Not found") unless dr?
+
+      handler = deletion_handlers[dr.application]
+      return callback("Missing handler") unless handler?.can_delete
+      handler.can_delete session, dr.entity, (err, can_delete) ->
+        return callback(err) if err?
+        return callback("Permission denied") unless can_delete
+        unless _.find(dr.confirmers, (c) -> c.toString() == session.auth.user_id)
+          dr.confirmers.push(session.auth.user_id)
+        #TODO: un-hardcode 2 person deletion threshold
+        if dr.confirmers.length >= 2
+          _delete_entity(params, callback)
+        else
+          dr.save (err, dr) ->
+            _update_deletion_notifications(dr, callback)
+
+  api.process_deletions = (callback) ->
+    now = new Date()
+    schema.DeletionRequest.find {end_date: {$lt: now}}, (err, drs) ->
+      return callback(err) if err?
+      async.map drs, _delete_entity, (err, results) ->
+        callback(err)
 
   #
   # Search indices

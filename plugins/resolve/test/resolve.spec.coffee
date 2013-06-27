@@ -16,14 +16,25 @@ describe "resolve", ->
 
       # Establish a session
       @session = {}
-      common.stubBrowserID({email: "one@mockmyid.com"})
+      @session2 = {}
       async.series [
         (done) =>
+          common.stubBrowserID({email: "one@mockmyid.com"})
           www_schema.User.findOne {email: "one@mockmyid.com"}, (err, doc) =>
             @user = doc
             done(err)
         (done) =>
           api_methods.authenticate(@session, "assertion", done)
+
+        (done) =>
+          common.stubBrowserID({email: "two@mockmyid.com"})
+          www_schema.User.findOne {email: "two@mockmyid.com"}, (err, doc) =>
+            @user2 = doc
+            done(err)
+
+        (done) =>
+          api_methods.authenticate(@session2, "assertion", done)
+
         (done) =>
           # Build a proposal to work with.
           new resolve_schema.Proposal({
@@ -487,3 +498,306 @@ describe "resolve", ->
       expect(res.user_id).to.be(@session.auth.user_id)
       expect(res.name).to.be(undefined)
       done()
+
+  it "puts a proposal in the trash", (done) ->
+    proposal = @proposal_with_notices
+    session = @session
+    www_schema.Notification.find {
+      entity: proposal.id
+      cleared: false
+    }, (err, docs) ->
+      expect(err).to.be(null)
+      expect(docs).to.not.be(null)
+      expect(docs.length > 0).to.be(true)
+      api_methods.trash_entity session, {
+        application: "resolve"
+        entity: proposal.id
+        group: proposal.sharing.group_id
+        trash: true
+      }, (err, event, si, handler_res) ->
+        expect(err).to.be(null)
+        expect(event).to.not.be(null)
+        expect(si).to.not.be(null)
+        expect(handler_res).to.not.be(null)
+
+        expect(si.trash).to.be(true)
+
+        expect(event.type).to.be("trash")
+        expect(event.absolute_url).to.be(proposal.absolute_url)
+        expect(event.url).to.be(proposal.url)
+        expect(event.entity).to.be(proposal.id)
+        expect(event.application).to.be("resolve")
+        terms = api_methods.get_event_grammar(event)
+        expect(terms.length).to.be(1)
+        expect(terms[0]).to.eql({
+          entity: proposal.title
+          aspect: "proposal"
+          collective: "moved to trash"
+          verbed: "moved to trash"
+          manner: ""
+        })
+
+        www_schema.Notification.find {
+          entity: proposal.id
+          cleared: false
+        }, (err, docs) ->
+          expect(err).to.be(null)
+          expect(docs?.length).to.be(0)
+          done()
+
+  it "removes a proposal from teh trash", (done) ->
+    proposal = @proposal_with_notices
+    session = @session
+    www_schema.Notification.find {
+      entity: proposal.id
+      cleared: false
+    }, (err, docs) ->
+      expect(err).to.be(null)
+      expect(docs).to.not.be(null)
+      expect(docs.length).to.be(0)
+      api_methods.trash_entity session, {
+        application: "resolve"
+        entity: proposal.id
+        group: proposal.sharing.group_id
+        trash: false
+      }, (err, event, si, handler_res) ->
+        expect(err).to.be(null)
+        expect(event).to.not.be(null)
+        expect(si).to.not.be(null)
+        expect(handler_res).to.not.be(null)
+
+        expect(si.trash).to.be(false)
+
+        expect(event.type).to.be("untrash")
+        expect(event.absolute_url).to.be(proposal.absolute_url)
+        expect(event.url).to.be(proposal.url)
+        expect(event.entity).to.be(proposal.id)
+        expect(event.application).to.be("resolve")
+        terms = api_methods.get_event_grammar(event)
+        expect(terms.length).to.be(1)
+        expect(terms[0]).to.eql({
+          entity: proposal.title
+          aspect: "proposal"
+          collective: "restored from trash"
+          verbed: "restored from trash"
+          manner: ""
+        })
+
+        www_schema.Notification.find {
+          entity: proposal.id
+          cleared: false
+        }, (err, docs) ->
+          expect(err).to.be(null)
+          expect(docs).to.not.be(null)
+          expect(docs.length > 0).to.be(true)
+          done()
+
+  it "requests deletion of a proposal", (done) ->
+    proposal = @proposal_with_notices
+    session = @session
+    session2 = @session2
+    dr = null
+
+    async.series [
+      # First, add a couple of responses so that we have multiple authors
+      (done) ->
+        resolve.add_opinion session, {
+          proposal: {_id: proposal._id}
+          opinion: {
+            user_id: session.auth.user_id
+            name: session.users[session.auth.user_id].name
+            text: "My opinion is..."
+            vote: "abstain"
+          }
+        }, (err) ->
+          done(err)
+
+      (done) ->
+        resolve.add_opinion session2, {
+          proposal: {_id: proposal._id}
+          opinion: {
+            user_id: session2.auth.user_id
+            name: session2.users[session2.auth.user_id].name
+            text: "My thinking is..."
+            vote: "abstain"
+          }
+        }, (err, proposal) ->
+          done(err)
+
+      # Now try deleting -- this should queue, and not delet outright.
+      (done) ->
+        api_methods.request_deletion session, {
+          application: "resolve"
+          entity: proposal.id
+          group: proposal.sharing.group_id
+          url: proposal.url
+          title: proposal.title
+        }, (err, thedr, trashing, event, notices) ->
+          dr = thedr
+
+          expect(err).to.be(null)
+          expect(dr).to.not.be(null)
+          expect(dr.url).to.be("/deletionrequest/#{dr.id}/")
+          expect(dr.absolute_url).to.be("#{config.api_url}/deletionrequest/#{dr.id}/")
+          expect(trashing).to.not.be(null)
+          expect(event).to.not.be(null)
+          expect(notices).to.not.be(null)
+          expect(notices.length).to.be(1)
+          expect(notices[0].url).to.be(dr.url)
+          expect(notices[0].absolute_url).to.be(dr.absolute_url)
+
+
+          expect(event.type).to.be("deletion")
+          expect(event.url).to.be(dr.entity_url)
+          expect(event.absolute_url).to.be(proposal.absolute_url)
+          expect(event.entity).to.be(proposal.id)
+          expect(event.application).to.be('resolve')
+          terms = api_methods.get_event_grammar(event)
+          expect(terms.length).to.be(1)
+          expect(terms[0]).to.eql({
+            entity: proposal.title
+            aspect: "proposal"
+            collective: "requests to delete"
+            verbed: "requested deletion"
+            manner: "by #{event.data.end_date.toString()}"
+          })
+
+          [trash_event, si, handler_res] = trashing
+          expect(trash_event).to.not.be(null)
+          expect(si).to.not.be(null)
+          expect(handler_res).to.not.be(null)
+          expect(si.trash).to.be(true)
+
+          [proposal, prop_notices] = handler_res
+          expect(proposal).to.not.be(null)
+          expect(prop_notices).to.not.be(null)
+          expect(proposal.trash).to.be(true)
+
+          expect(dr.application).to.be("resolve")
+          expect(dr.url).to.be("/deletionrequest/#{dr.id}/")
+          expect(dr.absolute_url).to.be("#{config.api_url}/deletionrequest/#{dr.id}/")
+          expect(dr.entity).to.be(proposal.id)
+          expect(dr.entity_url).to.be(proposal.url)
+          expect(dr.absolute_entity_url).to.be(proposal.absolute_url)
+          expect(dr.title).to.be(proposal.title)
+          expect(dr.confirmers.length).to.be(1)
+          expect(dr.confirmers[0].toString()).to.eql(session.auth.user_id)
+
+          done()
+
+        # Cancel deletion.
+        (done) ->
+          api_methods.cancel_deletion session, dr._id, (err, event, si, untrashing) ->
+            expect(err).to.be(null)
+            expect(event).to.not.be(null)
+            expect(si).to.not.be(null)
+            expect(untrashing).to.not.be(null)
+
+            expect(event.type).to.be("undeletion")
+            expect(event.url).to.be(proposal.url)
+            expect(event.absolute_url).to.be(proposal.absolute_url)
+            expect(event.entity).to.be(proposal.entity)
+            expect(event.application).to.be("resolve")
+            terms = api_methods.get_event_grammar(event)
+            expect(terms.length).to.be(1)
+            expect(terms[0]).to.eql({
+              entity: proposal.title
+              aspect: "proposal"
+              collective: "cancelled deletions"
+              verbed: "cancelled deletion"
+              manner: ""
+            })
+
+            [untrash_event, si, handler_res] = untrashing
+            expect(untrash_event).to.not.be(null)
+            expect(si).to.not.be(null)
+            expect(handler_res).to.not.be(null)
+            expect(si.trash).to.be(false)
+
+            [proposal, notices] = handler_res
+            expect(proposal).to.not.be(null)
+            expect(notices).to.not.be(null)
+            expect(notices.length > 0).to.be(true)
+            expect(proposal.trash).to.be(false)
+
+            www_schema.DeletionRequest.find {entity: proposal.id}, (err, docs) ->
+              expect(err).to.be(null)
+              expect(docs.length).to.be(0)
+              done()
+
+        # Delete successfully with confirmation
+        (done) ->
+          api_methods.request_deletion session, {
+            application: "resolve"
+            entity: proposal.id
+            group: proposal.sharing.group_id
+            url: proposal.url
+            title: proposal.title
+          }, (err, thedr, trashing, event, notices) ->
+            expect(err).to.be(null)
+            expect(thedr).to.not.be(null)
+
+            api_methods.confirm_deletion session2, thedr.id, (err, notices) ->
+              # Second confirmation; should be no notices.
+              expect(err).to.be(null)
+              expect(notices).to.be(null)
+
+              entity = proposal._id
+              async.parallel [
+                (done) ->
+                  resolve_schema.Proposal.objects.findOne {
+                    _id: entity
+                  }, (err, doc) ->
+                    expect(err).to.be(null)
+                    expect(doc).to.be(null)
+                    done()
+                (done) ->
+                  www_schema.Event.objects.find {entity}, (err, docs) ->
+                    expect(err).to.be(null)
+                    expect(docs.length).to.be(0)
+                    done()
+                (done) ->
+                  www_schema.SearchIndex.objects.find {entity}, (err, docs) ->
+                    expect(err).to.be(null)
+                    expect(docs.length).to.be(0)
+                    done()
+                (done) ->
+                  www_schema.Notification.objects.find {entity}, (err, docs) ->
+                    expect(err).to.be(null)
+                    expect(docs.length).to.be(0)
+                    done()
+                (done) ->
+                  www_schema.Twinkle.objects.find {entity}, (err, docs) ->
+                    expect(err).to.be(null)
+                    expect(docs.length).to.be(0)
+                    done()
+              ], (err) ->
+                done(err)
+
+    ], (err) ->
+      done(err)
+
+  it "Deletes immediately if requested by the only involved user", (done) ->
+    session = @session
+    group = _.find session.groups, (g) -> g.name == "Two Members"
+    resolve.create_proposal  session, {
+      proposal: {
+        proposal: "Just one person."
+        sharing: {group_id: group.id}
+      }
+    }, (err, proposal, event, si, notices) =>
+      expect(err).to.be(null)
+      api_methods.request_deletion session, {
+        application: "resolve"
+        entity: proposal.id
+        group: proposal.sharing.group_id
+        url: proposal.url
+        title: proposal.title
+      }, (err, args) ->
+        expect(err).to.be(null)
+        expect(args).to.be(undefined)
+        resolve_schema.Proposal.findOne {_id: proposal.id}, (err, doc) ->
+          expect(err).to.be(null)
+          expect(doc).to.be(null)
+          done()
+

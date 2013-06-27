@@ -6,6 +6,7 @@ load = (config) ->
   ProposalSchema = new Schema
     resolved: Date
     passed: Boolean
+    trash: Boolean
 
     revisions: [{
       user_id: String

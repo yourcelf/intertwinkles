@@ -272,6 +272,7 @@ load = (config) ->
 
     text: {type: String, required: true}
 
+    trash: {type: Boolean, default: false}
     sharing: {
       group_id: String
       public_view_until: Date
@@ -288,6 +289,27 @@ load = (config) ->
   SearchIndexSchema.set('toObject', {virtuals: true})
   SearchIndexSchema.set('toJSON', {virtuals: true})
 
+  #
+  # Deletion Queue
+  #
+
+  DeletionRequestSchema = new Schema {
+    application: {type: String, required: true}
+    entity: {type: String, required: true}
+    entity_url: {type: String, required: true}
+    group: {type: Schema.ObjectId, ref: 'Group', required: true}
+    title: {type: String, required: true}
+    start_date: {type: Date, required: true}
+    end_date: {type: Date, required: true}
+    confirmers: [{type: Schema.ObjectId, ref: 'User', required: true}]
+  }
+  DeletionRequestSchema.virtual('url').get -> "/deletionrequest/#{@id}/"
+  DeletionRequestSchema.virtual('absolute_url').get ->
+    return "#{config.api_url}#{@url}"
+  DeletionRequestSchema.virtual('absolute_entity_url').get ->
+    return config.apps[@application].url + @entity_url
+  DeletionRequestSchema.set('toObject', {virtuals: true})
+  DeletionRequestSchema.set('toJSON', {virtuals: true})
 
   #
   # Twinkles
@@ -340,7 +362,8 @@ load = (config) ->
   for name, schema of {
         User: UserSchema, Group: GroupSchema, Event: EventSchema,
         Notification: NotificationSchema, SearchIndex: SearchIndexSchema,
-        Twinkle: TwinkleSchema, ShortURL: ShortURLSchema}
+        Twinkle: TwinkleSchema, ShortURL: ShortURLSchema
+        DeletionRequest: DeletionRequestSchema}
     try
       schemas[name] = mongoose.connection.model(name)
     catch e
