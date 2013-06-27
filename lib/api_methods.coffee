@@ -199,7 +199,9 @@ module.exports = (config) ->
       }
       async.parallel [
         (done) -> schema.Event.find(query).remove (err) -> done(err)
-        (done) -> schema.SearchIndex.find(query).remove (err) -> done(err)
+        (done) ->
+          schema.SearchIndex.findOne query, (err, si) ->
+            api.remove_search_index(si.application, si.entity, si.type, done)
         (done) -> schema.Notification.find(query).remove (err) -> done(err)
         (done) -> schema.Twinkle.find(query).remove (err) -> done(err)
       ], (err) ->
@@ -304,6 +306,11 @@ module.exports = (config) ->
           return callback(null, clear_notices.concat(notifications))
 
   api.request_deletion = (session, params, callback) ->
+    ###
+    Request deletion.  If the receiving application's policy permits, delete
+    immediately; otherwise, create a DeletionRequest and associated
+    notifications.
+    ###
     unless utils.is_authenticated(session)
       return callback("Permission denied")
     for key in ["group", "application", "entity", "url", "title"]
@@ -321,6 +328,10 @@ module.exports = (config) ->
         return callback("Permission denied")
 
   api.trash_entity = (session, params, callback) ->
+    ###
+    Move the entity into or out of the trash, depending on the value of the
+    boolean params.trash.
+    ###
     unless utils.is_authenticated(session)
       return callback("Permission denied")
     for key in ["group", "application", "entity", "trash"]
@@ -355,7 +366,7 @@ module.exports = (config) ->
                   done(err, event)
 
               (done) ->
-                si.save (err, si) -> done(err, si)
+                api.add_search_index si, (err, si) -> done(err, si)
 
               (done) ->
                 handler.trash_entity(session, params, done)
@@ -368,6 +379,9 @@ module.exports = (config) ->
             return callback(null)
       
   api.cancel_deletion = (session, deletion_request_id, callback) ->
+    ###
+    Cancel a pending request to delete.
+    ###
     unless utils.is_authenticated(session)
       return callback("Permission denied")
     schema.DeletionRequest.findOne {_id: deletion_request_id}, (err, dr) ->
@@ -430,6 +444,11 @@ module.exports = (config) ->
           return callback(null, event, si, untrashing)
 
   api.confirm_deletion = (session, deletion_request_id, callback) ->
+    ###
+    Call to add an additional user who wishes to delete the entity referenced
+    by the DeletionRequest. If the number of confirming users is above the
+    threshold (hard-coded to 2 right now), the entity is deleted outright.
+    ###
     unless utils.is_authenticated(session)
       return callback("Permission denied")
     schema.DeletionRequest.findOne {_id: deletion_request_id}, (err, dr) ->
@@ -451,6 +470,10 @@ module.exports = (config) ->
             _update_deletion_notifications(dr, callback)
 
   api.process_deletions = (callback) ->
+    ###
+    Method to call from cron to process any deletions past their waiting
+    period.
+    ###
     now = new Date()
     schema.DeletionRequest.find {end_date: {$lt: now}}, (err, drs) ->
       return callback(err) if err?
@@ -467,7 +490,7 @@ module.exports = (config) ->
     update = {}
     for key in ["application", "entity", "type"]
       conditions[key] = params[key]
-    for key in ["title", "summary", "text", "url"]
+    for key in ["title", "summary", "text", "url", "trash"]
       update[key] = params[key]
     # Avoid updating sharing if not passed explicitly.
     if params.sharing?
