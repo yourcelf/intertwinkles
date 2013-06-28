@@ -29,6 +29,7 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
+    trash: Boolean
 
   TwinklePadSchema.pre 'save', (next) ->
     if @pad_id?

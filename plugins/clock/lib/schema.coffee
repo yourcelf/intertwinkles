@@ -14,6 +14,7 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
+    trash: Boolean
     categories: [{
       name: String
       times: [{

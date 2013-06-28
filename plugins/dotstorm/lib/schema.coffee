@@ -152,6 +152,7 @@ load = (config) ->
     topic: { type: String, required: false, trim: true }
     groups: [IdeaGroupSchema]
     trash: [{type: Schema.ObjectId, ref: 'Idea'}]
+    archived: Boolean
     sharing: {
       group_id: String
       public_view_until: Date
@@ -160,6 +161,9 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
+  DotstormSchema.virtual('title').get ->
+    # Normalize "title" as accessor to allow polymorphism with other models.
+    return @name
   DotstormSchema.virtual('url').get ->
     return "/d/#{@slug}/"
   DotstormSchema.virtual('absolute_url').get ->

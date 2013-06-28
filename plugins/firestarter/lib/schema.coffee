@@ -25,6 +25,7 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
+    trash: Boolean
     slug: {type: String, unique: true, required: true}
     name: {type: String, required: true}
     prompt: {type: String, required: true}

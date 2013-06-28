@@ -28,6 +28,7 @@ load = (config) ->
       extra_editors: [String]
       advertise: Boolean
     }
+    trash: Boolean
     points: [Point]
     drafts: [Point]
   PointSetSchema.virtual('url').get ->

@@ -457,7 +457,13 @@ module.exports = (config) ->
 
       handler = deletion_handlers[dr.application]
       return callback("Missing handler") unless handler?.can_delete
-      handler.can_delete session, dr.entity, (err, can_delete) ->
+      params = {
+        entity: dr.entity
+        application: dr.application
+        url: dr.entity_url
+        title: dr.title
+      }
+      handler.can_delete session, params, (err, can_delete) ->
         return callback(err) if err?
         return callback("Permission denied") unless can_delete
         unless _.find(dr.confirmers, (c) -> c.toString() == session.auth.user_id)

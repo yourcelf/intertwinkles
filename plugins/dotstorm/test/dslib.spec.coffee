@@ -340,6 +340,128 @@ describe "dslib", ->
 
           done()
 
+  it "trashes a Dotstorm", (done) ->
+    ds_schema.Dotstorm.findOne {}, (err, doc) ->
+      doc.sharing.group_id = _.find(session.groups, (g) -> g.slug == "three-members").id
+      doc.save (err, doc) ->
+        api_methods.trash_entity session, {
+          application: "dotstorm"
+          entity: doc.id
+          group: doc.sharing.group_id
+          trash: true
+        }, (err, event, si, dotstorm) ->
+          _no_err_args([err, event, si, dotstorm])
+          expect(si.trash).to.be(true)
+          expect(typeof dotstorm.trash).to.be("object")
+          expect(dotstorm.archived).to.be(true)
+          expect(event.type).to.be("trash")
+          expect(event.absolute_url).to.be(dotstorm.absolute_url)
+          expect(event.url).to.be(dotstorm.url)
+          expect(event.entity).to.be(dotstorm.id)
+          expect(event.application).to.be("dotstorm")
+          terms = api_methods.get_event_grammar(event)
+          expect(terms.length).to.be(1)
+          expect(terms[0]).to.eql({
+            entity: dotstorm.name
+            aspect: "dotstorm"
+            collective: "moved to trash"
+            verbed: "moved to trash"
+            manner: ""
+          })
+          done()
 
+  it "untrashes a Dotstorm", (done) ->
+    ds_schema.Dotstorm.findOne {}, (err, doc) ->
+      api_methods.trash_entity session, {
+        application: "dotstorm"
+        entity: doc.id
+        group: doc.sharing.group_id
+        trash: false
+      }, (err, event, si, dotstorm) ->
+        _no_err_args([err, event, si, dotstorm])
+        expect(si.trash).to.be(false)
+        expect(typeof dotstorm.trash).to.be("object")
+        expect(dotstorm.archived).to.be(false)
+        expect(event.type).to.be("untrash")
+        expect(event.absolute_url).to.be(dotstorm.absolute_url)
+        expect(event.url).to.be(dotstorm.url)
+        expect(event.entity).to.be(dotstorm.id)
+        expect(event.application).to.be("dotstorm")
+        terms = api_methods.get_event_grammar(event)
+        expect(terms.length).to.be(1)
+        expect(terms[0]).to.eql({
+          entity: dotstorm.name
+          aspect: "dotstorm"
+          collective: "restored from trash"
+          verbed: "restored from trash"
+          manner: ""
+        })
+        done()
 
+  it "requests deletion", (done) ->
+    ds_schema.Dotstorm.findOne {}, (err, dotstorm) ->
+      # Add an idea as a second user, so that we require confirmation to delete.
+      dslib.create_idea session2, {
+        dotstorm: {_id: dotstorm._id}
+        idea: {
+          description: "first run"
+          drawing: [['pencil', 0, 0, 640, 640]]
+          background: '#ff9033'
+        }
+      }, (err, dotstorm, idea, event, si) ->
+        _no_err_args([err, dotstorm, idea, event, si])
 
+        # Ensure we have multiple events
+        www_schema.Event.find {entity: dotstorm._id}, (err, events) ->
+          users = _.unique(_.map(events, (e) -> e.user.toString()))
+          expect(users.length > 1).to.be(true)
+
+          # Request deletion
+          api_methods.request_deletion session, {
+            application: "dotstorm"
+            entity: dotstorm.id
+            group: dotstorm.sharing.group_id
+            url: dotstorm.url
+            title: dotstorm.title
+          }, (err, dr, trashing, event, notices) ->
+            _no_err_args([err, dr, trashing, event, notices])
+            [trash_event, si, dotstorm] = trashing
+            _no_err_args([null, trash_event, si, dotstorm])
+
+            expect(dotstorm.archived).to.be(true)
+            expect(si.trash).to.be(true)
+
+            expect(event.type).to.be("deletion")
+            expect(event.url).to.be(dr.entity_url)
+            expect(event.absolute_url).to.be(dotstorm.absolute_url)
+            expect(event.entity).to.be(dotstorm.id)
+            expect(event.application).to.be('dotstorm')
+            terms = api_methods.get_event_grammar(event)
+            expect(terms.length).to.be(1)
+            expect(terms[0]).to.eql({
+              entity: dotstorm.title
+              aspect: "dotstorm"
+              collective: "requests to delete"
+              verbed: "requested deletion"
+              manner: "by #{event.data.end_date.toString()}"
+            })
+            done()
+
+  it "confirms deletion", (done) ->
+    ds_schema.Dotstorm.findOne {}, (err, dotstorm) ->
+      ds_schema.Idea.find {}, (err, ideas) ->
+        expect(ideas.length > 1).to.be(true)
+        www_schema.DeletionRequest.findOne {entity: dotstorm.id}, (err, dr) ->
+          api_methods.confirm_deletion session2, dr._id, (err, notices) ->
+            expect(err).to.be(null)
+            expect(notices).to.be(undefined)
+            ds_schema.Dotstorm.findOne {_id: dotstorm._id}, (err, doc) ->
+              expect(err).to.be(null)
+              expect(doc).to.be(null)
+              async.map ideas, (idea, done) ->
+                expect(fs.existsSync(idea.getDrawingPath('small'))).to.be(false)
+                ds_schema.Idea.findOne {_id: idea._id}, (err, doc) ->
+                  expect(err).to.be(null)
+                  expect(doc).to.be(null)
+                  done()
+              , done
