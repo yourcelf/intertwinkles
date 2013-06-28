@@ -13,6 +13,13 @@ timeoutSet = (a, b) -> setTimeout(b, a)
 
 skip_tests = process.env.SKIP_ETHERPAD_TESTS
 
+_no_err_args = (args) ->
+  expect(args[0]).to.be(null)
+  for i in [1...args.length]
+    expect(args[i]).to.not.be(null)
+    expect(args[i]).to.not.be(undefined)
+
+
 delete_all_test_pads = (callback) ->
   tp_schema.TwinklePad.find (err, docs) ->
     async.map docs, (doc, done) ->
@@ -23,6 +30,8 @@ delete_all_test_pads = (callback) ->
     , callback
 
 describe "padlib", ->
+  session = null
+  session2 = null
   before (done) ->
     return done() if skip_tests
     async.series [
@@ -39,6 +48,18 @@ describe "padlib", ->
       (done) =>
         common.startUp (server) =>
           @server = server
+          done()
+      (done) ->
+        session = {}
+        common.stubBrowserID({email: "one@mockmyid.com"})
+        api_methods.authenticate session, "mock assertion", ->
+          session.anon_id = "anon_id_1"
+          done()
+      (done) ->
+        session2 = {}
+        common.stubBrowserID({email: "two@mockmyid.com"})
+        api_methods.authenticate session2, "mock assertion", ->
+          session.anon_id = "anon_id_2"
           done()
     ], done
 
@@ -74,7 +95,7 @@ describe "padlib", ->
         expect(event).to.not.be(null)
         expect(event.application).to.be("twinklepad")
         expect(event.type).to.be("visit")
-        expect(event.url).to.be("/p/tptest_1")
+        expect(event.url).to.be("/p/tptest_1/")
         expect(event.user).to.be(undefined)
         expect(event.anon_id).to.be("me")
         expect(event.group).to.be(undefined)
@@ -131,9 +152,118 @@ describe "padlib", ->
   it "cannot create a pad via url", (done) ->
     return done() if skip_tests
     browser = common.fetchBrowser()
-    url = "#{config.apps.twinklepad.url}/p/tptest_2"
+    url = "#{config.apps.twinklepad.url}/p/tptest_2/"
     browser.visit url, (e, browser, status) =>
       tp_schema.TwinklePad.findOne {pad_name: "tptest_2"}, (err, doc) ->
         expect(err).to.be(null)
         expect(doc).to.be(null)
         done()
+
+  it "trashes a twinklepad", (done) ->
+    tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
+      doc.sharing.group_id = _.find(session.groups, (g) -> g.slug == "three-members").id
+      doc.save (err, doc) ->
+        api_methods.trash_entity session, {
+          application: "twinklepad"
+          entity: doc.id
+          group: doc.sharing.group_id
+          trash: true
+        }, (err, event, si, doc) ->
+          _no_err_args([err, event, si, doc])
+          expect(si.trash).to.be(true)
+          expect(doc.trash).to.be(true)
+          expect(event.type).to.be("trash")
+          expect(event.absolute_url).to.be(doc.absolute_url)
+          expect(event.url).to.be(doc.url)
+          expect(event.entity).to.be(doc.id)
+          expect(event.application).to.be("twinklepad")
+          terms = api_methods.get_event_grammar(event)
+          expect(terms.length).to.be(1)
+          expect(terms[0]).to.eql({
+            entity: doc.title
+            aspect: "twinklepad"
+            collective: "moved to trash"
+            verbed: "moved to trash"
+            manner: ""
+          })
+          done()
+
+  it "untrashes a twinklepad", (done) ->
+    tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
+      api_methods.trash_entity session2, {
+        application: "twinklepad"
+        entity: doc.id
+        group: doc.sharing.group_id
+        trash: false
+      }, (err, event, si, doc) ->
+        _no_err_args([err, event, si, doc])
+        expect(si.trash).to.be(false)
+        expect(doc.trash).to.be(false)
+        expect(event.type).to.be("untrash")
+        expect(event.absolute_url).to.be(doc.absolute_url)
+        expect(event.url).to.be(doc.url)
+        expect(event.entity).to.be(doc.id)
+        expect(event.application).to.be("twinklepad")
+        terms = api_methods.get_event_grammar(event)
+        expect(terms.length).to.be(1)
+        expect(terms[0]).to.eql({
+          entity: doc.title
+          aspect: "twinklepad"
+          collective: "restored from trash"
+          verbed: "restored from trash"
+          manner: ""
+        })
+        done()
+
+  it "requests deletion", (done) ->
+    tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
+      # Ensure we have multiple events
+      www_schema.Event.find {entity: doc._id}, (err, events) ->
+        users = _.unique(_.map(events, (e) -> e.user?.toString() or "undefined"))
+        expect(users.length > 1).to.be(true)
+
+        # Request deletion
+        api_methods.request_deletion session, {
+          application: "twinklepad"
+          entity: doc.id
+          group: doc.sharing.group_id
+          url: doc.url
+          title: doc.title
+        }, (err, dr, trashing, event, notices) ->
+          _no_err_args([err, dr, trashing, event, notices])
+          [trash_event, si, doc] = trashing
+          _no_err_args([null, trash_event, si, doc])
+
+          expect(doc.trash).to.be(true)
+          expect(si.trash).to.be(true)
+
+          expect(event.type).to.be("deletion")
+          expect(event.url).to.be(dr.entity_url)
+          expect(event.absolute_url).to.be(doc.absolute_url)
+          expect(event.entity).to.be(doc.id)
+          expect(event.application).to.be('twinklepad')
+          terms = api_methods.get_event_grammar(event)
+          expect(terms.length).to.be(1)
+          expect(terms[0]).to.eql({
+            entity: doc.title
+            aspect: "twinklepad"
+            collective: "requests to delete"
+            verbed: "requested deletion"
+            manner: "by #{event.data.end_date.toString()}"
+          })
+          done()
+
+  it "confirms deletion", (done) ->
+    tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
+      www_schema.DeletionRequest.findOne {entity: doc.id}, (err, dr) ->
+        api_methods.confirm_deletion session2, dr._id, (err, notices) ->
+          expect(err).to.be(null)
+          expect(notices).to.be(undefined)
+          tp_schema.TwinklePad.findOne {_id: doc._id}, (err, tdoc) ->
+            expect(err).to.be(null)
+            expect(tdoc).to.be(null)
+            padlib.etherpad.getText {padID: doc.pad_id}, (err, data) ->
+              expect(err).to.not.be(null)
+              expect(err.message).to.be('padID does not exist')
+              done()
+

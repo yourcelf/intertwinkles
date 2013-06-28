@@ -23,7 +23,7 @@ module.exports = (config) ->
     api_methods.post_event {
       application: "twinklepad"
       type: type
-      url: "/p/#{pad.pad_name}"
+      url: "/p/#{pad.pad_name}/"
       entity: pad._id
       user: session.auth?.user_id
       anon_id: session.anon_id
@@ -67,7 +67,7 @@ module.exports = (config) ->
         application: "twinklepad"
         entity: doc._id
         type: "etherpad"
-        url: "/p/#{encodeURIComponent(doc.pad_name)}"
+        url: "/p/#{encodeURIComponent(doc.pad_name)}/"
         title: "#{doc.title}"
         summary: summary
         text: text
