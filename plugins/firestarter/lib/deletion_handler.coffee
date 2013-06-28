@@ -1,4 +1,5 @@
 _ = require 'underscore'
+async = require 'async'
 
 module.exports = (config) ->
   schema = require("./schema").load(config)
@@ -8,7 +9,6 @@ module.exports = (config) ->
       ###
       Delete responses as well as firestarters.
       ###
-      resolvelib = require("./resolve")(config)
       async.parallel [
         (done) ->
           schema.Response.find {firestarter_id: params.entity}, (err, docs) ->

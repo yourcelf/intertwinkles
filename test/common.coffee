@@ -38,6 +38,11 @@ try
 catch e
   c.TestModel = mongoose.model("TestModel", TestModelSchema)
 
+c.no_err_args = (args) ->
+  expect(args[0]).to.be(null)
+  for i in [1...args.length]
+    expect(args[i]).to.not.be(null)
+    expect(args[i]).to.not.be(undefined)
 
 c.await = (fn, timeout=100) ->
   if fn() == true

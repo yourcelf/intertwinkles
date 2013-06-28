@@ -5,7 +5,7 @@ config      = require '../../../test/test_config'
 common      = require '../../../test/common'
 api_methods = require("../../../lib/api_methods")(config)
 www_schema  = require('../../../lib/schema').load(config)
-tp_schema   = require("../lib/schema").load(config)
+ps_schema   = require("../lib/schema").load(config)
 pointslib   = require("../lib/pointslib")(config)
 
 timeoutSet = (a, b) -> setTimeout(b, a)
@@ -128,7 +128,7 @@ describe "pointslib", ->
 
       @pointset = doc
 
-      tp_schema.PointSet.find {}, (err, docs) ->
+      ps_schema.PointSet.find {}, (err, docs) ->
         expect(err).to.be(null)
         expect(docs.length).to.be(1)
         www_schema.Event.find {application: "points"}, (err, docs) ->
@@ -559,3 +559,101 @@ describe "pointslib", ->
       (done) -> _check_move(1, 1, [0, 1, 2], "No change", done)
     ], (err, results) ->
       done()
+
+  it "trashes a pointset", (done) ->
+    [session, session2, doc] = [@session, @session2, @pointset]
+    api_methods.trash_entity session, {
+      application: "points"
+      entity: doc.id
+      group: doc.sharing.group_id
+      trash: true
+    }, (err, event, si, doc) ->
+      common.no_err_args([err, event, si, doc])
+      expect(si.trash).to.be(true)
+      expect(doc.trash).to.be(true)
+      expect(event.type).to.be("trash")
+      expect(event.absolute_url).to.be(doc.absolute_url)
+      expect(event.url).to.be(doc.url)
+      expect(event.entity).to.be(doc.id)
+      expect(event.application).to.be("points")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: doc.title
+        aspect: "point set"
+        collective: "moved to trash"
+        verbed: "moved to trash"
+        manner: ""
+      })
+      done()
+
+  it "untrashes a pointset", (done) ->
+    [session, session2, doc] = [@session, @session2, @pointset]
+    api_methods.trash_entity session2, {
+      application: "points"
+      entity: doc.id
+      group: doc.sharing.group_id
+      trash: false
+    }, (err, event, si, doc) ->
+      common.no_err_args([err, event, si, doc])
+      expect(si.trash).to.be(false)
+      expect(doc.trash).to.be(false)
+      expect(event.type).to.be("untrash")
+      expect(event.absolute_url).to.be(doc.absolute_url)
+      expect(event.url).to.be(doc.url)
+      expect(event.entity).to.be(doc.id)
+      expect(event.application).to.be("points")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: doc.title
+        aspect: "point set"
+        collective: "restored from trash"
+        verbed: "restored from trash"
+        manner: ""
+      })
+      done()
+
+  it "requests deletion", (done) ->
+    [session, session2, doc] = [@session, @session2, @pointset]
+    # Request deletion
+    api_methods.request_deletion session, {
+      application: "points"
+      entity: doc.id
+      group: doc.sharing.group_id
+      url: doc.url
+      title: doc.title
+    }, (err, dr, trashing, event, notices) ->
+      common.no_err_args([err, dr, trashing, event, notices])
+      [trash_event, si, doc] = trashing
+      common.no_err_args([null, trash_event, si, doc])
+
+      expect(doc.trash).to.be(true)
+      expect(si.trash).to.be(true)
+
+      expect(event.type).to.be("deletion")
+      expect(event.url).to.be(dr.entity_url)
+      expect(event.absolute_url).to.be(doc.absolute_url)
+      expect(event.entity).to.be(doc.id)
+      expect(event.application).to.be('points')
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: doc.title
+        aspect: "point set"
+        collective: "requests to delete"
+        verbed: "requested deletion"
+        manner: "by #{event.data.end_date.toString()}"
+      })
+      done()
+
+  it "confirms deletion", (done) ->
+    [session, session2, doc] = [@session, @session2, @pointset]
+    www_schema.DeletionRequest.findOne {entity: doc.id}, (err, dr) ->
+      api_methods.confirm_deletion session2, dr._id, (err, notices) ->
+        expect(err).to.be(null)
+        expect(notices).to.be(undefined)
+        ps_schema.PointSet.findOne {_id: doc._id}, (err, tdoc) ->
+          expect(err).to.be(null)
+          expect(tdoc).to.be(null)
+          done()

@@ -324,3 +324,118 @@ describe "firestarter", ->
             expect(docs.length).to.be(0)
             done()
 
+  it "trashes a firestarter", (done) ->
+    fs_schema.Firestarter.findOne {slug: "test"}, (err, doc) =>
+      doc.sharing.group_id = _.find(@session.groups, (g) -> g.slug == "three-members")._id
+      doc.save (err, doc) =>
+        @firestarter = doc
+        [session, session2, doc] = [@session, @session2, @firestarter]
+        api_methods.trash_entity session, {
+          application: "firestarter"
+          entity: doc.id
+          group: doc.sharing.group_id
+          trash: true
+        }, (err, event, si, doc) ->
+          common.no_err_args([err, event, si, doc])
+          expect(si.trash).to.be(true)
+          expect(doc.trash).to.be(true)
+          expect(event.type).to.be("trash")
+          expect(event.absolute_url).to.be(doc.absolute_url)
+          expect(event.url).to.be(doc.url)
+          expect(event.entity).to.be(doc.id)
+          expect(event.application).to.be("firestarter")
+          terms = api_methods.get_event_grammar(event)
+          expect(terms.length).to.be(1)
+          expect(terms[0]).to.eql({
+            entity: doc.title
+            aspect: "firestarter"
+            collective: "moved to trash"
+            verbed: "moved to trash"
+            manner: ""
+          })
+          done()
+
+
+  it "untrashes a firestarter", (done) ->
+    [session, session2, doc] = [@session, @session2, @firestarter]
+    api_methods.trash_entity session2, {
+      application: "firestarter"
+      entity: doc.id
+      group: doc.sharing.group_id
+      trash: false
+    }, (err, event, si, doc) ->
+      common.no_err_args([err, event, si, doc])
+      expect(si.trash).to.be(false)
+      expect(doc.trash).to.be(false)
+      expect(event.type).to.be("untrash")
+      expect(event.absolute_url).to.be(doc.absolute_url)
+      expect(event.url).to.be(doc.url)
+      expect(event.entity).to.be(doc.id)
+      expect(event.application).to.be("firestarter")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: doc.title
+        aspect: "firestarter"
+        collective: "restored from trash"
+        verbed: "restored from trash"
+        manner: ""
+      })
+      done()
+
+  it "requests deletion", (done) ->
+    [session, session2, doc] = [@session, @session2, @firestarter]
+    # Request deletion
+    api_methods.request_deletion session, {
+      application: "firestarter"
+      entity: doc.id
+      group: doc.sharing.group_id
+      url: doc.url
+      title: doc.title
+    }, (err, dr, trashing, event, notices) ->
+      common.no_err_args([err, dr, trashing, event, notices])
+      [trash_event, si, doc] = trashing
+      common.no_err_args([null, trash_event, si, doc])
+
+      expect(doc.trash).to.be(true)
+      expect(si.trash).to.be(true)
+
+      expect(event.type).to.be("deletion")
+      expect(event.url).to.be(dr.entity_url)
+      expect(event.absolute_url).to.be(doc.absolute_url)
+      expect(event.entity).to.be(doc.id)
+      expect(event.application).to.be('firestarter')
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: doc.title
+        aspect: "firestarter"
+        collective: "requests to delete"
+        verbed: "requested deletion"
+        manner: "by #{event.data.end_date.toString()}"
+      })
+      done()
+
+  it "confirms deletion", (done) ->
+    [session, session2, doc] = [@session, @session2, @firestarter]
+    fs_schema.Response.find {firestarter_id: doc._id}, (err, responses) ->
+      expect(err).to.be(null)
+      expect(responses.length > 0).to.be(true)
+      www_schema.DeletionRequest.findOne {entity: doc.id}, (err, dr) ->
+        api_methods.confirm_deletion session2, dr._id, (err, notices) ->
+          expect(err).to.be(null)
+          expect(notices).to.be(undefined)
+          fs_schema.Firestarter.findOne {_id: doc._id}, (err, fdoc) ->
+            expect(err).to.be(null)
+            expect(fdoc).to.be(null)
+            fs_schema.Response.find {firestarter_id: doc._id}, (err, docs) ->
+              expect(err).to.be(null)
+              expect(docs.length).to.be(0)
+
+              async.map responses, (response, done) ->
+                fs_schema.Response.findOne {_id: response._id}, (err, doc) ->
+                  expect(err).to.be(null)
+                  expect(doc).to.be(null)
+                  done()
+              , done
+

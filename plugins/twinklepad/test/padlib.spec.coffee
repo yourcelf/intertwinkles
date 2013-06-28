@@ -13,13 +13,6 @@ timeoutSet = (a, b) -> setTimeout(b, a)
 
 skip_tests = process.env.SKIP_ETHERPAD_TESTS
 
-_no_err_args = (args) ->
-  expect(args[0]).to.be(null)
-  for i in [1...args.length]
-    expect(args[i]).to.not.be(null)
-    expect(args[i]).to.not.be(undefined)
-
-
 delete_all_test_pads = (callback) ->
   tp_schema.TwinklePad.find (err, docs) ->
     async.map docs, (doc, done) ->
@@ -169,7 +162,7 @@ describe "padlib", ->
           group: doc.sharing.group_id
           trash: true
         }, (err, event, si, doc) ->
-          _no_err_args([err, event, si, doc])
+          common.no_err_args([err, event, si, doc])
           expect(si.trash).to.be(true)
           expect(doc.trash).to.be(true)
           expect(event.type).to.be("trash")
@@ -196,7 +189,7 @@ describe "padlib", ->
         group: doc.sharing.group_id
         trash: false
       }, (err, event, si, doc) ->
-        _no_err_args([err, event, si, doc])
+        common.no_err_args([err, event, si, doc])
         expect(si.trash).to.be(false)
         expect(doc.trash).to.be(false)
         expect(event.type).to.be("untrash")
@@ -230,9 +223,9 @@ describe "padlib", ->
           url: doc.url
           title: doc.title
         }, (err, dr, trashing, event, notices) ->
-          _no_err_args([err, dr, trashing, event, notices])
+          common.no_err_args([err, dr, trashing, event, notices])
           [trash_event, si, doc] = trashing
-          _no_err_args([null, trash_event, si, doc])
+          common.no_err_args([null, trash_event, si, doc])
 
           expect(doc.trash).to.be(true)
           expect(si.trash).to.be(true)

@@ -1,7 +1,9 @@
 _ = require 'underscore'
+utils = require '../../../lib/utils'
 
 module.exports = (config) ->
   schema = require("./schema").load(config)
+  www_schema = require('../../../lib/schema').load(config)
   handlers = require("../../../lib/base_deletion_handler")(config, schema.Clock)
   handlers.can_delete = (session, params, callback) ->
     ###
@@ -18,12 +20,27 @@ module.exports = (config) ->
       return callback("Invalid url") unless doc.url == params.url
       return callback("Invalid title") unless doc.title == params.title
 
-      count = 0
-      for cat in doc.categories
-        count += times.length
-      if count > 10
-        callback(null, "queue")
-      else
-        callback(null, "delete")
+      www_schema.Event.find {
+        entity: params.entity
+        user: {$exists: true}
+        type: {$ne: "visit"}
+      }, (err, events) ->
+        return callback(err) if err?
+        author_ids = {}
+        for event in events
+          author_ids[event.user.toString()] = true
+
+        match = {}
+        match[session.auth.user_id] = true
+        if _.isEqual author_ids, match
+          count = 0
+          for cat in doc.categories
+            count += cat.times.length
+          if count > 10
+            return callback(null, "queue")
+          return callback(null, "delete")
+        return callback(null, "queue")
+
+
 
   return handlers

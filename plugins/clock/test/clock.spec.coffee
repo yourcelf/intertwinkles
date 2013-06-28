@@ -26,6 +26,13 @@ describe "clock", ->
           @session = {}
           common.stubBrowserID({email: "one@mockmyid.com"})
           api_methods.authenticate(@session, "mock assertion", done)
+
+        (done) =>
+          # Establish another session.
+          @session2 = {}
+          common.stubBrowserID({email: "two@mockmyid.com"})
+          api_methods.authenticate(@session2, "mock assertion", done)
+
         (done) =>
           # Build a clock to use.
           new clock_schema.Clock({
@@ -220,7 +227,7 @@ describe "clock", ->
       about: "New about that is rather long, longer than 30 chars I should think"
       sharing: {group_id: @all_groups["three-members"]._id}
       categories: cats
-    }}, (err, clock, event, si) ->
+    }}, (err, clock, event, si) =>
       expect(err).to.be(null)
       expect(clock).to.not.be(null)
       expect(event).to.not.be(null)
@@ -257,6 +264,7 @@ describe "clock", ->
         verbed: "changed"
         manner: ""
       })
+      @clock = clock
       done()
 
 
@@ -294,3 +302,102 @@ describe "clock", ->
     browser.visit @clock.absolute_url, (e, browser, status) ->
       expect(status).to.be(200)
       done()
+
+  it "trashes a clock [lib]", (done) ->
+    [session, session2, doc] = [@session, @session2, @clock]
+    api_methods.trash_entity session, {
+      application: "clock"
+      entity: doc.id
+      group: doc.sharing.group_id
+      trash: true
+    }, (err, event, si, clock) ->
+      common.no_err_args([err, event, si, clock])
+      expect(si.trash).to.be(true)
+      expect(clock.trash).to.be(true)
+      expect(event.type).to.be("trash")
+      expect(event.absolute_url).to.be(clock.absolute_url)
+      expect(event.url).to.be(clock.url)
+      expect(event.entity).to.be(clock.id)
+      expect(event.application).to.be("clock")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: clock.name
+        aspect: "clock"
+        collective: "moved to trash"
+        verbed: "moved to trash"
+        manner: ""
+      })
+      done()
+
+
+  it "untrashes a clock [lib]", (done) ->
+    [session, session2, doc] = [@session, @session2, @clock]
+    api_methods.trash_entity session2, {
+      application: "clock"
+      entity: doc.id
+      group: doc.sharing.group_id
+      trash: false
+    }, (err, event, si, doc) ->
+      common.no_err_args([err, event, si, doc])
+      expect(si.trash).to.be(false)
+      expect(doc.trash).to.be(false)
+      expect(event.type).to.be("untrash")
+      expect(event.absolute_url).to.be(doc.absolute_url)
+      expect(event.url).to.be(doc.url)
+      expect(event.entity).to.be(doc.id)
+      expect(event.application).to.be("clock")
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: doc.title
+        aspect: "clock"
+        collective: "restored from trash"
+        verbed: "restored from trash"
+        manner: ""
+      })
+      done()
+
+  it "requests deletion [lib]", (done) ->
+    [session, session2, doc] = [@session, @session2, @clock]
+    # Request deletion
+    api_methods.request_deletion session, {
+      application: "clock"
+      entity: doc.id
+      group: doc.sharing.group_id
+      url: doc.url
+      title: doc.title
+    }, (err, dr, trashing, event, notices) ->
+      common.no_err_args([err, dr, trashing, event, notices])
+      [trash_event, si, doc] = trashing
+      common.no_err_args([null, trash_event, si, doc])
+
+      expect(doc.trash).to.be(true)
+      expect(si.trash).to.be(true)
+
+      expect(event.type).to.be("deletion")
+      expect(event.url).to.be(dr.entity_url)
+      expect(event.absolute_url).to.be(doc.absolute_url)
+      expect(event.entity).to.be(doc.id)
+      expect(event.application).to.be('clock')
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql({
+        entity: doc.title
+        aspect: "clock"
+        collective: "requests to delete"
+        verbed: "requested deletion"
+        manner: "by #{event.data.end_date.toString()}"
+      })
+      done()
+
+  it "confirms deletion [lib]", (done) ->
+    [session, session2, doc] = [@session, @session2, @clock]
+    www_schema.DeletionRequest.findOne {entity: doc.id}, (err, dr) ->
+      api_methods.confirm_deletion session2, dr._id, (err, notices) ->
+        expect(err).to.be(null)
+        expect(notices).to.be(undefined)
+        clock_schema.Clock.findOne {_id: doc._id}, (err, tdoc) ->
+          expect(err).to.be(null)
+          expect(tdoc).to.be(null)
+          done()

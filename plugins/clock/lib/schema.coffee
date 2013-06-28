@@ -22,6 +22,7 @@ load = (config) ->
         stop: Date
       }]
     }]
+  ClockSchema.virtual('title').get -> @name or "Untitled"
   ClockSchema.virtual('url').get ->
     return "/c/#{@_id}/"
   ClockSchema.virtual('absolute_url').get ->

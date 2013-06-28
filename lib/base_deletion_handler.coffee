@@ -43,6 +43,7 @@ module.exports = (config, BaseEntity) ->
           user: {$exists: true}
           type: {$ne: "visit"}
         }, (err, docs) ->
+          return callback(err) if err?
           for doc in docs
             author_ids[doc.user.toString()] = true
 

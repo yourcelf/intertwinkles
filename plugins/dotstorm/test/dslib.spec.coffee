@@ -47,12 +47,6 @@ describe "dslib", ->
   after (done) ->
     common.shutDown(server, done)
 
-  _no_err_args = (args) ->
-    expect(args[0]).to.be(null)
-    for i in [1...args.length]
-      expect(args[i]).to.not.be(null)
-      expect(args[i]).to.not.be(undefined)
-
   it "Errors with invalid params", (done) ->
     dslib.create_dotstorm session, {this_is_not: "valid"}, (err, doc, event, si) ->
       expect(err).to.be("Missing param")
@@ -66,7 +60,7 @@ describe "dslib", ->
         topic: "This is my topic"
       }
     }, (err, doc, event, si) ->
-      _no_err_args([err, doc, event, si])
+      common.no_err_args([err, doc, event, si])
 
       expect(doc.slug).to.be("my-dotstorm")
       expect(doc.name).to.be("My Dotstorm")
@@ -110,7 +104,7 @@ describe "dslib", ->
           topic: "Thees Ees Muah Downstorm"
         }
       }, (err, doc, event, si) ->
-        _no_err_args([err, doc, event, si])
+        common.no_err_args([err, doc, event, si])
 
         expect(doc.slug).to.be("my-dotstorm")
         expect(doc.name).to.be("Muah Downstorm")
@@ -151,9 +145,9 @@ describe "dslib", ->
 
   it "fetches a dotstorm", (done) ->
     ds_schema.Dotstorm.findOne {}, (err, docy) ->
-      _no_err_args([err, docy])
+      common.no_err_args([err, docy])
       dslib.get_dotstorm session, {dotstorm: {_id: docy._id}}, (err, doc, light_ideas, event) ->
-        _no_err_args([err, doc, light_ideas, event])
+        common.no_err_args([err, doc, light_ideas, event])
         expect(doc.id).to.be(docy.id)
 
         expect(event.type).to.be("visit")
@@ -175,7 +169,7 @@ describe "dslib", ->
 
   it "creates an idea", (done) ->
     ds_schema.Dotstorm.findOne {}, (err, doc) ->
-      _no_err_args([err, doc])
+      common.no_err_args([err, doc])
       dslib.create_idea session, {
         dotstorm: {_id: doc._id}
         idea: {
@@ -184,7 +178,7 @@ describe "dslib", ->
           background: '#ff9033'
         }
       }, (err, dotstorm, idea, event, si) ->
-        _no_err_args([err, dotstorm, idea, event, si])
+        common.no_err_args([err, dotstorm, idea, event, si])
       
         expect(dotstorm.groups.length).to.be(1)
         expect(dotstorm.groups[0].ideas.length).to.be(1)
@@ -222,14 +216,14 @@ describe "dslib", ->
 
   it "creates an idea with a photo", (done) ->
     ds_schema.Dotstorm.findOne {}, (err, doc) ->
-      _no_err_args([err, doc])
+      common.no_err_args([err, doc])
       dslib.create_idea session, {
         dotstorm: {_id: doc._id}
         idea: {
           photoData: '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBAQFBAYFBQYJBgUGCQsIBgYICwwKCgsKCgwQDAwMDAwMEAwODxAPDgwTExQUExMcGxsbHCAgICAgICAgICD/2wBDAQcHBw0MDRgQEBgaFREVGiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICD/wAARCAFKABsDAREAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAECBAMI/8QAFxABAQEBAAAAAAAAAAAAAAAAABESE//EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwD6pAAAAAAABAAAASgUCgUEAAABAAAASgUCgUAAAAGQAAAKBQKBQQAAAEAAABAAAASgUCgUEAAABAAAASgUCgUEAAABAAAAQAAAEoFAoFBAAAAQAAAEoFAoFAAAABkAAACgUCgUEAAABAAAAQAAAEoFAoFBAAAAQAAAEoFAoFBAAAAQAAAEAAAB47A2BsDYOboB0A6AdAc3QDoB0A6A5tgbA2BsGQAAAf/Z'
         }
       }, (err, dotstorm, idea, event, si) ->
-        _no_err_args([err, dotstorm, idea, event, si])
+        common.no_err_args([err, dotstorm, idea, event, si])
 
         expect(dotstorm.groups.length).to.be(2)
         expect(dotstorm.groups[0].ideas[0]).to.eql(idea._id)
@@ -264,12 +258,12 @@ describe "dslib", ->
 
   it "edits an idea", (done) ->
     ds_schema.Idea.findOne {description: "first run"}, (err, idea) ->
-      _no_err_args([err, idea])
+      common.no_err_args([err, idea])
 
       dslib.edit_idea session, {
         idea: {_id: idea._id, description: "muy calliente"}
       }, (err, dotstorm, idea, event, si) ->
-        _no_err_args([err, dotstorm, idea, event, si])
+        common.no_err_args([err, dotstorm, idea, event, si])
 
         expect(dotstorm.groups.length).to.be(2)
         expect(dotstorm.groups[1].ideas[0]).to.eql(idea._id)
@@ -307,7 +301,7 @@ describe "dslib", ->
     
   it "fetches an idea", (done) ->
     ds_schema.Idea.findOne {description: "muy calliente"}, (err, doc) ->
-      _no_err_args([err, doc])
+      common.no_err_args([err, doc])
       dslib.get_idea session, {idea: {_id: doc._id}}, (err, dotstorm, idea) ->
         expect(idea.drawing.length).to.be(1)
         expect(idea.drawing[0]).to.eql(['pencil', 0, 0, 640, 640])
@@ -315,13 +309,13 @@ describe "dslib", ->
 
   it "rearranges ideas", (done) ->
     ds_schema.Dotstorm.findOne {}, (err, orig_doc) ->
-      _no_err_args([err, orig_doc])
+      common.no_err_args([err, orig_doc])
       # Try moving something to the trash.
       dslib.rearrange session, {
         dotstorm: {_id: orig_doc._id, groups: orig_doc.groups, trash: orig_doc.trash}
         movement: [1, 0, null, null, 0]
       }, (err, doc, si) ->
-        _no_err_args([err, doc, si])
+        common.no_err_args([err, doc, si])
 
         expect(doc.trash.length).to.be(1)
         expect(doc.trash[0]).to.eql(orig_doc.groups[1].ideas[0])
@@ -350,7 +344,7 @@ describe "dslib", ->
           group: doc.sharing.group_id
           trash: true
         }, (err, event, si, dotstorm) ->
-          _no_err_args([err, event, si, dotstorm])
+          common.no_err_args([err, event, si, dotstorm])
           expect(si.trash).to.be(true)
           expect(typeof dotstorm.trash).to.be("object")
           expect(dotstorm.archived).to.be(true)
@@ -378,7 +372,7 @@ describe "dslib", ->
         group: doc.sharing.group_id
         trash: false
       }, (err, event, si, dotstorm) ->
-        _no_err_args([err, event, si, dotstorm])
+        common.no_err_args([err, event, si, dotstorm])
         expect(si.trash).to.be(false)
         expect(typeof dotstorm.trash).to.be("object")
         expect(dotstorm.archived).to.be(false)
@@ -409,7 +403,7 @@ describe "dslib", ->
           background: '#ff9033'
         }
       }, (err, dotstorm, idea, event, si) ->
-        _no_err_args([err, dotstorm, idea, event, si])
+        common.no_err_args([err, dotstorm, idea, event, si])
 
         # Ensure we have multiple events
         www_schema.Event.find {entity: dotstorm._id}, (err, events) ->
@@ -424,9 +418,9 @@ describe "dslib", ->
             url: dotstorm.url
             title: dotstorm.title
           }, (err, dr, trashing, event, notices) ->
-            _no_err_args([err, dr, trashing, event, notices])
+            common.no_err_args([err, dr, trashing, event, notices])
             [trash_event, si, dotstorm] = trashing
-            _no_err_args([null, trash_event, si, dotstorm])
+            common.no_err_args([null, trash_event, si, dotstorm])
 
             expect(dotstorm.archived).to.be(true)
             expect(si.trash).to.be(true)

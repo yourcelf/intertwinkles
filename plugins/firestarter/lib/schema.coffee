@@ -35,6 +35,7 @@ load = (config) ->
     @set('created', new Date().getTime()) unless @created
     @set('modified', new Date().getTime())
     next()
+  FirestarterSchema.virtual('title').get -> @name or "Untitled"
   FirestarterSchema.virtual('url').get ->
     return "/f/#{@slug}"
   FirestarterSchema.virtual('absolute_url').get ->

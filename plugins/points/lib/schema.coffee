@@ -31,6 +31,7 @@ load = (config) ->
     trash: Boolean
     points: [Point]
     drafts: [Point]
+  PointSetSchema.virtual('title').get -> @name or 'Untitled'
   PointSetSchema.virtual('url').get ->
     return "/u/#{@slug}/"
   PointSetSchema.virtual('absolute_url').get ->
