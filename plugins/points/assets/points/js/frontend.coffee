@@ -20,6 +20,7 @@ class PointsModel extends Backbone.Model
     @stopListening intertwinkles.socket, "points:editing", @_editingSet
     @stopListening intertwinkles.socket, "points:approved", @_approvedSet
     @stopListening intertwinkles.socket, "points:move", @_pointMoved
+    @stopListening intertwinkles.socket, "points:trash", @_pointTrashed
 
   _load: (data) => @set data.model
 
@@ -182,6 +183,43 @@ class PointsModel extends Backbone.Model
     list.splice(data.position, 0, point)
     changed = if list == @get("drafts") then "drafts" else "points"
     @trigger "change:#{changed}"
+    @trigger "notify:point:#{data.point_id}"
+
+  #
+  # Move a point to or from the trash
+  #
+  setTrash: (data, callback) =>
+    intertwinkles.socket.once "points:trash", callback
+    intertwinkles.socket.send "points/trash_point", _.extend({
+      _id: @id,
+    }, data)
+
+  _pointTrashed: (data) =>
+    if data.is_trash
+      try
+        [from_list, from_pos] = @getListPos(data.point_id)
+      catch e
+        return @fetch()
+      to_list = @get("trashed_points")
+      unless to_list?
+        to_list = []
+        @set({trashed_points: to_list}, {silent: true})
+    else
+      to_list = @get("drafts")
+      from_list = @get("trashed_points") or []
+      from_pos = null
+      for point,i in from_list
+        if point._id == data.point_id
+          from_pos = i
+          break
+      unless from_pos?
+        return @fetch()
+    from_list = from_list
+    [point] = from_list.splice(from_pos, 1)
+    to_list.unshift(point)
+    for key in ["points", "drafts", "trashed_points"]
+      if from_list == @get(key) or to_list == @get(key)
+        @trigger "change:#{key}"
     @trigger "notify:point:#{data.point_id}"
 
   #

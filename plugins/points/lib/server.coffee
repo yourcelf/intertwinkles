@@ -139,6 +139,15 @@ start = (config, app, sockrooms) ->
         position: data.position
       })
 
+  sockrooms.on "points/trash_point", (socket, session, data) ->
+    pointslib.trash_point session, data, (err, doc, point) ->
+      return sockrooms.handleError(socket, err) if err?
+      sockrooms.broadcast("points/#{doc.id}", "points:trash", {
+        _id: doc.id
+        point_id: point._id
+        is_trash: data.is_trash
+      })
+
   sockrooms.on "points/check_slug", (socket, session, data) ->
     schema.PointSet.findOne {slug: data.slug}, '_id', (err, doc) ->
       return sockrooms.handleError(socket, err) if err?

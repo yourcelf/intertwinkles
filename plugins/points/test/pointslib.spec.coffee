@@ -560,6 +560,103 @@ describe "pointslib", ->
     ], (err, results) ->
       done()
 
+  it "trashes single points", (done) ->
+    [session, pointset] = [@session, @pointset]
+    _check_event = (event, type, exp_terms) ->
+      expect(event.type).to.be(type)
+      expect(event.application).to.be("points")
+      expect(event.url).to.be(pointset.url)
+      expect(event.absolute_url).to.be(pointset.absolute_url)
+      expect(event.entity).to.be(pointset.id)
+      terms = api_methods.get_event_grammar(event)
+      expect(terms.length).to.be(1)
+      expect(terms[0]).to.eql(exp_terms)
+
+    async.waterfall [
+      # Adopt a point so we have an adopted to play with.
+      (done) ->
+        pointslib.set_approved session, {
+          _id: pointset._id
+          point_id: pointset.drafts[0]._id
+          approved: true
+        }, (err, doc, point, event) ->
+          common.no_err_args([err, doc, point, event])
+          done(null, doc)
+
+      # Move from approved points to trash
+      (pointset, done) ->
+        point = pointset.points[0]
+        expect(point).to.not.be(undefined)
+        points_length = pointset.points.length
+        pointslib.trash_point session, {
+          _id: pointset._id
+          point_id: point._id
+          is_trash: true
+        }, (err, doc, point, event) ->
+          common.no_err_args([err, doc, point, event])
+          expect(_.find(doc.points, (p) -> p._id == point._id)).to.be(undefined)
+          expect(doc.points.length).to.be(points_length - 1)
+          expect(doc.trashed_points[0]._id.toString()).to.be(point._id.toString())
+
+          _check_event(event, "trash_point", {
+            entity: pointset.title
+            aspect: "point"
+            collective: "points moved to trash"
+            verbed: "moved to trash"
+            manner: "Whoa."
+          })
+          done(null, doc)
+
+      # Restore from trash
+      (pointset, done) ->
+        point = pointset.trashed_points[0]
+        expect(point).to.not.be(undefined)
+        points_length = pointset.trashed_points.length
+        pointslib.trash_point session, {
+          _id: pointset._id
+          point_id: point._id
+          is_trash: false
+        }, (err, doc, outpoint, event) ->
+          common.no_err_args([err, doc, outpoint, event])
+          expect(_.find(doc.trashed_points, (p) -> p._id == point._id)).to.be(undefined)
+          expect(doc.points.length).to.be(points_length - 1)
+          expect(doc.drafts[0]._id).to.eql(point._id)
+          _check_event(event, "untrash_point", {
+            entity: pointset.title
+            aspect: "point"
+            collective: "points restored from trash"
+            verbed: "restored from trash"
+            manner: "Whoa."
+          })
+          done(null, doc)
+
+      # Move from drafts to trash
+      (pointset, done) ->
+        point = pointset.drafts[0]
+        expect(point).to.not.be(undefined)
+        points_length = pointset.drafts.length
+        pointslib.trash_point session, {
+          _id: pointset._id
+          point_id: point._id
+          is_trash: true
+        }, (err, doc, outpoint, event) ->
+          common.no_err_args([err, doc, outpoint, event])
+          expect(_.find(doc.trashed_points, (p) -> p._id == point._id)).to.be(undefined)
+          expect(doc.drafts.length).to.be(points_length - 1)
+          expect(doc.trashed_points[0]._id).to.eql(point._id)
+          _check_event(event, "trash_point", {
+            entity: pointset.title
+            aspect: "point"
+            collective: "points moved to trash"
+            verbed: "moved to trash"
+            manner: "Whoa."
+          })
+          done(null, doc)
+
+    ], (err, pointset) =>
+      @pointset = pointset
+      done(err)
+
   it "trashes a pointset", (done) ->
     [session, session2, doc] = [@session, @session2, @pointset]
     api_methods.trash_entity session, {

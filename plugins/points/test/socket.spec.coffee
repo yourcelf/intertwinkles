@@ -77,10 +77,7 @@ describe "Socket pointsets", ->
     }
     async.map [@client, @client2], (client, done) ->
       client.onceJSON (data) ->
-        expect(data).to.eql({
-          route: "points:pointset",
-          body: {model: _.extend {}, pointset, {name: "Your Ten Point"}}
-        })
+        expect(data.body.model.name).to.be("Your Ten Point")
         pointset = data.body.model
         done()
     , done
@@ -307,5 +304,41 @@ describe "Socket pointsets", ->
             done()
         , done
     ], done
+
+  it "trashes a point", (done) ->
+    @client.writeJSON {
+      route: "points/trash_point"
+      body: {
+        _id: pointset._id
+        point_id: point._id
+        is_trash: true
+      }
+    }
+    async.map [@client, @client2], (client, done) =>
+      client.onceJSON (data) =>
+        expect(data.route).to.be("points:trash")
+        expect(data.body._id).to.be(pointset._id)
+        expect(data.body.point_id).to.be(point._id)
+        expect(data.body.is_trash).to.be(true)
+        done()
+    , done
+
+  it "untrashes a point", (done) ->
+    @client.writeJSON {
+      route: "points/trash_point"
+      body: {
+        _id: pointset._id
+        point_id: point._id
+        is_trash: false
+      }
+    }
+    async.map [@client, @client2], (client, done) =>
+      client.onceJSON (data) =>
+        expect(data.route).to.be("points:trash")
+        expect(data.body._id).to.be(pointset._id)
+        expect(data.body.point_id).to.be(point._id)
+        expect(data.body.is_trash).to.be(false)
+        done()
+    , done
 
 

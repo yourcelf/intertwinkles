@@ -72,6 +72,22 @@ module.exports = {
           verbed: if event.data.approve then "adopted" else "retired"
           manner: event.data.text
         }]
+      when "trash_point"
+        return [{
+          entity: event.data.entity_name
+          aspect: "point"
+          collective: "points moved to trash"
+          verbed: "moved to trash"
+          manner: event.data.text
+        }]
+      when "untrash_point"
+        return [{
+          entity: event.data.entity_name
+          aspect: "point"
+          collective: "points restored from trash"
+          verbed: "restored from trash"
+          manner: event.data.text
+        }]
       when "deletion"
         return [{
           entity: event.data.entity_name

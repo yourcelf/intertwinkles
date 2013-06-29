@@ -241,7 +241,7 @@ module.exports = (config) ->
           start_pos = i
           break
       unless start_pos?
-        throw new Error("Unmatched point id #{point._id}")
+        callback("Unmatched point id #{point._id}")
       
       if start_pos == data.position
         # No change -- must be out of sync.
@@ -253,6 +253,47 @@ module.exports = (config) ->
       list.splice(data.position, 0, point)
       # No rearrangement "event" for now.
       doc.save (err, doc) -> callback(err, doc, point)
+
+  pl.trash_point = (session, data, callback) ->
+    ###
+    Move a single point in or out of the point set's trash.
+    ###
+    get_point session, data, ["_id", "point_id", "is_trash"], (err, doc, point) ->
+      return callback(err) if err?
+      trash_status = doc.is_trash(point)
+      if trash_status == data.is_trash
+        return callback("No change", doc, point)
+      list = null
+      if trash_status
+        list = doc.trashed_points
+      else if doc.is_approved(point)
+        list = doc.points
+      else
+        list = doc.drafts
+      found = false
+      for p,i in list
+        if p._id == point._id
+          list.splice(i, 1)
+          found = true
+          break
+      unless found
+        callback("Unmatched point id #{point._id}")
+
+      if data.is_trash
+        doc.trashed_points ?= []
+        doc.trashed_points.unshift(point)
+      else
+        doc.drafts.unshift(point)
+      doc.save (err, doc) ->
+        event_opts = {
+          type: if data.is_trash then "trash_point" else "untrash_point"
+          data: {
+            text: _ellipse(point.revisions[0].text, 30)
+            point_id: point._id
+          }
+        }
+        pl.post_event session, doc, event_opts, 0, (err, event) ->
+          callback(err, doc, point, event)
 
   pl.get_events = (session, data, callback) ->
     return callback("Missing pointset ID") unless data._id?

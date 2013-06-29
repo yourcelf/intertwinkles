@@ -31,6 +31,7 @@ load = (config) ->
     trash: Boolean
     points: [Point]
     drafts: [Point]
+    trashed_points: [Point]
   PointSetSchema.virtual('title').get -> @name or 'Untitled'
   PointSetSchema.virtual('url').get ->
     return "/u/#{@slug}/"
@@ -40,9 +41,12 @@ load = (config) ->
   PointSetSchema.set('toJSON',   {virtuals: true})
   PointSetSchema.methods.find_point = (id) ->
     point = _.find(@points, (p) -> p._id.toString() == id.toString()) or \
-            _.find(@drafts, (p) -> p._id.toString() == id.toString())
+            _.find(@drafts, (p) -> p._id.toString() == id.toString()) or \
+            _.find(@trashed_points, (p) -> p._id.toString() == id.toString())
   PointSetSchema.methods.is_approved = (point) ->
     return not not _.find(@points, (p) -> p._id.toString() == point._id.toString())
+  PointSetSchema.methods.is_trash = (point) ->
+    return not not _.find(@trashed_points, (p) -> p._id.toString() == point._id.toString())
 
   schemas = {}
   for name, schema of {PointSet: PointSetSchema}
