@@ -12,6 +12,7 @@ class PointsModel extends Backbone.Model
     @listenTo intertwinkles.socket, "points:editing", @_editingSet
     @listenTo intertwinkles.socket, "points:approved", @_approvedSet
     @listenTo intertwinkles.socket, "points:move", @_pointMoved
+    @listenTo intertwinkles.socket, "points:trash", @_pointTrashed
 
   removeHandlers: =>
     @stopListening intertwinkles.socket, "points:pointset", @_load
@@ -25,11 +26,13 @@ class PointsModel extends Backbone.Model
   _load: (data) => @set data.model
 
   getPoint: (point_id) =>
-    return _.find(@get("points"), (p) -> p._id == point_id) or
-           _.find(@get("drafts"), (p) -> p._id == point_id)
+    match = (p) -> p._id == point_id
+    return _.find(@get("points"), match) or
+           _.find(@get("drafts"), match) or
+           _.find(@get("trashed_points"), match)
 
   getListPos: (point_id) =>
-    for list in [@get("points"), @get("drafts")]
+    for list in [@get("points"), @get("drafts"), @get("trashed_points")]
       for point, i in list
         if point._id == point_id
           return [list, i]
@@ -402,12 +405,14 @@ class PointSetView extends PointsBaseView
   events:
     'click .softnav': 'softNav'
     'click a.add-point': 'addPoint'
+    'click .trash': 'openTrash'
 
   initialize: (options) ->
     super(options)
     @listenTo @model, "change:name", @render
     @listenTo @model, "change:points", @renderPoints
     @listenTo @model, "change:drafts", @renderDrafts
+    @listenTo @model, "change:trashed_points", @renderTrashedPointsButton
     @listenTo intertwinkles.socket, "points:events", @renderSummary
 
   addPoint: (event) =>
@@ -419,6 +424,7 @@ class PointSetView extends PointsBaseView
     @$el.html(@template(model: @model.toJSON()))
     @renderPoints()
     @renderDrafts()
+    @renderTrashedPointsButton()
     intertwinkles.socket.send "points/get_points_events", {_id: @model.id}
 
   _renderPointList: (list, dest) =>
@@ -450,6 +456,14 @@ class PointSetView extends PointsBaseView
     @$(".history-holder").html(summary.el)
     summary.render()
 
+  renderTrashedPointsButton: =>
+    count = @model.get("trashed_points").length
+    $(".trash").attr("disabled", count == 0)
+    $(".trashed-points-length").html(if count > 0 then "(#{count})" else "")
+
+  openTrash: (event) =>
+    event.preventDefault()
+    new ShowTrashView(model: @model).render()
 
   _get_box: ($el) ->
     offset = $el.offset()
@@ -707,11 +721,14 @@ class PointView extends PointsBaseView
     'click .edit':    'edit'
     'click .mark-approved': 'approve'
     'click .upboat':  'vote'
+    'click .mark-trash':   'trash'
+    'click .mark-untrash': 'untrash'
     'mousedown .drag-handle': 'startDrag'
 
   initialize: (options) ->
     super(options)
     @point = options.point
+    @is_trash = options.is_trash
     @listenTo @model, "change:point:#{@point._id}", @render
     @listenTo @model, "notify:point:#{@point._id}", @flash
     @listenTo @model, "notify:supporter:#{@point._id}", @flashSupporter
@@ -732,6 +749,15 @@ class PointView extends PointsBaseView
     form = new VoteView({model: @model, point: @point })
     form.render()
 
+  trash: (event) =>
+    event.preventDefault()
+    form = new ConfirmTrash({model: @model, point: @point })
+    form.render()
+
+  untrash: (event) =>
+    event.preventDefault()
+    @model.setTrash({point_id: @point._id, is_trash: false})
+
   flash: =>
     @$el.effect('highlight', {}, 5000)
 
@@ -746,13 +772,15 @@ class PointView extends PointsBaseView
     [list, number] = @model.getListPos(@point._id)
     @$el.attr("data-id", @point._id)
     @$el.attr("data-number", number)
-    approved = list == @model.get("points")
+    is_draft = list == @model.get("draft")
+    is_approved = list == @model.get("points")
     @$el.addClass("point")
-        .toggleClass("draft", not approved)
+        .toggleClass("draft", is_draft)
         .html(@template({
+          is_trash: @is_trash
           model: @model.toJSON()
           point: @point
-          approved: approved
+          approved: is_approved
           number: number
           sessionSupports: @model.isSupporter({
             user_id: intertwinkles.user.id, name: intertwinkles.user.get("name")
@@ -795,6 +823,46 @@ class HistoryView extends PointsBaseView
     }))
     intertwinkles.sub_vars(@el)
     @$("[rel=popover]").popover()
+
+class ConfirmTrash extends intertwinkles.BaseModalFormView
+  template: _.template $("#confirmTrashTemplate").html()
+  initialize: (options) ->
+    @model = options.model
+    @point = options.point
+    super {
+      context: {
+        model: @model
+        point: @point
+      }
+    }
+
+    @on "submitted", (cleaned_data) =>
+      @model.setTrash {
+        point_id: @point._id
+        is_trash: true
+      }, @remove
+
+class ShowTrashView extends intertwinkles.BaseModalFormView
+  template: _.template $("#showTrashTemplate").html()
+  events:
+    'click .softnav': 'remove'
+  initialize: (options) ->
+    @model = options.model
+    super({context: {model: @model}})
+    @listenTo @model, "change:trashed_points", @renderPoints
+
+  render: =>
+    super()
+    @renderPoints()
+
+  renderPoints: =>
+    return @remove() unless @model.get("trashed_points").length > 0
+    @$(".trashed-points").html("")
+    for point in @model.get("trashed_points")
+      pointView = new PointView({model: @model, point: point, is_trash: true})
+      @$(".trashed-points").append(pointView.el)
+      pointView.render()
+
 
 class VoteView extends intertwinkles.BaseModalFormView
   template: _.template $("#voteTemplate").html()

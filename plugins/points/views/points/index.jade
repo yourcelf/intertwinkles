@@ -90,17 +90,23 @@ block postapp
     ul.points.two-col
     hr
 
-    div.drafts-area.row-fluid
-      div(style='text-align: center;')
-        h3 Drafts
-        div.add-point
+    div.drafts-area
+      div.row-fluid(style='text-align: center;')
+        div.add-point.span8.offset2
+          h3 Drafts
           <% if (intertwinkles.can_edit(model)) { %>
           a.btn.add-point(href='#') Add Point
+          <% } %>
+        div.offset8
+          <% if (intertwinkles.can_edit(model)) { %>
+          button.btn.trash(style='float: right;')
+            <i class='icon-trash'></i> Trash <span class='trashed-points-length'></span>
           <% } %>
       ul.drafts.two-col
 
     div.row-fluid
       div.history-holder(style='text-align: center;')
+    
 
   script(type='text/template', id='supportersTemplate').
     <span
@@ -139,8 +145,16 @@ block postapp
           div.text.
             <%= intertwinkles.markup(point.revisions[0].text) %>
           div.edit-line
-            <% if (!approved && intertwinkles.can_edit(model)) { %>
+            <% if (is_trash) { %>
+            a.mark-untrash.pull-left(href='#') Restore
+            <% } else if (!approved && intertwinkles.can_edit(model)) { %>
             a.mark-approved.pull-left(href='#') adopt
+            <% } else if (approved && intertwinkles.can_edit(model)) { %>
+            a.mark-approved(href='#') retire
+            <% } %>
+            <% if (!is_trash) { %>
+            &nbsp;
+            a.mark-trash(href='#') trash
             <% } %>
             ul.group.pull-right
               <% if (point.revisions.length > 1) { %>
@@ -150,10 +164,7 @@ block postapp
                   history
                 </a>
               <% } %>
-              <% if (approved && intertwinkles.can_edit(model)) { %>
-              li
-                a.mark-approved(href='#') retire
-              <% } %>
+              <% if (!is_trash) { %>
               li.
                 <span
                     class='editing<%- point.editing.length > 0 ? " active" : "" %>'
@@ -170,6 +181,7 @@ block postapp
                     title='Show detail'>
                   <i class='icon-fullscreen'></i>
                 </a>
+              <% } %>
             div(style='clear: both;')
 
   script(type='text/template', id='voteTemplate')
@@ -188,8 +200,15 @@ block postapp
         div.status.pull-right(style='margin-right: 0.5em;')
         a.close.pull-left.btn(href='#', data-dismiss='modal') Cancel
           
-
-
+  script(type='text/template', id='confirmTrashTemplate')
+    form.confirm-trash.form-horizontal
+      div.modal-body
+        button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+        p.
+          Move this point to the trash? You can restore it later.
+      div.modal-footer
+        button.pull-right.btn.btn-primary(type='submit') Move to trash
+        a.close.pull-left.btn(href='#', data-dismiss='modal') Cancel
 
   script(type='text/template', id='pointDetailTemplate')
     div.point-detail.row-fluid
@@ -239,6 +258,14 @@ block postapp
         button.btn.btn-primary(type='submit')
           <%- approved ? "Retire point" : "Adopt point" %>
         a.close.pull-left.btn(href='#', data-dismiss='modal') Cancel
+
+  script(type='text/template', id='showTrashTemplate')
+    div.modal-body 
+      button.close(type='button', data-dismiss='modal', aria-hidden='true') &times;
+      h3(style='text-align: center') Trash
+      ul.trashed-points
+    div.modal-footer
+      a.btn.close(href='#', data-dismiss='modal') Close
 
   script(type='text/template', id='historyTemplate')
     div.point-history
