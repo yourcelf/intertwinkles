@@ -73,6 +73,18 @@ intertwinkles.simple_date = (date, bare=false) ->
       #{str}
     </span>"""
 
+intertwinkles.absolute_date = (date, bare=false) ->
+  date = intertwinkles.parse_date(date)
+  now = intertwinkles.now()
+  if now.getFullYear() != date.getFullYear()
+    str = date.toString("MMM d, YYYY")
+  else
+    str = date.toString("MMM d")
+  if bare
+    return str
+  return """<span class='date' title='#{date.toString("dddd, MMMM dd, yyyy h:mm:ss tt")}'>
+    #{str}
+  </span>"""
 
 intertwinkles.user_icon = (user_id, name, size="small") ->
   user = intertwinkles.users?[user_id]

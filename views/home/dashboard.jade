@@ -16,8 +16,9 @@ block body
         // This will contain howto/guide stuff?
       div.span6.groups
       div.span2
-        div.pull-right
-          a.btn(href='/groups/new/') Add Group
+          a.btn(href='/groups/new/', style='margin-bottom: 16px') Add Group
+          br
+          a(href='/trash/', style='padding-top: 1em') <i class='icon-trash'></i> View Trash
     div.personal-events
 
   script#appList(type='text/template').
@@ -31,9 +32,6 @@ block body
         </a>
       </li>
     <% }); %>
-          
-
-      
 
   script#emptyGroup(type='text/template').
     <div class='group'>

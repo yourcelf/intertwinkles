@@ -83,7 +83,6 @@ block postapp
   script(type='text/template', id='pointsetTemplate')
     div.hover-edit(style='text-align: center;')
       h1 <%- model.name %>
-      | <% console.log(intertwinkles.can_edit(model), model.sharing); %>
       | <% if (intertwinkles.can_edit(model)) { %>
       |   <a class='edit-link softnav' href='/points/u/<%- model.slug %>/edit/'>edit</a>
       | <% } %>
@@ -97,7 +96,7 @@ block postapp
           <% if (intertwinkles.can_edit(model)) { %>
           a.btn.add-point(href='#') Add Point
           <% } %>
-        div.offset8
+        div.offset10
           <% if (intertwinkles.can_edit(model)) { %>
           button.btn.trash(style='float: right;')
             <i class='icon-trash'></i> Trash <span class='trashed-points-length'></span>
@@ -106,7 +105,6 @@ block postapp
 
     div.row-fluid
       div.history-holder(style='text-align: center;')
-    
 
   script(type='text/template', id='supportersTemplate').
     <span

@@ -51,7 +51,7 @@ route = (config, app, sockrooms) ->
         async.map group_ids, (group_id, done) ->
           finish = (err, docs) -> done(err, {group_id: group_id, docs: docs})
           utils.list_group_documents(schema.SearchIndex, req.session, finish,
-            {"sharing.group_id": group_id}, "-modified", 0, 10, true
+            {"sharing.group_id": group_id, trash: {$ne: true}}, "-modified", 0, 10, true
           )
         , done
     ], (err, results) ->
@@ -71,6 +71,83 @@ route = (config, app, sockrooms) ->
       return res.redirect("/")
     else
       return res.redirect("/profiles/login?next=%2f")
+
+  utils.append_slash(app, '/trash')
+  app.get '/trash/', (req, res) ->
+    unless utils.is_authenticated(req.session)
+      return www_methods.redirect_to_login(req, res)
+
+    async.parallel [
+      (done) ->
+        utils.list_group_documents(schema.SearchIndex, req.session, done,
+          {trash: true}, "-modified", 0, null, true
+        )
+      (done) ->
+        schema.DeletionRequest.find {
+          group: {$in: _.keys(req.session.groups)}
+        }, (err, docs) ->
+          done(err, docs)
+
+    ], (err, results) ->
+      return www_methods.handle_error(req, res, err) if err?
+      [docs, deletion_requests] = results
+      return res.render "home/trash", context(req, {
+        title: "Trash"
+      }, {
+        active_name: "Home"
+        trash_docs: docs
+        deletion_requests: deletion_requests
+      })
+
+  utils.append_slash(app, '/deletionrequest/[^/]+')
+  app.get '/deletionrequest/:id/', (req, res) ->
+    unless utils.is_authenticated(req.session)
+      return www_methods.redirect_to_login(req, res)
+    schema.DeletionRequest.findOne {
+      _id: req.params.id
+    }, (err, doc) ->
+      return www_methods.handle_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless doc?
+      # Must be group member in order to manage deletion requests.
+      unless _.find(_.keys(req.session.groups), (g) -> g == doc.group.toString())
+        return www_methods.permission_denied(req, res)
+      api_methods.get_events {entity: doc.entity}, (err, events) ->
+        return www_methods.handle_error(req, res, err) if err?
+        return res.render "home/deletionrequest", context(req, {
+          title: "Deletion Request"
+          deletion_request: doc
+          can_confirm: not _.find(doc.confirmers,
+            ((c) -> c.toString() == req.session.auth.user_id))
+        }, {
+          deletion_request: doc
+          entity_events: events
+        })
+
+  app.post '/deletionrequest/:id/', (req, res) ->
+    unless utils.is_authenticated(req.session)
+      return www_methods.redirect_to_login(req, res)
+    schema.DeletionRequest.findOne {
+      _id: req.params.id
+    }, (err, dr) ->
+      return www_methods.handle_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless dr?
+      # Must be group member in order to manage deletion requests.
+      unless _.find(_.keys(req.session.groups), (g) -> g == dr.group.toString())
+        return www_methods.permission_denied(req, res)
+
+      if req.body.delete
+        api_methods.confirm_deletion req.session, dr._id, (err, update) ->
+          return www_methods.handle_error(req, res, err) if err?
+          if update?
+            req.flash("info", "You have voted to delete.")
+          else
+            req.flash("success", "Item deleted.")
+          res.redirect("/")
+      else
+        api_methods.cancel_deletion req.session, dr.id, (err) ->
+          return www_methods.handle_error(req, res, err) if err?
+          req.flash("success", "Deletion cancelled.")
+          res.redirect("/")
 
   utils.append_slash(app, "/feedback")
   app.get '/feedback/', (req, res) ->
@@ -404,6 +481,7 @@ route = (config, app, sockrooms) ->
         (done) ->
           schema.SearchIndex.find({
             'sharing.group_id': doc._id
+            'trash': false
           }).sort('-modified').exec done
 
         (done) ->

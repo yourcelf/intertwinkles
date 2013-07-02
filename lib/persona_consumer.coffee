@@ -13,6 +13,16 @@ default_options =
   method: 'POST'
   logger:
     debug: (->)
+###
+default_options =
+  protocol: "http"
+  host: "localhost:10002"
+  port: 80
+  path: '/verify'
+  method: 'POST'
+  logger:
+    debug: (->)
+###
 
 canonicalize = (email) ->
   return email.toLowerCase()

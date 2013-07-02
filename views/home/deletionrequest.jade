@@ -1,0 +1,52 @@
+extends www_base
+
+block body
+  div.span6.offset3
+    h1 Deletion Request
+    div.well
+      a.entity
+      div.entity-events
+
+    p.
+      On <span class='start-date'></span>, 
+      <span class='initial-confirmer'></span>
+      requested that this item be deleted.  If you take no action, it will be
+      deleted on <span class='end-date'></span>.
+
+    if can_confirm
+      p.alert.alert-error.
+        Warning: if you click "Delete immediately", this item and all
+        associated parts will be gone forever.
+
+    else
+      p.
+        You have already requested that this item be deleted. Other group
+        members have been notified.  Any one of them can confirm and delete
+        this immediately, or stop the deletion.
+
+
+    form(method='post', action='', style='text-align: center;')
+      if can_confirm
+        input.btn.btn-large.btn-danger(type='submit', value='Delete immediately', name='delete')
+        &nbsp;
+      input.btn.btn-large.btn-success(type='submit', value='Stop deletion', name='cancel')
+
+block postscripts
+  :coffeescript
+    intertwinkles.connect_socket ->
+      intertwinkles.build_toolbar($("header"), {applabel: "www"})
+      intertwinkles.build_footer($("footer"))
+      dr = INITIAL_DATA.deletion_request
+      $(".start-date").html(intertwinkles.absolute_date(dr.start_date))
+      $(".end-date").html(intertwinkles.absolute_date(dr.end_date))
+      $(".initial-confirmer").html(intertwinkles.inline_user(dr.confirmers[0], null, "tiny"))
+      $("a.entity").attr({
+        href: dr.entity_url
+      }).html(
+        "<img src='#{INTERTWINKLES_APPS[dr.application].image}' alt='#{dr.application}' style='width: 24px; height: 24px;' />" + dr.title
+      )
+      eventsColl = intertwinkles.buildEventCollection(INITIAL_DATA.entity_events)
+      summary = new intertwinkles.EventsSummary(collection: eventsColl)
+      $(".entity-events").html(summary.el)
+      summary.render()
+

@@ -158,8 +158,38 @@ route = (config, sockrooms) ->
       }
     return respond(null, []) unless utils.is_authenticated(session)
     utils.list_group_documents(
-      schema.SearchIndex, session, respond, {}, "-modified", 0, 5, true,
+      schema.SearchIndex, session, respond, {trash: {$ne: true}}, "-modified", 0, 5, true,
     )
+
+  sockrooms.on "check_deletable", (socket, session, data) ->
+    return sockrooms.handleError("Missing callback key") unless data.callback?
+    api_methods.can_delete session, data, (err, can_delete) ->
+      return sockrooms.handleError(socket, err) if err?
+      socket.sendJSON data.callback, {can_delete: can_delete}
+
+  sockrooms.on "trash_entity", (socket, session, data) ->
+    return sockrooms.handleError("Missing callback key") unless data.callback?
+    api_methods.trash_entity session, data, (err) ->
+      return sockrooms.handleError(socket, err) if err?
+      socket.sendJSON data.callback, {status: "success"}
+
+  sockrooms.on "request_deletion", (socket, session, data) ->
+    return sockrooms.handleError("Missing callback key") unless data.callback?
+    api_methods.request_deletion session, data, (err, deletion_request) ->
+      return sockrooms.handleError(socket, err) if err?
+      if deletion_request?
+        socket.sendJSON data.callback, {
+          result: "queued",
+          deletion_request: deletion_request
+        }
+      else
+        socket.sendJSON data.callback, {result: "deleted"}
+
+  sockrooms.on "cancel_deletion", (socket, session, data) ->
+    return sockrooms.handleError("Missing callback key") unless data.callback?
+    api_methods.cancel_deletion session, data, (err, doc) ->
+      return sockrooms.handleError(socket, err) if err?
+      socket.sendJSON data.callback, {status: "success"}
 
   #
   # Joining / leaving

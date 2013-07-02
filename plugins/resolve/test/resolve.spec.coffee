@@ -624,7 +624,7 @@ describe "resolve", ->
         }, (err, proposal) ->
           done(err)
 
-      # Now try deleting -- this should queue, and not delet outright.
+      # Now try deleting -- this should queue, and not delete outright.
       (done) ->
         api_methods.request_deletion session, {
           application: "resolve"
@@ -685,94 +685,93 @@ describe "resolve", ->
 
           done()
 
-        # Cancel deletion.
-        (done) ->
-          api_methods.cancel_deletion session, dr._id, (err, event, si, untrashing) ->
+      # Cancel deletion.
+      (done) ->
+        api_methods.cancel_deletion session, dr._id, (err, event, untrashing) ->
+          common.no_err_args([err, event, untrashing])
+
+          expect(event.type).to.be("undeletion")
+          expect(event.url).to.be(proposal.url)
+          expect(event.absolute_url).to.be(proposal.absolute_url)
+          expect(event.entity).to.be(proposal.id)
+          expect(event.application).to.be("resolve")
+          terms = api_methods.get_event_grammar(event)
+          expect(terms.length).to.be(1)
+          expect(terms[0]).to.eql({
+            entity: proposal.title
+            aspect: "proposal"
+            collective: "cancelled deletions"
+            verbed: "cancelled deletion"
+            manner: ""
+          })
+
+          [untrash_event, si, handler_res] = untrashing
+          common.no_err_args([null, untrash_event, si, handler_res])
+          expect(si.trash).to.be(false)
+
+          [proposal, notices] = handler_res
+          expect(proposal).to.not.be(null)
+          expect(notices).to.not.be(null)
+          expect(proposal.trash).to.be(false)
+
+          www_schema.DeletionRequest.find {entity: proposal.id}, (err, docs) ->
             expect(err).to.be(null)
-            expect(event).to.not.be(null)
-            expect(si).to.not.be(null)
-            expect(untrashing).to.not.be(null)
-
-            expect(event.type).to.be("undeletion")
-            expect(event.url).to.be(proposal.url)
-            expect(event.absolute_url).to.be(proposal.absolute_url)
-            expect(event.entity).to.be(proposal.entity)
-            expect(event.application).to.be("resolve")
-            terms = api_methods.get_event_grammar(event)
-            expect(terms.length).to.be(1)
-            expect(terms[0]).to.eql({
-              entity: proposal.title
-              aspect: "proposal"
-              collective: "cancelled deletions"
-              verbed: "cancelled deletion"
-              manner: ""
-            })
-
-            [untrash_event, si, handler_res] = untrashing
-            expect(untrash_event).to.not.be(null)
-            expect(si).to.not.be(null)
-            expect(handler_res).to.not.be(null)
-            expect(si.trash).to.be(false)
-
-            [proposal, notices] = handler_res
-            expect(proposal).to.not.be(null)
-            expect(notices).to.not.be(null)
-            expect(notices.length > 0).to.be(true)
-            expect(proposal.trash).to.be(false)
-
-            www_schema.DeletionRequest.find {entity: proposal.id}, (err, docs) ->
+            expect(docs.length).to.be(0)
+            www_schema.Notification.find {
+                entity: proposal.id, type: "deletion", cleared: false
+            }, (err, docs) ->
               expect(err).to.be(null)
               expect(docs.length).to.be(0)
               done()
 
-        # Delete successfully with confirmation
-        (done) ->
-          api_methods.request_deletion session, {
-            application: "resolve"
-            entity: proposal.id
-            group: proposal.sharing.group_id
-            url: proposal.url
-            title: proposal.title
-          }, (err, thedr, trashing, event, notices) ->
+      # Delete successfully with confirmation
+      (done) ->
+        api_methods.request_deletion session, {
+          application: "resolve"
+          entity: proposal.id
+          group: proposal.sharing.group_id
+          url: proposal.url
+          title: proposal.title
+        }, (err, thedr, trashing, event, notices) ->
+          expect(err).to.be(null)
+          expect(thedr).to.not.be(null)
+
+          api_methods.confirm_deletion session2, thedr.id, (err, notices) ->
+            # Second confirmation; should be no notices.
             expect(err).to.be(null)
-            expect(thedr).to.not.be(null)
+            expect(notices).to.be(undefined)
 
-            api_methods.confirm_deletion session2, thedr.id, (err, notices) ->
-              # Second confirmation; should be no notices.
-              expect(err).to.be(null)
-              expect(notices).to.be(null)
-
-              entity = proposal._id
-              async.parallel [
-                (done) ->
-                  resolve_schema.Proposal.objects.findOne {
-                    _id: entity
-                  }, (err, doc) ->
-                    expect(err).to.be(null)
-                    expect(doc).to.be(null)
-                    done()
-                (done) ->
-                  www_schema.Event.objects.find {entity}, (err, docs) ->
-                    expect(err).to.be(null)
-                    expect(docs.length).to.be(0)
-                    done()
-                (done) ->
-                  www_schema.SearchIndex.objects.find {entity}, (err, docs) ->
-                    expect(err).to.be(null)
-                    expect(docs.length).to.be(0)
-                    done()
-                (done) ->
-                  www_schema.Notification.objects.find {entity}, (err, docs) ->
-                    expect(err).to.be(null)
-                    expect(docs.length).to.be(0)
-                    done()
-                (done) ->
-                  www_schema.Twinkle.objects.find {entity}, (err, docs) ->
-                    expect(err).to.be(null)
-                    expect(docs.length).to.be(0)
-                    done()
-              ], (err) ->
-                done(err)
+            entity = proposal._id
+            async.parallel [
+              (done) ->
+                resolve_schema.Proposal.findOne {
+                  _id: entity
+                }, (err, doc) ->
+                  expect(err).to.be(null)
+                  expect(doc).to.be(null)
+                  done()
+              (done) ->
+                www_schema.Event.find {entity}, (err, edocs) ->
+                  expect(err).to.be(null)
+                  expect(edocs.length).to.be(0)
+                  done()
+              (done) ->
+                www_schema.SearchIndex.find {entity}, (err, sidocs) ->
+                  expect(err).to.be(null)
+                  expect(sidocs.length).to.be(0)
+                  done()
+              (done) ->
+                www_schema.Notification.find {entity: entity}, (err, ndocs) ->
+                  expect(err).to.be(null)
+                  expect(ndocs.length).to.be(0)
+                  done()
+              (done) ->
+                www_schema.Twinkle.find {entity}, (err, tdocs) ->
+                  expect(err).to.be(null)
+                  expect(tdocs.length).to.be(0)
+                  done()
+            ], (err) ->
+              done(err)
 
     ], (err) ->
       done(err)
@@ -800,4 +799,78 @@ describe "resolve", ->
           expect(err).to.be(null)
           expect(doc).to.be(null)
           done()
+
+  it "Handles deferred deletion", (done) ->
+    [session, session2] = [@session, @session2]
+    group = _.find session.groups, (g) -> g.name == "Two Members"
+    async.waterfall [
+      # Create a thing edited by two people.
+      (done) ->
+        resolve.create_proposal session, {
+          proposal: {
+            proposal: "This is my proposal."
+            sharing: { group_id: group._id }
+          }
+        }, (err, proposal, event, si, notices) =>
+          common.no_err_args([err, proposal, event, si, notices])
+          resolve.update_proposal session2, {
+            proposal: {
+              _id: proposal._id
+              proposal: "This is my better proposal."
+            }
+          }, (err, proposal, event, si, notices) =>
+            common.no_err_args([err, proposal, event, si, notices])
+            done(null, proposal)
+
+      # Create a deletion request
+      (proposal, done) ->
+        api_methods.request_deletion session, {
+          group: proposal.sharing.group_id
+          application: "resolve"
+          entity: proposal._id
+          url: proposal.url
+          title: proposal.title
+        }, (err, dr, trashing, event, notices) ->
+          common.no_err_args([err, dr, trashing, event, notices])
+          done(null, dr)
+
+      # Try running deletions -- should not impact dr.
+      (dr, done) ->
+        www_schema.DeletionRequest.findOne {_id: dr._id}, (err, dr) ->
+          expect(err).to.be(null)
+          expect(dr).to.not.be(null)
+          api_methods.process_deletions (err, count) ->
+            expect(err).to.be(null)
+            expect(count).to.be(0)
+            www_schema.DeletionRequest.findOne {_id: dr._id}, (err, dr) ->
+              expect(err).to.be(null)
+              expect(dr).to.not.be(null)
+              resolve_schema.Proposal.findOne {_id: dr.entity}, (err, doc) ->
+                expect(err).to.be(null)
+                expect(doc).to.not.be(null)
+                expect(doc).to.not.be(undefined)
+                done(null, dr)
+
+      # Back-date the deletion request, and run deletions. Should delete.
+      (dr, done) ->
+        dr.start_date = new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 3)
+        dr.end_date = new Date()
+        dr.save (err, dr) ->
+          expect(err).to.be(null)
+          api_methods.process_deletions (err, count) ->
+            expect(err).to.be(null)
+            expect(count).to.be(1)
+            www_schema.DeletionRequest.findOne {_id: dr._id}, (err, deleted) ->
+              expect(err).to.be(null)
+              expect(deleted).to.be(null)
+              resolve_schema.Proposal.findOne {_id: dr.entity}, (err, doc) ->
+                expect(err).to.be(null)
+                expect(doc).to.be(null)
+                done()
+
+    ], done
+
+        
+        
+
 

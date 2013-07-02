@@ -524,15 +524,40 @@ intertwinkles.get_short_url = (params, callback) ->
   }
 
 document_list_template = _.template("""
-  <% _.each(docs, function(doc) { %>
-    <li class='document'>
-      <a class='document-app-icon' href='<%- doc.absolute_url %>'>
+  <% _.each(docs, function(doc, i) { %>
+    <% var dr = deletion_requests[doc.entity]; %>
+    <li class='document<%- dr ? " deletion" : "" %>'>
+      <a class='document-app-icon hover-show' href='<%- doc.absolute_url %>'>
         <img src='<%- INTERTWINKLES_APPS[doc.application].image %>' alt='<%- doc.application %>' />
+        <% if (doc.trash) { %>
+          <span class='label'>in trash</span>
+        <% } %>
       </a>
-      <a class='title' href='<%- doc.absolute_url %>'>
-        <%- doc.title %>
-      </a>
-      <span class='date'><%= intertwinkles.simple_date(doc.modified) %></span>
+      <span class='title'>
+        <% if (dr) { %>
+          <a class='deletion-request' href='<%- dr.url %>'>
+            <span class='label label-important'>Scheduled for deletion <%- intertwinkles.simple_date(dr.end_date, true) %>. <u>manage</u></span>
+          </a>
+        <% } %>
+        <a href='<%- doc.absolute_url %>' class='hover-show' style='display: block;'>
+          <%- doc.title %>
+        </a>
+      </span>
+      <span class='date doc-date'><%= intertwinkles.simple_date(doc.modified) %></span>
+      <% if (doc.trash) { %>
+          <a class='untrash-document' href='#' data-doc-index='<%- i %>'
+             title='Restore item from trash'>restore</a>
+          &nbsp;
+          <% if (dr) { %>
+            <a href='<%- dr.url %>'>delete</a>
+          <% } else { %>
+            <a class='delete-document' href='#' data-doc-index='<%- i %>'>delete</a>
+          <% } %>
+      <% } else { %>
+        <a class='trash-document' title='trash' href='#' data-doc-index='<%- i %>'>
+          <i class='icon-trash'></i>
+        </a>
+      <% } %>
     </li>
   <% }); %>
 """)
@@ -540,9 +565,155 @@ document_list_template = _.template("""
 class intertwinkles.DocumentList extends Backbone.View
   tagName: "ul"
   template: document_list_template
+  events: {
+    'click .trash-document': 'showTrashDialog'
+    'click .untrash-document': 'untrashDocument'
+    'click .delete-document': 'showTrashDialog'
+    'mouseover .hover-show': 'hoverShowOn'
+    'mouseout .hover-show': 'hoverShowOff'
+  }
+
   initialize: (options) ->
     @docs = options.docs
+    @deletion_requests = {}
+    for dr in options.deletion_requests or []
+      @deletion_requests[dr.entity] = dr
+
   render: =>
-    @$el.html(@template({docs: @docs}))
+    @$el.html(@template({
+      docs: @docs
+      deletion_requests: @deletion_requests
+    }))
     @$el.addClass("documents-list")
     this
+
+  untrashDocument: (event) =>
+    doc = @docs[parseInt($(event.currentTarget).attr("data-doc-index"))]
+    intertwinkles.socket.once "untrashed", (data) =>
+      flash "success", "Item restored from trash."
+      @docs = _.reject(@docs, (d) -> d._id == doc._id)
+      @render()
+    intertwinkles.socket.send "trash_entity", {
+      callback: "untrashed"
+      application: doc.application
+      entity: doc.entity
+      title: doc.title
+      group: doc.sharing?.group_id
+      trash: false
+    }
+
+  showTrashDialog: (event) =>
+    event.preventDefault()
+    doc = @docs[parseInt($(event.currentTarget).attr("data-doc-index"))]
+    diag = new intertwinkles.TrashDocumentDialog({doc: doc})
+    diag.on "removal", (doc) =>
+      @docs = _.reject(@docs, (d) -> d._id == doc._id)
+      @render()
+
+  hoverShowOn: (event) =>
+    $(event.currentTarget).closest("li").addClass("hovered")
+  hoverShowOff: (event) =>
+    $(event.currentTarget).closest("li").removeClass("hovered")
+
+trash_document_dialog_template = _.template("""
+  <div class='modal-body'>
+    <button class='close' type='button' data-dismiss='modal' aria-hidden='true'>&times;</button>
+    <% if (can_delete) { %>
+      <h3><%- doc.trash ? "Delete" : "Remove" %> item?</h3>
+      <div class='well'>
+        <img src='<%- INTERTWINKLES_APPS[doc.application].image %>' alt='<%- doc.application %>' style='width: 16px; height: 16px;' />
+        <%- doc.title %>
+        <span class='date'><%= intertwinkles.simple_date(doc.modified) %></span>
+      </div>
+      <% if (!doc.trash) { %>
+        <p> You have two options. </p>
+      <% } %>
+    <% } %>
+    <div class='row-fluid'>
+      <div class='<%- doc.trash ? "" : "span6" %>'>
+        <% if (can_delete == "delete") { %>
+          <p><%- doc.trash ? "" : "1." %> Delete this permanently right now. (Since others haven't worked on this yet, it doesn't require confirmation). <em>Once deleted, it's gone forever.</em></p>
+        <% } else if (can_delete == "queue") { %>
+          <p><%- doc.trash ? "" : "1." %> Request that this item be deleted permanently. Others in your group will be notified, and have <b>three days</b> in which to contest or confirm deletion.  If any <b>one</b> person confirms, it will be deleted right then. If anyone contests, it won't be deleted.  If three days pass without input, it'll be deleted. <em>Once deleted, it's gone forever.</em></p>
+        <% } %>
+      </div>
+      <% if (!doc.trash) { %>
+        <div class='span6'>
+          <p><%= can_delete ? "2." : "" %> Move this item to the trash. This can be undone, and the content remains on InterTwinkles.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+  <div class='modal-footer'>
+    <% if (can_delete) { %>
+      <button class='pull-left btn btn-large btn-danger request-deletion'>
+        <% if (can_delete == "delete") { %>
+          Delete right now
+        <% } else if (can_delete == "queue") { %>
+          Request deletion
+        <% } %>
+      </button>
+    <% } %>
+    <% if (!doc.trash) { %>
+      <button class='btn btn-large btn-primary trash-entity'>Move to trash (archive)</button>
+    <% } else { %>
+      <a class='close btn' data-dismiss='modal' href='#'>Cancel</a>
+    <% } %>
+  </div>
+""")
+
+class intertwinkles.TrashDocumentDialog extends intertwinkles.BaseModalFormView
+  template: trash_document_dialog_template
+  events:
+    'click .trash-entity': 'trashEntity'
+    'click .request-deletion': 'requestDeletion'
+
+  initialize: (options) ->
+    @doc = options.doc
+    intertwinkles.socket.once "can_delete", (data) =>
+      super {
+        context: {doc: @doc, can_delete: data.can_delete}
+      }
+      @render()
+    intertwinkles.socket.send "check_deletable", {
+      callback: "can_delete"
+      application: @doc.application
+      entity: @doc.entity
+      title: @doc.title
+      url: @doc.url
+      group: @doc.sharing?.group_id
+    }
+
+  trashEntity: (event) =>
+    event.preventDefault()
+    intertwinkles.socket.once "trashed", (data) =>
+      flash "success", "Item moved to the trash."
+      @trigger "removal", @doc
+      @remove()
+    intertwinkles.socket.send "trash_entity", {
+      callback: "trashed"
+      application: @doc.application
+      entity: @doc.entity
+      title: @doc.title
+      url: @doc.url
+      group: @doc.sharing?.group_id
+      trash: true
+    }
+
+  requestDeletion: (event) =>
+    event.preventDefault()
+    intertwinkles.socket.once "trashed", (data) =>
+      if data.deletion_request
+        flash("success", "Item scheduled for deletion on " + intertwinkles.simple_date(data.deletion_request.end_date, true))
+      else
+        flash("success", "Item deleted, and is gone forever.")
+      @trigger "removal", @doc
+      @remove()
+    intertwinkles.socket.send "request_deletion", {
+      callback: "trashed"
+      application: @doc.application
+      entity: @doc.entity
+      title: @doc.title
+      url: @doc.url
+      group: @doc.sharing?.group_id
+    }

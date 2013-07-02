@@ -1,0 +1,20 @@
+extends www_base
+
+block body
+  h1 Trash
+  div.container-fluid#trash_list
+
+block postscripts
+  :coffeescript
+    intertwinkles.connect_socket ->
+      intertwinkles.build_toolbar($("header"), {applabel: "www"})
+      intertwinkles.build_footer($("footer"))
+      if INITIAL_DATA.trash_docs.length == 0
+        $("#trash_list").html("<div style='text-align: center;'>Trash is empty.</div>")
+      else
+        trash_list = new intertwinkles.DocumentList({
+          docs: INITIAL_DATA.trash_docs
+          deletion_requests: INITIAL_DATA.deletion_requests
+        })
+        $("#trash_list").html(trash_list.el)
+        trash_list.render()

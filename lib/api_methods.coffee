@@ -202,8 +202,11 @@ module.exports = (config) ->
         (done) ->
           schema.SearchIndex.findOne query, (err, si) ->
             api.remove_search_index(si.application, si.entity, si.type, done)
-        (done) -> schema.Notification.find(query).remove (err) -> done(err)
+        (done) -> schema.Notification.find({
+            entity: params.entity
+          }).remove (err) -> done(err)
         (done) -> schema.Twinkle.find(query).remove (err) -> done(err)
+        (done) -> schema.DeletionRequest.find(query).remove (err) -> done(err)
       ], (err) ->
         callback(err)
 
@@ -305,20 +308,23 @@ module.exports = (config) ->
           return callback(err) if err?
           return callback(null, clear_notices.concat(notifications))
 
+  api.can_delete = (session, params, callback) ->
+    unless utils.is_authenticated(session)
+      return callback("Permission denied")
+    for key in ["group", "application", "entity", "url", "title"]
+      return callback("Missing param #{key}") unless params[key]?
+    handler = deletion_handlers[params.application]
+    return callback("Missing handler") unless handler?
+    handler.can_delete session, params, (err, can_delete) ->
+      return callback(err, can_delete)
+
   api.request_deletion = (session, params, callback) ->
     ###
     Request deletion.  If the receiving application's policy permits, delete
     immediately; otherwise, create a DeletionRequest and associated
     notifications.
     ###
-    unless utils.is_authenticated(session)
-      return callback("Permission denied")
-    for key in ["group", "application", "entity", "url", "title"]
-      unless params[key]
-        return callback("Missing param #{key}")
-    handler = deletion_handlers[params.application]
-    return callback("Missing handler") unless handler?
-    handler.can_delete session, params, (err, can_delete) ->
+    api.can_delete session, params, (err, can_delete) ->
       return callback(err) if err?
       if can_delete == "delete"
         _delete_entity(params, callback)
@@ -332,51 +338,83 @@ module.exports = (config) ->
     Move the entity into or out of the trash, depending on the value of the
     boolean params.trash.
     ###
-    unless utils.is_authenticated(session)
-      return callback("Permission denied")
+    return callback("Permission denied") unless utils.is_authenticated(session)
     for key in ["group", "application", "entity", "trash"]
       unless params[key]?
         return callback("Missing param #{key}")
     handler = deletion_handlers[params.application]
     return callback("Missing handler") unless handler?
-    handler.can_trash session, params, (err, can_trash) ->
-      return callback("Permission denied") unless can_trash
-      schema.SearchIndex.findOne {
+    async.waterfall [
+      (next) ->
+        handler.can_trash session, params, (err, can_trash) ->
+          unless can_trash
+            callback("Permission denied")
+            return next("nop")
+          return next()
+
+      (next) ->
+        schema.SearchIndex.findOne {
           application: params.application
           entity: params.entity
         }, (err, si) ->
-          return callback(err) if err?
-          return callback("Not found") unless si?
-          if !!si.trash != !!params.trash
-            si.trash = !!params.trash
-            async.parallel [
-              (done) ->
-                api.post_event {
-                  application: si.application
-                  entity: si.entity
-                  type: if params.trash then "trash" else "untrash"
-                  url: si.url
-                  date: new Date()
-                  user: session.auth.user_id
-                  group: si.sharing.group_id
-                  data: {
-                    entity_name: si.title
-                  }
-                }, (err, event) ->
-                  done(err, event)
+          return next(err) if err?
+          return next("Not found") unless si?
+          if !!si.trash == !!params.trash
+            callback()
+            return next("nop")
+          next(null, si)
 
-              (done) ->
-                api.add_search_index si, (err, si) -> done(err, si)
+      (si, next) ->
+        # If we're removing from trash, look to see if there is an
+        # outstanding deletion request.  If so, we must remove it.
+        if not params.trash
+          schema.DeletionRequest.findOne {
+            application: params.application, entity: params.entity
+          }, (err, dr) ->
+            if dr?
+              # Just run cancel deletion, which includes removal from trash.
+              api.cancel_deletion(session, dr._id, callback)
+              return next("nop")
+        return next(null, si)
 
-              (done) ->
-                handler.trash_entity(session, params, done)
+      (si, next) ->
+        # Update trash status.
+        si.trash = !!params.trash
+        async.parallel [
+          (done) ->
+            # Add an untrashing event.
+            api.post_event {
+              application: si.application
+              entity: si.entity
+              type: if params.trash then "trash" else "untrash"
+              url: si.url
+              date: new Date()
+              user: session.auth.user_id
+              group: si.sharing.group_id
+              data: {
+                entity_name: si.title
+              }
+            }, (err, event) ->
+              done(err, event)
 
-            ], (err, results) ->
-              return callback(err) if err?
-              [event, si, handler_res] = results
-              return callback(null, event, si, handler_res)
-          else
-            return callback(null)
+          (done) ->
+            # Update the search index.
+            api.add_search_index si, (err, si) ->
+              done(err, si)
+
+          (done) ->
+            # Do the trashing.
+            handler.trash_entity(session, params, done)
+
+        ], (err, results) ->
+          return next(err) if err?
+          [event, si, handler_res] = results
+          return next(null, event, si, handler_res)
+
+    ], (err, event, si, handler_res) ->
+      return if err == "nop"
+      return callback(err, event, si, handler_res)
+
       
   api.cancel_deletion = (session, deletion_request_id, callback) ->
     ###
@@ -390,58 +428,56 @@ module.exports = (config) ->
 
       handler = deletion_handlers[dr.application]
       return callback("Missing handler") unless handler?.can_delete
-      handler.can_delete session, dr.entity, (err, can_delete) ->
+      handler.can_delete session, {
+        entity: dr.entity
+        application: dr.application
+        url: dr.entity_url
+        title: dr.title
+      }, (err, can_delete) ->
         return callback(err) if err?
         return callback("Permission denied") unless can_delete
         query = {entity: dr.entity, application: dr.application}
         update = {trash: false}
-        async.parallel [
-          # Post event.
-          (done) ->
-            #TODO: post event
-            api.post_event {
-              application: dr.application
-              entity: dr.entity
-              type: "undeletion"
-              url: dr.entity_url
-              date: new Date()
-              user: session.auth.user_id
-              group: dr.group
-              data: { entity_name: dr.title }
-            }, (err, event) ->
-              done(err, event)
-
-          # Untrash
-          (done) ->
-            api.trash_entity {
-              group: dr.group,
-              entity: dr.entity,
-              application: dr.application,
-              trash: false
-            }, done
-
-          # Remove deletion notifications
-          (done) -> schema.Notification.find({
-              entity: dr.entity
-              type: "deletion"
-            }).remove (err) ->
-              done(err)
-
-          # Update search index.
-          (done) -> schema.SearchIndex.findOneAndUpdate {
-              entity: dr.entity
-              application: dr.application
-            }, {trash: false}, (err, si) ->
-              done(err, si)
-
-          # Remove deletion request
-          (done) ->
-            dr.remove (err) -> done(err)
-
-        ], (err, results) ->
+        # Remove deletion request first, to avoid recursing with un-trashing.
+        dr.remove (err) ->
           return callback(err) if err?
-          [event, untrashing, blank, si, blank] = results
-          return callback(null, event, si, untrashing)
+          async.parallel [
+            # Post event.
+            (done) ->
+              #TODO: post event
+              api.post_event {
+                application: dr.application
+                entity: dr.entity
+                type: "undeletion"
+                url: dr.entity_url
+                date: new Date()
+                user: session.auth.user_id
+                group: dr.group
+                data: { entity_name: dr.title }
+              }, (err, event) ->
+                done(err, event)
+
+            # Untrash
+            (done) ->
+              api.trash_entity session, {
+                group: dr.group,
+                entity: dr.entity,
+                application: dr.application,
+                trash: false
+              }, done
+
+            # Remove deletion notifications
+            (done) ->
+              api.clear_notifications {
+                entity: dr.entity
+                type: "deletion"
+              }, (err, notifications) ->
+                return done(err, notifications or [])
+
+          ], (err, results) ->
+            return callback(err) if err?
+            [event, untrashing, notifications] = results
+            return callback(null, event, untrashing)
 
   api.confirm_deletion = (session, deletion_request_id, callback) ->
     ###
@@ -481,10 +517,10 @@ module.exports = (config) ->
     period.
     ###
     now = new Date()
-    schema.DeletionRequest.find {end_date: {$lt: now}}, (err, drs) ->
+    schema.DeletionRequest.find {end_date: {$lte: now}}, (err, drs) ->
       return callback(err) if err?
       async.map drs, _delete_entity, (err, results) ->
-        callback(err)
+        callback(err or null, drs.length)
 
   #
   # Search indices

@@ -457,16 +457,26 @@ table.email-sender
   list-style-type: none
   margin: 0
   li
+    &.hovered
+      .document-app-icon, .title
+        color: white
+        background-color: #acf
+    &.deletion
+      background-color: #fee
     list-style-type: none
     display: table-row
-    .document-app-icon, .title, .date
+    .document-app-icon, .title, .doc-date, .trash-document
       display: table-cell
     .title
       padding: 0em 0.5em
-    &:hover
-      a
-        color: white
-      background-color: #acf
+    .doc-date
+      padding-right: 0.5em
+    .trash-document
+      opacity: 0.2
+      &:hover
+        background-color: red !important
+        opacity: 1
+     
 
 .document-app-icon
   min-width: 32px
