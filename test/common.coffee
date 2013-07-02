@@ -21,6 +21,16 @@ email        = require "emailjs"
 mongoose     = require "mongoose"
 uuid         = require 'node-uuid'
 
+# XXX url.parse in node < 0.8.24 passed already-parsed URL's (objects) through,
+# rather than throwing an error.  node >= 0.8.24 throws an error for these
+# (which is arguably cthe correct behavior). However, Zombie.js 1.4.1 sometimes
+# tries to re-parse already parsed urls.  Monkey-patch "url.parse" to survive
+# this by bringing back the old behavior.
+url = require('url')
+_orig_url_parse = url.parse
+url.parse = (the_url) ->
+  if (typeof the_url == "string") then _orig_url_parse(the_url) else the_url
+
 module.exports = c = {}
 
 TestModelSchema = new Schema
@@ -174,7 +184,7 @@ c.stubAuthenticate = (browser, email, callback) ->
   if cookie
     authenticate()
   else
-    browser.visit "http://localhost:#{config.port}/", (e, browser) ->
+    browser.visit "#{config.api_url}/", (e, browser) ->
       authenticate()
 
 c.stubBrowserID = (browserid_response) ->
