@@ -153,6 +153,7 @@ describe "padlib", ->
         done()
 
   it "trashes a twinklepad", (done) ->
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       doc.sharing.group_id = _.find(session.groups, (g) -> g.slug == "three-members").id
       doc.save (err, doc) ->
@@ -182,6 +183,7 @@ describe "padlib", ->
           done()
 
   it "untrashes a twinklepad", (done) ->
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       api_methods.trash_entity session2, {
         application: "twinklepad"
@@ -209,6 +211,7 @@ describe "padlib", ->
         done()
 
   it "requests deletion", (done) ->
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       # Ensure we have multiple events
       www_schema.Event.find {entity: doc._id}, (err, events) ->
@@ -247,6 +250,7 @@ describe "padlib", ->
           done()
 
   it "confirms deletion", (done) ->
+    return done() if skip_tests
     tp_schema.TwinklePad.findOne {pad_name: "tptest_1"}, (err, doc) ->
       www_schema.DeletionRequest.findOne {entity: doc.id}, (err, dr) ->
         api_methods.confirm_deletion session2, dr._id, (err, notices) ->
