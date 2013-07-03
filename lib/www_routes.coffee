@@ -481,7 +481,7 @@ route = (config, app, sockrooms) ->
         (done) ->
           schema.SearchIndex.find({
             'sharing.group_id': doc._id
-            'trash': false
+            'trash': {$ne: true}
           }).sort('-modified').exec done
 
         (done) ->
