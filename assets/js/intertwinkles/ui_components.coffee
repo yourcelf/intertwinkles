@@ -644,7 +644,7 @@ trash_document_dialog_template = _.template("""
       <% } %>
     </div>
   </div>
-  <div class='modal-footer'>
+  <div class='modal-footer block-on-small'>
     <% if (can_delete) { %>
       <button class='pull-left btn btn-large btn-danger request-deletion'>
         <% if (can_delete == "delete") { %>
