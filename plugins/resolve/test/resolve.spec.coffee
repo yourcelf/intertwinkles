@@ -531,8 +531,8 @@ describe "resolve", ->
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
           entity: proposal.title
-          aspect: "proposal"
-          collective: "moved to trash"
+          aspect: ""
+          collective: "removals"
           verbed: "moved to trash"
           manner: ""
         })
@@ -577,8 +577,8 @@ describe "resolve", ->
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
           entity: proposal.title
-          aspect: "proposal"
-          collective: "restored from trash"
+          aspect: ""
+          collective: "removals"
           verbed: "restored from trash"
           manner: ""
         })
@@ -656,10 +656,10 @@ describe "resolve", ->
           expect(terms.length).to.be(1)
           expect(terms[0]).to.eql({
             entity: proposal.title
-            aspect: "proposal"
-            collective: "requests to delete"
-            verbed: "requested deletion"
-            manner: "by #{event.data.end_date.toString()}"
+            aspect: ""
+            collective: "removals"
+            verbed: "deletion requested"
+            manner: ""
           })
 
           [trash_event, si, handler_res] = trashing
@@ -699,9 +699,9 @@ describe "resolve", ->
           expect(terms.length).to.be(1)
           expect(terms[0]).to.eql({
             entity: proposal.title
-            aspect: "proposal"
-            collective: "cancelled deletions"
-            verbed: "cancelled deletion"
+            aspect: ""
+            collective: "removals"
+            verbed: "deletion cancelled"
             manner: ""
           })
 

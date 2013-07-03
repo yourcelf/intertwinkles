@@ -1,4 +1,5 @@
 logger = require("log4js").getLogger()
+base_events_grammar = require("../../../lib/base_events_grammar.coffee")
 
 module.exports = {
   get_terms: (event) ->
@@ -67,39 +68,9 @@ module.exports = {
             manner: ""
             image: event.data.image
           }]
-      when "deletion"
-        return [{
-          entity: event.data.entity_name
-          aspect: "dotstorm"
-          collective: "requests to delete"
-          verbed: "requested deletion"
-          manner: "by #{event.data.end_date.toString()}"
-        }]
-      when "undeletion"
-        return [{
-          entity: event.data.entity_name
-          aspect: "dotstorm"
-          collective: "cancelled deletions"
-          verbed: "cancelled deletion"
-          manner: ""
-        }]
-      when "trash"
-        return [{
-          entity: event.data.entity_name
-          aspect: "dotstorm"
-          collective: "moved to trash"
-          verbed: "moved to trash"
-          manner: ""
-        }]
-      when "untrash"
-        return [{
-          entity: event.data.entity_name
-          aspect: "dotstorm"
-          collective: "restored from trash"
-          verbed: "restored from trash"
-          manner: ""
-        }]
-
+    matched = base_events_grammar.get_terms(event)
+    if matched?
+      return matched
     logger.error("Unknown event type \"#{event.type}\"")
     return null
 }

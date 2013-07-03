@@ -600,9 +600,9 @@ describe "pointslib", ->
 
           _check_event(event, "trash_point", {
             entity: pointset.title
-            aspect: "point"
-            collective: "points moved to trash"
-            verbed: "moved to trash"
+            aspect: ""
+            collective: "point removals"
+            verbed: "moved point to trash"
             manner: "Whoa."
           })
           done(null, doc)
@@ -623,9 +623,9 @@ describe "pointslib", ->
           expect(doc.drafts[0]._id).to.eql(point._id)
           _check_event(event, "untrash_point", {
             entity: pointset.title
-            aspect: "point"
-            collective: "points restored from trash"
-            verbed: "restored from trash"
+            aspect: ""
+            collective: "point removals"
+            verbed: "restored point from trash"
             manner: "Whoa."
           })
           done(null, doc)
@@ -646,9 +646,9 @@ describe "pointslib", ->
           expect(doc.trashed_points[0]._id).to.eql(point._id)
           _check_event(event, "trash_point", {
             entity: pointset.title
-            aspect: "point"
-            collective: "points moved to trash"
-            verbed: "moved to trash"
+            aspect: ""
+            collective: "point removals"
+            verbed: "moved point to trash"
             manner: "Whoa."
           })
           done(null, doc)
@@ -677,8 +677,8 @@ describe "pointslib", ->
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
         entity: doc.title
-        aspect: "point set"
-        collective: "moved to trash"
+        aspect: ""
+        collective: "removals"
         verbed: "moved to trash"
         manner: ""
       })
@@ -704,8 +704,8 @@ describe "pointslib", ->
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
         entity: doc.title
-        aspect: "point set"
-        collective: "restored from trash"
+        aspect: ""
+        collective: "removals"
         verbed: "restored from trash"
         manner: ""
       })
@@ -737,10 +737,10 @@ describe "pointslib", ->
       expect(terms.length).to.be(1)
       expect(terms[0]).to.eql({
         entity: doc.title
-        aspect: "point set"
-        collective: "requests to delete"
-        verbed: "requested deletion"
-        manner: "by #{event.data.end_date.toString()}"
+        aspect: ""
+        collective: "removals"
+        verbed: "deletion requested"
+        manner: ""
       })
       done()
 

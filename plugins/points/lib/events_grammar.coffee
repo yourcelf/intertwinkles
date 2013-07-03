@@ -1,4 +1,5 @@
 logger = require("log4js").getLogger()
+base_events_grammar = require("../../../lib/base_events_grammar.coffee")
 module.exports = {
   get_terms: (event) ->
     return null unless event.application == "points"
@@ -75,51 +76,23 @@ module.exports = {
       when "trash_point"
         return [{
           entity: event.data.entity_name
-          aspect: "point"
-          collective: "points moved to trash"
-          verbed: "moved to trash"
+          aspect: ""
+          collective: "point removals"
+          verbed: "moved point to trash"
           manner: event.data.text
         }]
       when "untrash_point"
         return [{
           entity: event.data.entity_name
-          aspect: "point"
-          collective: "points restored from trash"
-          verbed: "restored from trash"
+          aspect: ""
+          collective: "point removals"
+          verbed: "restored point from trash"
           manner: event.data.text
         }]
-      when "deletion"
-        return [{
-          entity: event.data.entity_name
-          aspect: "point set"
-          collective: "requests to delete"
-          verbed: "requested deletion"
-          manner: "by #{event.data.end_date.toString()}"
-        }]
-      when "undeletion"
-        return [{
-          entity: event.data.entity_name
-          aspect: "point set"
-          collective: "cancelled deletions"
-          verbed: "cancelled deletion"
-          manner: ""
-        }]
-      when "trash"
-        return [{
-          entity: event.data.entity_name
-          aspect: "point set"
-          collective: "moved to trash"
-          verbed: "moved to trash"
-          manner: ""
-        }]
-      when "untrash"
-        return [{
-          entity: event.data.entity_name
-          aspect: "point set"
-          collective: "restored from trash"
-          verbed: "restored from trash"
-          manner: ""
-        }]
+
+    matched = base_events_grammar.get_terms(event)
+    if matched?
+      return matched
     logger.error("Unknown event type \"#{event.type}\"")
     return null
 }

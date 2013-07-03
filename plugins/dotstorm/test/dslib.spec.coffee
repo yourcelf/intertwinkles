@@ -357,8 +357,8 @@ describe "dslib", ->
           expect(terms.length).to.be(1)
           expect(terms[0]).to.eql({
             entity: dotstorm.name
-            aspect: "dotstorm"
-            collective: "moved to trash"
+            aspect: ""
+            collective: "removals"
             verbed: "moved to trash"
             manner: ""
           })
@@ -385,8 +385,8 @@ describe "dslib", ->
         expect(terms.length).to.be(1)
         expect(terms[0]).to.eql({
           entity: dotstorm.name
-          aspect: "dotstorm"
-          collective: "restored from trash"
+          aspect: ""
+          collective: "removals"
           verbed: "restored from trash"
           manner: ""
         })
@@ -434,10 +434,10 @@ describe "dslib", ->
             expect(terms.length).to.be(1)
             expect(terms[0]).to.eql({
               entity: dotstorm.title
-              aspect: "dotstorm"
-              collective: "requests to delete"
-              verbed: "requested deletion"
-              manner: "by #{event.data.end_date.toString()}"
+              aspect: ""
+              collective: "removals"
+              verbed: "deletion requested"
+              manner: ""
             })
             done()
 
