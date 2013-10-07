@@ -17,7 +17,7 @@ import tempfile
 import argparse
 import subprocess
 
-SOLR_VERSION = "4.1.0"
+SOLR_VERSION = "4.5.0"
 SOLR_INSTALLER = "http://apache.mirrors.pair.com/lucene/solr/{0}/solr-{0}.tgz".format(SOLR_VERSION)
 ETHERPAD_REPOSITORY = "https://github.com/ether/etherpad-lite.git"
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
