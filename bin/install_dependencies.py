@@ -37,6 +37,10 @@ parser.add_argument("include", metavar='APP', nargs='*',
         help="List tasks to complete: ['config', 'node', 'secrets', 'solr', 'etherpad']")
 
 def install_all():
+    try:
+        os.makedirs(vendor)
+    except OSError:
+        pass
     args = parser.parse_args()
     include = set(args.include or [
         "config", "secrets", "assets", "node", "solr", "etherpad", "selenium"
