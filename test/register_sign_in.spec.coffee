@@ -32,8 +32,6 @@ describe "registration", ->
     .then -> done()
 
   it "registers a new account", (done) ->
-    # Reload it because zombie borks when an internal redirect is triggered.
-    # browsers...
     color = null
     common.stubAuthenticate browser, "new_account@example.com", (err) =>
       expect(err).to.be(null)

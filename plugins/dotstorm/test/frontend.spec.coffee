@@ -1,7 +1,6 @@
 expect     = require 'expect.js'
 async      = require 'async'
 _          = require 'underscore'
-Browser    = require 'zombie'
 mongoose   = require 'mongoose'
 fs         = require 'fs'
 
