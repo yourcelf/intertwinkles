@@ -14,6 +14,7 @@ RoomManager    = require("./socket_server").RoomManager
 socket_routes  = require './www_socket_routes'
 www_routes     = require "./www_routes"
 api_routes     = require "./api_routes"
+hangout_routes = require "./hangout_routes"
 yaac           = require "yaac"
 
 # Include code lines in stack traces.
@@ -114,6 +115,7 @@ start = (config) ->
   # Base routes for home page, auth, groups, profiles, search
   www_routes.route(config, app, sockrooms)
   api_routes.route(config, app)
+  hangout_routes.route(config, app, sockrooms)
   # Routes for plugins.
   for key, appconf of config.apps
     continue if key == "www"
