@@ -9,9 +9,7 @@ describe "Socket dotstorms", ->
   @timeout(20000)
   server = null
   session = {}
-  session2 = {}
   client = null
-  client2 = null
 
   before (done) ->
     common.startUp (theserver) ->

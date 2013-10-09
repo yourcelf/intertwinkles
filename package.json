@@ -4,10 +4,13 @@
   "description": "Web application for group collaboration and decision making",
   "scripts": {
       "start": "bin/run.js",
-      "test": "mocha --compilers coffee:coffee-script --timeout 20000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
+      "test": "mocha -R spec --compilers coffee:coffee-script --timeout 40000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
       "postinstall": "bin/install_dependencies.py config secrets assets selenium"
   },
-  "repository": "",
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/yourcelf/intertwinkles.git"
+  },
   "author": "Charlie DeTar",
   "dependencies": {
     "coffee-script": ">=1.6.2",
