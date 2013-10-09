@@ -63,6 +63,6 @@ describe "registration", ->
           expect(res).to.be(
             "http://localhost:#{config.port}/uploads/user_icons/#{color}-Microwave Oven-16.png"
           )
-        browser.byCss(".user-menu .hidden-phone").getText().then (text) ->
-          expect(text).to.be("Testy McTester")
+        browser.executeScript("return $('.user-menu .hidden-phone').text();").then (res) ->
+          expect(res.trim()).to.be("Testy McTester")
           done()
