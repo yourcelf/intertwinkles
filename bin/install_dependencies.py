@@ -37,10 +37,6 @@ parser.add_argument("include", metavar='APP', nargs='*',
         help="List tasks to complete: ['config', 'node', 'secrets', 'solr', 'etherpad']")
 
 def install_all():
-    try:
-        os.makedirs(vendor)
-    except OSError:
-        pass
     args = parser.parse_args()
     include = set(args.include or [
         "config", "secrets", "assets", "node", "solr", "etherpad", "selenium"
@@ -230,6 +226,8 @@ def install_etherpad():
 
 def install_selenium():
     dest = os.path.join(VENDOR_DIR, "selenium-server-standalone.jar")
+    if not os.path.exists(os.path.dirname(dest)):
+        os.makedirs(os.path.dirname(dest))
     if os.path.exists(dest):
         # check version
         major_version = None
