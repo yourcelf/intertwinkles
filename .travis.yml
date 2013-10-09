@@ -1,6 +1,6 @@
 language: node_js
 node_js:
- - 0.8
+ - 0.10
 env: SKIP_SOLR_TESTS=1 SKIP_ETHERPAD_TESTS=1 DISPLAY=:99.0
 services:
  - redis-server
