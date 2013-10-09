@@ -175,7 +175,7 @@ c.stubAuthenticate = (browser, email, callback) ->
   # authenticate the session.
   authenticate = () ->
     c.stubBrowserID({email: email})
-    user_done = "return intertwinkles.user && intertwinkles.user.get('email') == '#{email}';"
+    user_done = "return window.intertwinkles && intertwinkles.user && intertwinkles.user.get('email') == '#{email}';"
 
     browser.executeScript("intertwinkles._onlogout = function(){} ; " +
                           "intertwinkles._onlogin('mock assertion');")
