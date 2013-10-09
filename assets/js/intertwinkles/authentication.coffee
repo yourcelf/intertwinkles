@@ -46,7 +46,7 @@ intertwinkles.refresh_session = ->
 # Set up User authentication state
 #
 do ->
-  console.info "load initial data"
+  #console.info "load initial data"
   # Load initial data.
   intertwinkles.user = new intertwinkles.User()
   intertwinkles.users = null  # map of intertwinkles user_id to user data

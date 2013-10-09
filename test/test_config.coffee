@@ -20,5 +20,6 @@ config.apps.points.url = "#{config.api_url}/points"
 config.email = {port: 2526, host: "localhost"}
 if process.env.SKIP_SOLR_TESTS
   config.solr = {fake_solr: true}
+config.TESTING_MOCK_PERSONA = true
 
 module.exports = config

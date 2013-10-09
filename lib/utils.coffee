@@ -126,6 +126,7 @@ utils.clean_conf = (config) ->
   return {
     api_url: config.api_url
     apps: config.apps
+    TESTING_MOCK_PERSONA: config.TESTING_MOCK_PERSONA
   }
 
 utils.csv_escape = (str) ->

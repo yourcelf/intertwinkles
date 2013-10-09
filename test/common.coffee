@@ -2,7 +2,6 @@ log4js = require 'log4js'
 logger = log4js.getLogger()
 logger.setLevel(log4js.levels.FATAL)
 
-Browser      = require 'zombie'
 fs           = require 'fs'
 _            = require 'underscore'
 async        = require 'async'
@@ -20,18 +19,32 @@ email_server = require "../dev/email_server"
 email        = require "emailjs"
 mongoose     = require "mongoose"
 uuid         = require 'node-uuid'
-
-# XXX url.parse in node < 0.8.24 passed already-parsed URL's (objects) through,
-# rather than throwing an error.  node >= 0.8.24 throws an error for these
-# (which is arguably cthe correct behavior). However, Zombie.js 1.4.1 sometimes
-# tries to re-parse already parsed urls.  Monkey-patch "url.parse" to survive
-# this by bringing back the old behavior.
-url = require('url')
-_orig_url_parse = url.parse
-url.parse = (the_url) ->
-  if (typeof the_url == "string") then _orig_url_parse(the_url) else the_url
+webdriver    = require 'selenium-webdriver'
+SeleniumServer = require("selenium-webdriver/remote").SeleniumServer
 
 module.exports = c = {}
+
+selenium_server = null
+
+c.fetchBrowser = (callback) ->
+  build_browser = ->
+    browser = new webdriver.Builder().usingServer(
+        selenium_server.address()
+      ).withCapabilities(
+        webdriver.Capabilities.firefox()
+      ).build()
+    # Conveninece method for find by css selector
+    browser.byCss = (selector) ->
+      return browser.findElement(webdriver.By.css(selector))
+    browser.byCsss = (selector) ->
+      return browser.findElements(webdriver.By.css(selector))
+    callback(browser)
+
+  unless selenium_server?
+    selenium_server = new SeleniumServer(config.testing.selenium_path, {port: 4444})
+    selenium_server.start().then(build_browser)
+  else
+    build_browser()
 
 TestModelSchema = new Schema
   name: String
@@ -59,19 +72,12 @@ c.await = (fn, timeout=100) ->
     return true
   setTimeout((-> c.await(fn, timeout)), timeout)
 
-c.fetchBrowser = () ->
-  browser = new Browser()
-  browser.maxWait = '120s'
-  browser.evaluate("console.log = function() {};")
-  return browser
-
 c.startUp = (done) ->
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
   srv = server.start(config)
   # Re-Squelch logging to preserve mocha's reporter
   logger.setLevel(log4js.levels.FATAL)
   log4js.getLogger("www").setLevel(log4js.levels.FATAL)
-
 
   async.series [
     (done) ->
@@ -167,25 +173,23 @@ c.loadFixture = (callback) ->
 c.stubAuthenticate = (browser, email, callback) ->
   # Establish a session (if none exists) between browser and server. Then,
   # authenticate the session.
-
   authenticate = () ->
     c.stubBrowserID({email: email})
-    browser.evaluate("intertwinkles._onlogin('mock assertion')")
-    c.await ->
-      user_done = """intertwinkles.user && intertwinkles.user.get('email') == '#{email}'"""
-      if browser.evaluate(user_done)
-        callback(null)
-        return true
-      
-  try
-    cookie = browser.evaluate("$.cookie('express.sid')")
-  catch e
+    user_done = "return intertwinkles.user && intertwinkles.user.get('email') == '#{email}';"
 
-  if cookie
-    authenticate()
-  else
-    browser.visit "#{config.api_url}/", (e, browser) ->
+    browser.executeScript("intertwinkles._onlogout = function(){} ; " +
+                          "intertwinkles._onlogin('mock assertion');")
+    browser.wait ->
+      browser.executeScript(user_done).then (result) ->
+        if result == true
+          callback(null)
+        return result
+
+  browser.executeScript("window.$ && $.cookie('express.sid')").then (cookie) ->
+    if cookie
       authenticate()
+    else
+      browser.get("#{config.api_url}/").then(authenticate)
 
 c.stubBrowserID = (browserid_response) ->
   persona = require("../lib/persona_consumer")

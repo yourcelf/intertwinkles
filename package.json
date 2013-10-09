@@ -1,11 +1,11 @@
 {
   "name": "InterTwinkles",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Web application for group collaboration and decision making",
   "scripts": {
       "start": "bin/run.js",
-      "test": "mocha --compilers coffee:coffee-script --globals exportscoffeeScript --timeout 10000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
-      "postinstall": "bin/install_dependencies.py config secrets assets"
+      "test": "mocha --compilers coffee:coffee-script --timeout 20000 test/*.spec.coffee plugins/*/test/*.spec.coffee",
+      "postinstall": "bin/install_dependencies.py config secrets assets selenium"
   },
   "repository": "",
   "author": "Charlie DeTar",
@@ -40,10 +40,9 @@
   },
   "devDependencies": {
     "mocha": "~1.8",
-    "html5": "0.3.8",
-    "zombie": "~1",
     "expect.js": "~0.2",
     "backbone": "~0.9",
-    "sockjs-client": "*"
+    "sockjs-client": "*",
+    "selenium-webdriver": "*"
   }
 }

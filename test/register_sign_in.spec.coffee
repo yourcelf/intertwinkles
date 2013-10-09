@@ -5,69 +5,64 @@ common  = require './common'
 timeoutSet = (a, b) -> setTimeout(b, a)
 
 describe "registration", ->
-  this.timeout(40000)
+  server = null
+  browser = null
+
   before (done) ->
-    common.startUp (server) =>
-      @server = server
-      done()
+    common.startUp (theServer) ->
+      server = theServer
+      common.fetchBrowser (theBrowser) ->
+        browser = theBrowser
+        done()
 
   after (done) ->
-    common.shutDown(@server, done)
+    browser.quit().then -> common.shutDown(server, done)
 
   it "authenticates", (done) ->
-    @browser = common.fetchBrowser()
-    common.stubAuthenticate @browser, "one@mockmyid.com", (err) ->
+    common.stubAuthenticate browser, "one@mockmyid.com", (err) ->
       expect(err).to.be(null)
       done()
 
   it "logs out", (done) ->
-    @browser.evaluate("intertwinkles._onlogout()")
-    common.await =>
-      if @browser.evaluate("intertwinkles.user && intertwinkles.user.get('email') == null")
-        done()
-        return true
+    browser.executeScript("intertwinkles._onlogout();")
+    .then ->
+      is_logged_out = "return intertwinkles.user && intertwinkles.user.get('email') == null;"
+      browser.wait ->
+        browser.executeScript(is_logged_out).then (val) -> val
+    .then -> done()
 
   it "registers a new account", (done) ->
     # Reload it because zombie borks when an internal redirect is triggered.
     # browsers...
-    browser = common.fetchBrowser()
+    color = null
     common.stubAuthenticate browser, "new_account@example.com", (err) =>
       expect(err).to.be(null)
       # Give time for the modal to load.
       timeoutSet 500, =>
-        expect(browser.text(".modal-scrollable h3")).to.be("Ready in 1, 2, 3:")
-        browser.fill("name", "Testy McTester")
-        browser.query("input.color").click()
-        @color = browser.evaluate('$("input.color").val()')
-        browser.evaluate("$($('div.profile-image')[2]).click()")
-        expect(browser.text("div.profile-image.chosen")).to.be("Microwave Oven")
-        browser.query(".modal-footer input.btn.btn-primary").click()
-        done()
-
-  it "redirects to 'getting started'", (done) ->
-    browser = common.fetchBrowser()
-    browser.visit "http://localhost:#{config.port}/", (e, browser) =>
-      common.stubAuthenticate browser, "new_account@example.com", (err) =>
-        common.await =>
-          if browser.location.pathname == "/about/starting/"
-            done()
-            return true
-
-  it "has the right icon and name", (done) ->
-    browser = common.fetchBrowser()
-    browser.visit "http://localhost:#{config.port}/about/starting/", (e, browser) =>
-      common.stubAuthenticate browser, "new_account@example.com", (err) =>
-        common.await =>
-          if browser.text("h1") == "Getting Started"
-            common.await =>
-              if browser.evaluate("$('.user-menu img').attr('src')")?
-                expect(
-                  browser.evaluate("$('.user-menu img').attr('src')")
-                ).to.be(
-                  "http://localhost:#{config.port}/uploads/user_icons/" +
-                  "#{@color}-Microwave Oven-16.png"
-                )
-                expect(browser.text(".user-menu .hidden-phone")).to.be("Testy McTester")
-                done()
-                return true
-            return true
+        # Check the modal, then add a name
+        browser.byCss(".modal-scrollable h3").getText().then (text) ->
+          expect(text).to.be("Ready in 1, 2, 3:")
+        browser.byCss("[name=name]").sendKeys("Testy McTester")
+        browser.byCss("input.color").click()
+        browser.executeScript('return $("input.color").val();').then (theColor) ->
+          color = theColor
+        browser.executeScript("$($('div.profile-image')[2]).click();")
+        browser.byCss("div.profile-image.chosen").getText().then (text) ->
+          expect(text).to.be("Microwave Oven")
+        browser.byCss(".modal-footer input.btn.btn-primary").click()
+        browser.wait ->
+          browser.getCurrentUrl().then (url) ->
+            return url == "http://localhost:#{config.port}/about/starting/"
+        browser.wait ->
+          browser.byCss("h1").getText().then (text) ->
+            return text == "Getting Started"
+        browser.wait ->
+          browser.executeScript("return $('.user-menu img').attr('src');").then (res) ->
+            return res?
+        browser.executeScript("return $('.user-menu img').attr('src');").then (res) =>
+          expect(res).to.be(
+            "http://localhost:#{config.port}/uploads/user_icons/#{color}-Microwave Oven-16.png"
+          )
+        browser.byCss(".user-menu .hidden-phone").getText().then (text) ->
+          expect(text).to.be("Testy McTester")
+          done()

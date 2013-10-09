@@ -34,7 +34,10 @@ html
     != "var INTERTWINKLES_API_URL = '" + conf.api_url + "';"
     != "var INTERTWINKLES_APPS = " + JSON.stringify(conf.apps) + ";"
     </script>
-    script(src='https://login.persona.org/include.js')
+    if conf.TESTING_MOCK_PERSONA
+      script(src=asset("js/mock_persona.coffee"))
+    else
+      script(src='https://login.persona.org/include.js')
     //script(src='http://localhost:10002/include.js')
     script(src=asset("js/intertwinkles/index.coffee"))
     // Flash messages

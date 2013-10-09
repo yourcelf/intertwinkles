@@ -8,40 +8,66 @@ common        = require './common'
 utils         = require '../lib/utils'
 logger        = require('log4js').getLogger()
 api_methods   = require("../lib/api_methods")(config)
+selenium_test = require "selenium-webdriver/testing"
 
 describe "HTTP api", ->
+  browser = null
+  server  = null
+
   before (done) ->
-    common.startUp (server) =>
-      @server = server
-      @browser = common.fetchBrowser()
-      done()
+    common.startUp (theServer) =>
+      server = theServer
+      common.fetchBrowser (theBrowser) =>
+        browser = theBrowser
+        done()
 
   after (done) ->
-    common.shutDown(@server, done)
+    browser.quit().then ->
+      common.shutDown(server, done)
+
+  fetchJSON = (url, callback) ->
+    # Hackish -- but selenium hands us JSON as a pseudo-HTML document wrapped
+    # in <body> and <pre> tags, complete with inline styles in <head>.  Parse
+    # out the body text 
+    browser.get(url)
+    browser.byCss("body").getText().then (text) ->
+      callback(browser, JSON.parse(text))
 
   # Groups API invalid requests
   it "Gets bad request without API key", (done) ->
     url = "http://localhost:#{config.port}/api/groups/?user=one%40mockmyid.com"
-    @browser.visit url, (err, browser, status) ->
-      expect(status).to.be(400)
+    fetchJSON url, (promise, json) ->
+      expect(json).to.eql {
+        error: "Missing required param 'api_key'"
+        status: 400
+      }
       done()
 
   it "Gets bad request without user", (done) ->
     url = "http://localhost:#{config.port}/api/groups/?api_key=test-key-one"
-    @browser.visit url, (err, browser, status) ->
-      expect(status).to.be(400)
+    fetchJSON url, (promise, json) ->
+      expect(json).to.eql {
+        error: "Missing required param 'user'"
+        status: 400
+      }
       done()
 
   it "Gets permission denied with invalid API key", (done) ->
     url = "http://localhost:#{config.port}/api/groups/?user=one%40mockmyid.com&api_key=invalid"
-    @browser.visit url, (err, browser, status) ->
-      expect(status).to.be(403)
+    fetchJSON url, (promise, json) ->
+      expect(json).to.eql {
+        error: "Missing or invalid API key"
+        status: 403
+      }
       done()
 
-  it "Gets permission denied with invalid user", (done) ->
-    url = "http://localhost:#{config.port}/api/groups/?user=noexist%40mockmyid.com&api_key=invalid"
-    @browser.visit url, (err, browser, status) ->
-      expect(status).to.be(403)
+  it "Gets not found with invalid user", (done) ->
+    url = "http://localhost:#{config.port}/api/groups/?user=noexist%40mockmyid.com&api_key=test-key-one"
+    fetchJSON url, (promise, json) ->
+      expect(json).to.eql {
+        error: "No user found for 'noexist@mockmyid.com'"
+        status: 404
+      }
       done()
 
   #
@@ -49,12 +75,10 @@ describe "HTTP api", ->
   #
   it "Gets success with correct user and api key", (done) ->
     url = "http://localhost:#{config.port}/api/groups/?api_key=test-key-one&user=one%40mockmyid.com"
-    browser = @browser
     schema.User.findOne {email: "one@mockmyid.com"}, (err, doc) ->
       expect(err).to.be(null)
       expect(doc).to.not.be(null)
-      browser.visit(url).then( =>
-        json = JSON.parse(browser.text())
+      fetchJSON url, (promise, json) ->
         # We have our groups...
         expect(_.keys(json.groups).length).to.be(2)
         expect(_.find json.groups, (g) -> g.name == "Two Members").to.not.be(null)
@@ -75,7 +99,6 @@ describe "HTTP api", ->
             expect(member.email).to.be(undefined)
             expect(member.user).to.not.be(undefined)
         done()
-      ).fail (err) -> done(err)
 
   #
   # Email change request

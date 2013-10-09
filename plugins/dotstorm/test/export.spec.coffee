@@ -10,7 +10,6 @@ describe "exports", ->
   before (done) ->
     common.startUp (server) =>
       @server = server
-      @browser = common.fetchBrowser()
       done()
 
   after (done) ->

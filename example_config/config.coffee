@@ -94,5 +94,8 @@ config = {
       image: "#{base_url}/static/clock/img/clock.png"
     }
   }
+  testing: {
+    selenium_path: __dirname + "/../vendor/selenium-server-standalone.jar"
+  }
 }
 module.exports = config

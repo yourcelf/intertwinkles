@@ -119,6 +119,11 @@ module.exports = (config) ->
     else if _.isString(email_or_id_or_user)
       get_user email_or_id_or_user, (err, user) ->
         return callback(err) if err?
+        unless user?
+          return callback({
+            error: "No user found for '#{email_or_id_or_user}'"
+            status: 404
+          })
         _get_groups(user, callback)
     else
       callback("Unrecognized user, neither object nor string")

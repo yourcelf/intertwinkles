@@ -12,14 +12,17 @@ import time
 import shutil
 import base64
 import tarfile
+import zipfile
 import urllib2
 import tempfile
 import argparse
 import subprocess
 
 SOLR_VERSION = "4.5.0"
+SELENIUM_VERSION = "2.35.0"
 SOLR_INSTALLER = "http://apache.mirrors.pair.com/lucene/solr/{0}/solr-{0}.tgz".format(SOLR_VERSION)
 ETHERPAD_REPOSITORY = "https://github.com/ether/etherpad-lite.git"
+SELENIUM_STAND_ALONE_SERVER = "https://selenium.googlecode.com/files/selenium-server-standalone-{0}.jar".format(SELENIUM_VERSION)
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
 VENDOR_DIR = os.path.join(PROJECT_ROOT, "vendor")
 EXAMPLE_CONFIG_DIR = os.path.join(PROJECT_ROOT, "example_config")
@@ -35,7 +38,9 @@ parser.add_argument("include", metavar='APP', nargs='*',
 
 def install_all():
     args = parser.parse_args()
-    include = set(args.include or ["config", "secrets", "assets", "node", "solr", "etherpad"])
+    include = set(args.include or [
+        "config", "secrets", "assets", "node", "solr", "etherpad", "selenium"
+    ])
     if "config" in include:
         print("Copying configuration...")
         copy_configuration()
@@ -54,6 +59,9 @@ def install_all():
     if "etherpad" in include:
         print("Installing etherpad...")
         install_etherpad()
+    if "selenium" in include:
+        print("Installing selenium...")
+        install_selenium()
     print "All done!"
 
 def _make_config_file(example_path):
@@ -215,6 +223,36 @@ def install_etherpad():
     print "Status", status
     proc.kill()
     assert status == 200
+
+def install_selenium():
+    dest = os.path.join(VENDOR_DIR, "selenium-server-standalone.jar")
+    if os.path.exists(dest):
+        # check version
+        major_version = None
+        minor_version = None
+        with zipfile.ZipFile(dest, "r") as jar:
+            version_file = jar.open("VERSION.txt")
+            contents = version_file.read()
+            match = re.search("^selenium.core.version=([.\d]+)\s*$", contents, re.M)
+            if match:
+                major_version = match.group(1)
+            match = re.search("^selenium.core.revision=([.\d]+)\s*$", contents, re.M)
+            if match:
+                minor_version = match.group(1)
+            version_file.close()
+        if major_version and minor_version and \
+                major_version + minor_version == SELENIUM_VERSION:
+            print "Selenium up-to-date ({0}{1}).".format(major_version, minor_version)
+            return
+        else:
+            print "Selenium server out of date, reinstalling. ({0}{1})".format(
+                    major_version, minor_version
+            )
+    else:
+        print "Selenium server not found, downloading."
+    response = urllib2.urlopen(SELENIUM_STAND_ALONE_SERVER)
+    with open(dest, 'wb') as fh:
+        shutil.copyfileobj(response, fh)
 
 def _overwrite_link(source, dest):
     try:

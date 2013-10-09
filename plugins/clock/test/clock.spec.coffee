@@ -11,10 +11,19 @@ clock = require("../lib/clock")(config)
 timeoutSet = (a, b) -> setTimeout(b, a)
 
 describe "clock", ->
+  browser = null
+  server = null
+
   before (done) ->
-    common.startUp (server) =>
-      @server = server
+    common.startUp (theServer) =>
+      server = theServer
       async.series [
+        (done) =>
+          # Grab us a browser.
+          common.fetchBrowser (theBrowser) ->
+            browser = theBrowser
+            done()
+
         (done) =>
           # get all users and groups for convenience
           common.getAllUsersAndGroups (err, maps) =>
@@ -51,7 +60,7 @@ describe "clock", ->
       ], done
 
   after (done) ->
-    common.shutDown(@server, done)
+    browser.quit().then -> common.shutDown(server, done)
 
   it "has correct url [lib]", (done) ->
     expect(@clock.url).to.be("/c/#{@clock.id}/")
@@ -269,39 +278,55 @@ describe "clock", ->
 
 
   it "about link [live]", (done) ->
-    this.timeout(20000)
-    browser = common.fetchBrowser()
-    browser.visit "#{config.apps.clock.url}/", (e, browser, status) ->
-      expect(status).to.be(200)
-      browser.clickLink(".about")
-      # Check the about link.
-      expect(browser.location.pathname).to.be("/clock/about/")
-      expect(browser.text("h3")).to.be("About the Progressive Clock")
+    browser.get("#{config.apps.clock.url}/")
+    browser.wait ->
+      browser.byCsss(".about").then (els) ->
+        return els.length > 0
+    browser.byCss(".about").click()
+    browser.getCurrentUrl().then (url) ->
+      expect(url).to.be("http://localhost:#{config.port}/clock/about/")
+    browser.byCss("h3").getText().then (text) ->
+      expect(text).to.be("About the Progressive Clock")
       done()
   
   it "adds a clock [live]", (done) ->
-    this.timeout(20000)
-    browser = common.fetchBrowser()
-    browser.visit "#{config.apps.clock.url}/", (e, browser, status) ->
-      browser.clickLink(".add-new-clock")
-      expect(browser.location.pathname).to.be("/clock/add/")
-      expect(browser.text("h1")).to.be("Add new Clock")
-      browser.fill("#id_name", "Fun")
-      expect(
-        browser.evaluate('$("#category_controls [name=item-0]").val()')
-      ).to.be("Male")
-      browser.query("input[type=submit]").click()
-      common.await =>
-        if browser.location.pathname.substring(0, "/clock/c/".length) == "/clock/c/"
-          done()
-          return true
+    browser.get("#{config.apps.clock.url}/")
+    browser.wait ->
+      browser.getCurrentUrl().then (url) ->
+        return url == config.apps.clock.url + "/"
+    browser.byCss(".add-new-clock").click()
+    browser.wait ->
+      browser.getCurrentUrl().then (url) ->
+        return url == "http://localhost:#{config.port}/clock/add/"
+    browser.byCss("h1").getText().then (text) ->
+      expect(text).to.be("Add new Clock")
+    browser.byCss("#id_name").sendKeys("Fun")
+    browser.executeScript(
+      'return $("#category_controls [name=item-0]").val();'
+    ).then (res) ->
+      expect(res).to.be("Male")
+    browser.byCss("input[type=submit]").click()
+    browser.wait ->
+      browser.getCurrentUrl().then (url) ->
+        stub = "http://localhost:#{config.port}/clock/c/"
+        return url.substring(0, stub.length) == stub
+    .then ->
+      done()
 
   it "connects to detail page [live]", (done) ->
-    this.timeout(20000)
-    browser = common.fetchBrowser()
-    browser.visit @clock.absolute_url, (e, browser, status) ->
-      expect(status).to.be(200)
-      done()
+    clock = @clock
+    common.stubAuthenticate browser, "one@mockmyid.com", (err) ->
+      expect(err).to.be(null)
+      browser.get(clock.absolute_url)
+      browser.wait ->
+        browser.getCurrentUrl().then (url) ->
+          return url == clock.absolute_url
+      browser.wait ->
+        browser.byCsss("h3").then (els) ->
+          return els.length > 0
+      browser.byCss("h3").getText().then (text) ->
+        expect(text).to.be("New name")
+        done()
 
   it "trashes a clock [lib]", (done) ->
     [session, session2, doc] = [@session, @session2, @clock]

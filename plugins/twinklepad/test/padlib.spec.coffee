@@ -25,6 +25,8 @@ delete_all_test_pads = (callback) ->
 describe "padlib", ->
   session = null
   session2 = null
+  server = null
+  browser = null
   before (done) ->
     return done() if skip_tests
     async.series [
@@ -37,10 +39,13 @@ describe "padlib", ->
         )
         delete_all_test_pads ->
           db.disconnect(done)
-
-      (done) =>
-        common.startUp (server) =>
-          @server = server
+      (done) ->
+        common.startUp (theServer) =>
+          server = theServer
+          done()
+      (done) ->
+        common.fetchBrowser (theBrowser) ->
+          browser = theBrowser
           done()
       (done) ->
         session = {}
@@ -59,7 +64,7 @@ describe "padlib", ->
   after (done) ->
     return done() if skip_tests
     delete_all_test_pads =>
-      common.shutDown(@server, done)
+      browser.quit().then -> common.shutDown(server, done)
 
   it "Saves a pad", (done) ->
     return done() if skip_tests
@@ -144,9 +149,8 @@ describe "padlib", ->
 
   it "cannot create a pad via url", (done) ->
     return done() if skip_tests
-    browser = common.fetchBrowser()
     url = "#{config.apps.twinklepad.url}/p/tptest_2/"
-    browser.visit url, (e, browser, status) =>
+    browser.get(url).then ->
       tp_schema.TwinklePad.findOne {pad_name: "tptest_2"}, (err, doc) ->
         expect(err).to.be(null)
         expect(doc).to.be(null)

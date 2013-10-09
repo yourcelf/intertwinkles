@@ -5,43 +5,33 @@ common  = require './common'
 timeoutSet = (a, b) -> setTimeout(b, a)
 
 describe "creates and edits groups", ->
-  this.timeout(40000)
+  browser = null
+  server = null
+
   before (done) ->
-    common.startUp (server) =>
-      @server = server
-      done()
+    common.startUp (theServer) =>
+      server = theServer
+      common.fetchBrowser (theBrowser) =>
+        browser = theBrowser
+        done()
 
   after (done) ->
-    common.shutDown(@server, done)
-
-  browser = null
+    browser.quit().then -> common.shutDown(server, done)
 
   it "create group", (done) ->
-    browser = common.fetchBrowser()
     common.stubAuthenticate browser, "one@mockmyid.com", (err) ->
       expect(err).to.be(null)
-      browser.visit "http://localhost:#{config.port}/groups/new", (e, browser) ->
-        expect(browser.text("h1")).to.be("New group")
-        browser.fill("name", "Affinito")
-        browser.fill("#add_email", "two@mockmyid.com")
-        browser.clickLink("a.add-new-invitee")
-        expect(browser.queryAll(".newinvite").length).to.be(1)
-        browser.query("form.form-horizontal").submit()
-        common.await ->
-          if browser.location.pathname == "/groups/show/affinito/"
-            # We'd check for results here; but Zombie isn't re-parsing js after
-            # a redirect, so we need to fetch a new browser first.
-            done()
-            return true
-
-  it "has new group properties", (done) ->
-    browser = common.fetchBrowser()
-    common.stubAuthenticate browser, "one@mockmyid.com", (err) ->
-      expect(err).to.be(null)
-      browser.visit "http://localhost:#{config.port}/groups/edit/affinito/", (e, browser) ->
-        common.await ->
-          if browser.queryAll("tr").length > 0
-            expect(browser.queryAll(".newinvite").length).to.be(0)
-            expect(browser.queryAll(".member").length).to.be(2)
-            done()
-            return true
+      browser.get("http://localhost:#{config.port}/groups/new")
+      browser.byCss("h1").getText().then (text) ->
+        expect(text).to.be("New group")
+      browser.byCss("[name=name]").sendKeys("Affinito")
+      browser.byCss("#add_email").sendKeys("two@mockmyid.com")
+      browser.byCss("a.add-new-invitee").click()
+      browser.byCss(".newinvite").then (el) -> expect(el?).to.be(true)
+      browser.byCss("form.form-horizontal").submit()
+      browser.wait ->
+        browser.byCsss(".membership-list li").then (lis) ->
+          return lis.length == 1
+      browser.byCss("#invited_members a").getText().then (text) ->
+        expect(text).to.be("1 invited members")
+        done()

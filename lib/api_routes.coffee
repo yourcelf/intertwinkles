@@ -37,28 +37,17 @@ route = (config, app) ->
       return false
     return true
 
-  retrieve_user = (req, res, query, fn) ->
-    if query?
-      if query.indexOf('@') != -1
-        filter = {email: query}
-      else
-        filter = {_id: query}
-      schema.User.findOne filter, (err, doc) ->
-        return server_error(res, err) if err?
-        unless doc?
-          res.statusCode = 404
-          return res.send {error: "No user found for '#{query}'", status: 404}
-        return fn({model: doc})
-    else
-      res.statusCode = 403
-      res.send({error: "User not specified", status: res.statusCode})
-
   app.get "/api/groups/", (req, res) ->
     return unless validate_request(req, res, ["user", "api_key"])
     return server_error("Unknown user") unless req.query.user?
     api_methods.get_groups req.query.user, (err, data) ->
-      return server_error(res, err) if err?
-      res.send(data)
+      if err?.status
+        res.statusCode = err.status
+        return res.send(err)
+      else if err?
+        return server_error(res, err)
+      else
+        res.send(data)
 
   app.get "/api/events/", (req, res) ->
     return unless validate_request(req, res, ["api_key"])
