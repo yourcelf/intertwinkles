@@ -2,10 +2,6 @@
 Copy all the files in the various 'assets' folders into one place.  This is a
 similar strategy to 'collectstatic' from the Django world.
 ###
-stylus    = require 'stylus'
-Snockets  = require('snockets')
-less      = require 'less'
-nib       = require 'nib'
 fs        = require 'fs'
 path      = require 'path'
 async     = require 'async'
@@ -21,40 +17,6 @@ asset_folders = [
   __dirname + "/../plugins/clock/assets",
   __dirname + "/../plugins/points/assets",
 ]
-
-compiled_files = [
-  # Switched to using yaac; no longer using this strategy.
-]
-
-write = (filepath, contents) ->
-  mkdirs(path.dirname(filepath))
-  fs.writeFileSync(filepath, contents, 'utf-8')
-
-snockets = new Snockets()
-compile_coffee = (src, dest) ->
-  write(dest, snockets.getConcatenation(src, {async: false, minify: true}))
-
-compile_stylus = (src, dest) ->
-  code = fs.readFileSync(src, 'utf-8')
-  stylus(code)
-    .set('filename', src)
-    .set('compress', true)
-    .use(nib())
-    .import('nib')
-    .render((err, css) ->
-      throw(err) if err?
-      write(dest, css, 'utf-8')
-    )
-
-compile_less = (src, dest) ->
-  parser = new less.Parser(paths: [path.dirname(src)])
-  code = fs.readFileSync(src, 'utf-8')
-  parser.parse(code, (err, tree) ->
-    if err?
-      logger.error(err)
-      throw(err) if err?
-    write(dest, tree.toCSS({compress: true}), 'utf-8')
-  )
 
 mkdirs = (dir) ->
   if fs.existsSync(dir)
@@ -76,49 +38,10 @@ copy_files = (dir, parent, destRoot) ->
       mkdirs(path.dirname(dest))
       fs.writeFileSync(dest, fs.readFileSync(full_name))
 
-compile_one = (filename) ->
-  ext = path.extname(filename)
-  switch ext
-    when ".coffee"
-      new_ext = ".js"
-      compile = compile_coffee
-    when ".styl"
-      new_ext = ".css"
-      compile = compile_stylus
-    when ".less"
-      new_ext = ".css"
-      compile = compile_less
-  dest = filename.substring(0, filename.length - ext.length) + new_ext
-  logger.info("Compile", filename, "=>", dest)
-  compile(filename, dest)
-
 compile_all = (destRoot) ->
   destRoot = path.normalize(destRoot)
   # Copy *all* the assets to the destination.
   for dir in asset_folders
     copy_files(dir, dir, destRoot)
 
-  # Compile those that need compilation.
-  for file in compiled_files
-    compile_one(destRoot + file)
-
-
-watchTimeout = null
-_watch = (dir, destRoot) ->
-  # Ugly, ugly, ugly. Re-build everything when anything changes.
-  for name in fs.readdirSync(dir)
-    filename = path.normalize(dir + "/" + name)
-    if filename.substring(0, 1) == "."
-      continue
-    if fs.statSync(filename).isDirectory()
-      _watch(filename, destRoot)
-    else
-      fs.watch filename, (event, filename) ->
-        clearTimeout(watchTimeout) if watchTimeout?
-        watchTimeout = setTimeout((-> compile_all destRoot), 100)
-
-watch = (destRoot) ->
-  for dir in asset_folders
-    _watch(dir, destRoot)
-
-module.exports = {compile_all, watch}
+module.exports = {compile_all}

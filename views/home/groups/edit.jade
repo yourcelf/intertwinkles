@@ -1,31 +1,5 @@
 extends ../www_base
 
-block append poststyles
-  :stylus
-    a.remove
-      color: #999
-      &:hover
-        background-color: #f00
-        color: white
-    td
-      padding: 0.1em
-    th .popover
-      font-weight: normal
-      text-align: left
-    tr.removed
-      background-color: #fee
-      td
-        text-decoration: line-through
-        font-style: italic
-      td.link
-        text-decoration: none
-    tr.newinvite
-      background-color: #efe
-    td.changed
-      background-color: #ffe
-    .table th, .table td
-      border-top: 1px solid #eee
-
 block body
   if group.name
     h1= group.name

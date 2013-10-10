@@ -28,7 +28,8 @@ describe "registration", ->
     .then ->
       is_logged_out = "return intertwinkles.user && intertwinkles.user.get('email') == null;"
       browser.wait ->
-        browser.executeScript(is_logged_out).then (val) -> val
+        browser.executeScript(is_logged_out).then (val) ->
+          return val
     .then -> done()
 
   it "registers a new account", (done) ->

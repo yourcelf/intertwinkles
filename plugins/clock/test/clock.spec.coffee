@@ -292,8 +292,8 @@ describe "clock", ->
   it "adds a clock [live]", (done) ->
     browser.get("#{config.apps.clock.url}/")
     browser.wait ->
-      browser.getCurrentUrl().then (url) ->
-        return url == config.apps.clock.url + "/"
+      browser.byCsss(".add-new-clock").then (els) ->
+        return els.length > 0
     browser.byCss(".add-new-clock").click()
     browser.wait ->
       browser.getCurrentUrl().then (url) ->

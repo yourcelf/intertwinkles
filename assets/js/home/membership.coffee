@@ -1,7 +1,7 @@
 EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
 
 membershipTableTemplate = _.template("""
-<table class='table'>
+<table class='table manage-group'>
   <tr>
     <th>User</th>
     <th>Voting <i class='icon-question-sign voting'></i></th>
