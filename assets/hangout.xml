@@ -4,6 +4,7 @@
     <Require feature="rpc" /> 
   </ModulePrefs> 
    <Content type="html"><![CDATA[
+<!DOCTYPE html>
 <html>
   <body> 
     <script src="https://plus.google.com/hangouts/_/api/v1/hangout.js" ></script>

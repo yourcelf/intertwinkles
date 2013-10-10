@@ -131,12 +131,12 @@ c.deleteIcons = (cb) ->
 
 c.clearDb = (cb) ->
   conn = mongoose.createConnection(
-    "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}"
+    "mongodb://#{config.dbhost}:#{config.dbport}/#{config.dbname}", ->
+      conn.db.dropDatabase (err) ->
+        expect(err).to.be(null)
+        conn.close()
+        cb()
   )
-  conn.db.dropDatabase (err) ->
-    expect(err).to.be(null)
-    conn.close()
-    cb()
 
 c.loadFixture = (callback) ->
   users_by_name = {}
@@ -189,7 +189,11 @@ c.stubAuthenticate = (browser, email, callback) ->
     if cookie
       authenticate()
     else
-      browser.get("#{config.api_url}/").then(authenticate)
+      browser.get("#{config.api_url}/").then ->
+        browser.wait ->
+          browser.executeScript("return window.intertwinkles != null;").then (res) ->
+            return res
+        .then(authenticate)
 
 c.stubBrowserID = (browserid_response) ->
   persona = require("../lib/persona_consumer")

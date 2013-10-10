@@ -128,6 +128,6 @@ if __name__ == "__main__":
         "www": ("node bin/run.js", ".."),
         "solr": ("./start.sh", "../vendor/solr/"),
         "etherpad": ("./bin/run.sh", "../vendor/etherpad-lite"),
-        "proxy": ("node bin/proxy.js", ".."),
+        #"proxy": ("node bin/proxy.js", ".."),
     }
     main(apps)
