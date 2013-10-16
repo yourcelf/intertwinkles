@@ -109,7 +109,7 @@ route = (config, app, sockrooms) ->
 
   app.get "/hangout/", (req, res) ->
     res.render "hangout/index", context(req, {}, {
-      hangout_origin: config.hangout_origin
+      hangout_origin_re: config.hangout_origin_re
       intertwinkles_url_base: config.api_url
       intertwinkles_short_url_base: config.short_url_base
     })

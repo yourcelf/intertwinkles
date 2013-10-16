@@ -7,9 +7,6 @@ class intertwinkles.Hangout extends Backbone.View
     window.INTERTWINKLES_AUTH_LOGOUT_REDIRECT = "/hangout/"
     @hangout_docs = new HangoutDocumentList()
     window.addEventListener "message", @message_listener, false
-    window.parent.postMessage({
-      get: "getHangoutUrl"
-    }, INITIAL_DATA.hangout_origin)
     @listenTo intertwinkles.socket, "hangout:document_list", @load
 
   load: (data) =>
@@ -33,15 +30,20 @@ class intertwinkles.Hangout extends Backbone.View
     window.removeEventListener "message", @message_listener, false
       
   message_listener: (event) =>
-    console.log("Inner message", event)
-    if event.origin == INITIAL_DATA.hangout_origin
+    console.log("Inner message", event.origin, event.data)
+    if new RegExp(INITIAL_DATA.hangout_origin_re).test(event.origin)
       if event.data.hangoutUrl
-        console.info "Setting hangout url:", event.data.hangoutUrl
-        @join(event.data.hangoutUrl)
+        if @hangout_url != event.data.hangoutUrl
+          console.info "Setting hangout url:", event.data.hangoutUrl
+          @join(event.data.hangoutUrl)
+        window.parent.postMessage({
+          method: "gotHangoutUrl"
+        }, event.origin)
 
   join: (hangout_url) =>
     # TODO: join an intertwinkles socket room for this hangout, get list of
     # any current documents in play.
+    @hangout_url = hangout_url
     @room_name = "hangout/" + encodeURIComponent(hangout_url)
     @room_view?.remove()
     @room_view = new intertwinkles.RoomUsersMenu({room: @room_name})
