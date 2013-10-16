@@ -97,5 +97,6 @@ config = {
   testing: {
     selenium_path: __dirname + "/../vendor/selenium-server-standalone.jar"
   }
+  hangout_origin: base_url
 }
 module.exports = config

@@ -10,10 +10,12 @@ intertwinkles.request_logout = ->
   navigator.id.logout()
 
 # Request login
-intertwinkles.request_login = ->
+intertwinkles.request_login = (next) ->
+  unless next and next.substr(0, 1) == "/"
+    next = "/"
   opts = {
     siteName: "InterTwinkles"
-    returnTo: "/"
+    returnTo: next
   }
   if window.location.protocol == "https:"
     opts.termsOfService = "/about/terms/"
