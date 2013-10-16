@@ -33,6 +33,7 @@ class intertwinkles.Hangout extends Backbone.View
     window.removeEventListener "message", @message_listener, false
       
   message_listener: (event) =>
+    console.log("Inner message", event)
     if event.origin == INITIAL_DATA.hangout_origin
       if event.data.hangoutUrl
         console.info "Setting hangout url:", event.data.hangoutUrl

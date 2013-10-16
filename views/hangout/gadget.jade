@@ -14,16 +14,13 @@ Module
                 style="width: 100%; height: 100%; border: none; overflow: auto; position: absolute; left: 0px; top: 0px;"></iframe>
         <script>
             var iframe = document.getElementById("intertwinklesWrapper");
-            // Compatibility for IE.
-            if (!window.location.origin) {
-                window.location.origin = window.location.protocol + "//" + window.location.host;
-            }
-            
             // Respond for data requests from the iframe.
             function receiveMessage(event) {
+                console.log(event);
                 if (event.origin === "#{intertwinkles_origin}") {
                     if (event.data.get === "getHangoutUrl") {
                         var url = !{testurl === false ? 'gapi.hangout.getHangoutUrl()' : '"' + testurl + '"'};
+                        console.log("Posting URL:", url)
                         iframe.contentWindow.postMessage({
                             hangoutUrl: url
                         }, "#{intertwinkles_origin}");
