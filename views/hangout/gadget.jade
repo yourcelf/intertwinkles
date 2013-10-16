@@ -27,6 +27,8 @@ Module
                 }, "#{intertwinkles_origin}");
               }
             }, 10);
+            // Cancel after 5 seconds if nothing.
+            setTimeout(function() { if (tellUrl) { clearInterval(tellUrl); } }, 5000);
 
             // Respond for data requests from the iframe.
             function receiveMessage(event) {
