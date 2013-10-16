@@ -11,26 +11,32 @@ route = (config, app, sockrooms) ->
   hangout_methods = require('./hangout_methods')(config)
 
   broadcastRoomDocs = (room, socket, session) ->
-    docs = hangout_rooms[room].docs
-    cleaned = hangout_methods.clean_room_docs(session, docs)
+    docs = hangout_rooms[room]?.docs
+    if docs
+      cleaned = hangout_methods.clean_room_docs(session, docs)
+    else
+      cleaned = []
     socket.sendJSON "hangout:document_list", {hangout_docs: cleaned}
 
   sockrooms.addChannelAuth "hangout", (session, room, callback) ->
     # No authorization required for joining hangout
-    return callback(null, true)
+    [channel, name] = room.split("/")
+    return callback(null, channel == "hangout")
 
   sockrooms.on "leave", (data) ->
     {socket, session, room, last} = data
     [channel, name] = room.split("/")
-    if last and channel == "hangout"
-      delete hangout_rooms[room]
+    if channel == "hangout"
+      sockrooms.getSessionsInRoom room, (err, sessions) ->
+        if sessions.length == 0
+          delete hangout_rooms[room]
 
   sockrooms.on "join", (data) ->
     {socket, session, room, first} = data
     [channel, name_stub] = room.split("/")
-    if first and channel == "hangout"
-      hangout_rooms[room] = {docs: []}
-    broadcastRoomDocs(room, socket, session)
+    if channel == "hangout"
+      hangout_rooms[room] ?= {docs: []}
+      broadcastRoomDocs(room, socket, session)
 
   sockrooms.on "hangout/add_document", (socket, session, data) ->
     respond = (err, docs) ->

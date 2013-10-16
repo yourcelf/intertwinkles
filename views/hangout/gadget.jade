@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+Module
+  ModulePrefs(title="InterTwinkles")
+    Require(feature="rpc")
+  Content(type="html").
+    <![CDATA[
+    <!DOCTYPE html>
+    <html>
+      <body style='width: 100%; height: 100%; padding: 0; margin: 0;'> 
+        !{testurl === false ? '<script src="//plus.google.com/hangouts/_/api/v1/hangout.js" ></script>' : ""}
+        <iframe src="#{hangout_iframe_src}"
+                id="intertwinklesWrapper"
+                width="100%" height="100%"
+                style="width: 100%; height: 100%; border: none; overflow: auto; position: absolute; left: 0px; top: 0px;"></iframe>
+        <script>
+            var iframe = document.getElementById("intertwinklesWrapper");
+            // Compatibility for IE.
+            if (!window.location.origin) {
+                window.location.origin = window.location.protocol + "//" + window.location.host;
+            }
+            
+            // Respond for data requests from the iframe.
+            function receiveMessage(event) {
+                if (event.origin === "#{intertwinkles_origin}") {
+                    if (event.data.get === "getHangoutUrl") {
+                        var url = !{testurl === false ? 'gapi.hangout.getHangoutUrl()' : '"' + testurl + '"'};
+                        iframe.contentWindow.postMessage({
+                            hangoutUrl: url
+                        }, "#{intertwinkles_origin}");
+                    }
+                }
+            }
+            window.addEventListener('message', receiveMessage, false);
+        </script>
+      </body>
+    </html>
+    ]]>

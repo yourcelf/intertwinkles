@@ -1,0 +1,12 @@
+extends ../layout
+
+block poststyles
+  link(rel='stylesheet', type='text/css', href=asset('css/hangout.styl'))
+
+block postscripts
+  script(type='text/javascript', src=asset("js/hangout.coffee"))
+  script(type='text/javascript').
+    intertwinkles.connect_socket(function(socket) {
+      var main = new intertwinkles.Hangout().render();
+    });
+
