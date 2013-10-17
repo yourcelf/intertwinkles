@@ -13,34 +13,39 @@ Module
                 width="100%" height="100%"
                 style="width: 100%; height: 100%; border: none; overflow: auto; position: absolute; left: 0px; top: 0px;"></iframe>
         <script>
-            var iframe = document.getElementById("intertwinklesWrapper");
-            var origin = window.location.protocol + "//" + window.location.host;
-            var complete = false;
-            var url = !{testurl === false ? 'gapi.hangout.getHangoutUrl()' : '"' + testurl + '"'};
-            var tellUrl = setInterval(function() {
-              if (complete) {
-                return clearInterval(tellUrl);
-              } else {
-                console.log("Telling room name:", url)
-                iframe.contentWindow.postMessage({
-                  hangoutUrl: url
-                }, "#{intertwinkles_origin}");
-              }
-            }, 10);
-            // Cancel after 5 seconds if nothing.
-            setTimeout(function() { if (tellUrl) { clearInterval(tellUrl); } }, 5000);
+            gadgets.util.registerOnLoadHandler(function() {
+              gapi.hangout.onApiReady.add(function(event) {
+                if (!event.isApiReady) { return; }
+                var iframe = document.getElementById("intertwinklesWrapper");
+                var complete = false;
+                var url = !{testurl === false ? 'gapi.hangout.getHangoutUrl()' : '"' + testurl + '"'};
+                console.log("Hangout URL is", url);
+                var tellUrl = setInterval(function() {
+                  if (complete) {
+                    return clearInterval(tellUrl);
+                  } else {
+                    console.log("Telling room name:", url, "to", iframe.src)
+                    iframe.contentWindow.postMessage({
+                      hangoutUrl: url
+                    }, "#{intertwinkles_origin}");
+                  }
+                }, 10);
+                // Cancel after 5 seconds if nothing.
+                setTimeout(function() { if (tellUrl) { clearInterval(tellUrl); } }, 5000);
 
-            // Respond for data requests from the iframe.
-            function receiveMessage(event) {
-                console.log("Outer message", event.origin, event.data);
-                if (event.origin === "#{intertwinkles_origin}") {
-                    if (event.data.method === "gotHangoutUrl") {
-                        console.log("Room name finished.")
-                        complete = true;
+                // Respond for data requests from the iframe.
+                function receiveMessage(event) {
+                    console.log("Outer message", event.origin, event.data);
+                    if (event.origin === "#{intertwinkles_origin}") {
+                        if (event.data.method === "gotHangoutUrl") {
+                            console.log("Room name finished.")
+                            complete = true;
+                        }
                     }
                 }
-            }
-            window.addEventListener('message', receiveMessage, false);
+                window.addEventListener('message', receiveMessage, false);
+              });
+            });
         </script>
       </body>
     </html>
