@@ -20,6 +20,8 @@ class intertwinkles.Hangout extends Backbone.View
         @hangout_docs.add(new HangoutDocument(doc))
     if @hangout_docs.length > 0 and not @current_url
       @setDocument(@hangout_docs.at(@hangout_docs.length - 1).get("absolute_url"))
+    else if @hangout_docs.length == 0
+      @sidebar.reveal()
       
   fetchHangoutDocuments: =>
     if @room_name
