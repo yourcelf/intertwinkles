@@ -2,51 +2,82 @@
 Module
   ModulePrefs(title="InterTwinkles")
     Require(feature="rpc")
-  Content(type="html").
-    <![CDATA[
-    <!DOCTYPE html>
-    <html>
-      <body style='width: 100%; height: 100%; padding: 0; margin: 0;'> 
-        !{testurl === false ? '<script src="//plus.google.com/hangouts/_/api/v1/hangout.js" ></script>' : ""}
-        <iframe src="#{hangout_iframe_src}"
-                id="intertwinklesWrapper"
-                width="100%" height="100%"
-                style="width: 100%; height: 100%; border: none; overflow: auto; position: absolute; left: 0px; top: 0px;"></iframe>
-        <script>
-            gadgets.util.registerOnLoadHandler(function() {
-              gapi.hangout.onApiReady.add(function(event) {
-                if (!event.isApiReady) { return; }
-                var iframe = document.getElementById("intertwinklesWrapper");
-                var complete = false;
-                var url = !{testurl === false ? 'gapi.hangout.getHangoutUrl()' : '"' + testurl + '"'};
-                console.log("Hangout URL is", url);
-                var tellUrl = setInterval(function() {
-                  if (complete) {
-                    return clearInterval(tellUrl);
-                  } else {
-                    console.log("Telling room name:", url, "to", iframe.src)
-                    iframe.contentWindow.postMessage({
-                      hangoutUrl: url
-                    }, "#{intertwinkles_origin}");
-                  }
-                }, 10);
-                // Cancel after 5 seconds if nothing.
-                setTimeout(function() { if (tellUrl) { clearInterval(tellUrl); } }, 5000);
-
-                // Respond for data requests from the iframe.
-                function receiveMessage(event) {
-                    console.log("Outer message", event.origin, event.data);
-                    if (event.origin === "#{intertwinkles_origin}") {
-                        if (event.data.method === "gotHangoutUrl") {
-                            console.log("Room name finished.")
-                            complete = true;
-                        }
-                    }
+  Content(type="html")
+    | <![CDATA[
+    | <!DOCTYPE html>
+    html
+      body(style='width: 100%; height: 100%; padding: 0; margin: 0;')
+        if !testurl
+          script(src="//plus.google.com/hangouts/_/api/v1/hangout.js")
+        else
+          // Shim gadget/gapi.
+          script(type='text/javascript').
+            // Make global -- no 'var'.
+            gadgets = {
+              util: {
+                registerOnLoadHandler: function (cb) {
+                  cb();
                 }
-                window.addEventListener('message', receiveMessage, false);
-              });
+              }
+            };
+            // Make global -- no 'var'.
+            gapi = {
+              hangout: {
+                onApiReady: {
+                  add: function(cb) {
+                    cb({isApiReady: true});
+                  }
+                },
+                getHangoutUrl: function() {
+                  return "#{testurl}";
+                }
+              }
+            };
+
+        iframe(src=hangout_iframe_src, id="intertwinklesWrapper",
+               width="100%", height="100%",
+                style="width: 100%; height: 100%; border: none; overflow: auto; position: absolute; left: 0px; top: 0px;")
+
+        script(type='text/javascript').
+          // console log safety.
+          if (typeof console === "undefined") {
+            console = {log: function() {}, info: function() {}, error: function() {}}
+          }
+
+          gadgets.util.registerOnLoadHandler(function() {
+            gapi.hangout.onApiReady.add(function(event) {
+              if (!event.isApiReady) { return }
+              var iframe = document.getElementById("intertwinklesWrapper");
+              var url = gapi.hangout.getHangoutUrl();
+              var poll_count = 0;
+
+              // Poll the inner iframe with the hangout URL.
+              console.info("Hangout room name starting:", url);
+              var tellUrl = setInterval(function() {
+                iframe.contentWindow.postMessage({hangoutUrl: url}, "#{intertwinkles_origin}");
+                poll_count += 1;
+              }, 10);
+              // Cancel after 10 seconds if we've gotten nothing -- but warn of failure.
+              setTimeout(function() {
+                if (tellUrl) {
+                  console.log(tellUrl);
+                  alert("Error loading InterTwinkles.");
+                  console.error("Hangout room name failed; poll count: " + poll_count);
+                  clearInterval(tellUrl);
+                }
+              }, 10000);
+
+              // Respond for data requests from the iframe.
+              function receiveMessage(event) {
+                if (event.origin === "#{intertwinkles_origin}") {
+                  if (event.data.method === "gotHangoutUrl") {
+                    console.info("Hangout room name finished; poll count: " + poll_count);
+                    clearInterval(tellUrl);
+                    tellUrl = null;
+                  }
+                }
+              }
+              window.addEventListener('message', receiveMessage, false);
             });
-        </script>
-      </body>
-    </html>
-    ]]>
+          });
+    | ]]>

@@ -121,7 +121,7 @@ route = (config, app, sockrooms) ->
       xml_res.on 'data', (chunk) -> data += chunk
       xml_res.on 'end', ->
         xml = libxmljs.parseXml(data)
-        content = xml.get('//Content').text()
+        content = xml.get('/Module/Content').text()
         res.send content
     .on 'error', (err) ->
       return www_methods.handle_error(req, res, err) if err?

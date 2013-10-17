@@ -76,7 +76,8 @@ describe "Hangout", ->
       expect(err).to.be(null)
       expect(status).to.be(200)
       xml = libxmljs.parseXml(data)
-      expect(xml.get('//ModulePrefs').attr('title').value()).to.be("InterTwinkles")
+      expect(xml.get('/Module/ModulePrefs').attr('title').value()).to.be("InterTwinkles")
+      expect(xml.get('/Module/Content').attr('type').value()).to.be("html")
       done()
 
   it "Publishes front page", (done) ->
