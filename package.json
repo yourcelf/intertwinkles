@@ -18,7 +18,7 @@
     "underscore": "~1",
     "canvas": "~1",
     "connect-redis": "~1",
-    "express": "~3.4",
+    "express": ">=3.4.4 <3.5",
     "connect": "~2",
     "connect-flash": "~0",
     "imagemagick": "~0",
