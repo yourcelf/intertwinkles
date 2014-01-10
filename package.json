@@ -14,7 +14,7 @@
   "author": "Charlie DeTar",
   "dependencies": {
     "coffee-script": "~1.6",
-    "sockjs": "~0.3",
+    "sockjs": "0.3.7",
     "underscore": "~1",
     "canvas": "~1",
     "connect-redis": "~1",
