@@ -3,6 +3,7 @@ _             = require 'underscore'
 async         = require 'async'
 carriers      = require './carriers'
 thumbnails    = require './thumbnails'
+multiparty    = require 'multiparty'
 logger        = require('log4js').getLogger()
 
 route = (config, app, sockrooms) ->
@@ -345,26 +346,34 @@ route = (config, app, sockrooms) ->
       group: {}
     }, {active_name: "Groups"})
 
-  get_group_update_params = (req) ->
-    group_update = {
-      name: req.body.name
-      remove_logo: req.body.remove_logo
-      member_changeset: JSON.parse(req.body.member_changeset or "{}")
-    }
-    if req.files.logo?.size > 0 and req.files.logo.type.substring(0, 'image/'.length) == 'image/'
-      group_update.logo_file = req.files.logo
-    return group_update
+  get_group_update_params = (req, cb) ->
+    form = new multiparty.Form()
+    form.parse req, (err, fields, files) ->
+      return cb(err) if err?
+      try
+        member_changeset = JSON.parse(fields.member_changeset[0] or "{}")
+      catch e
+        return cb(e)
+      group_update = {
+        name: fields.name[0]
+        remove_logo: if fields.remove_logo then fields.remove_logo[0] else null
+        member_changeset: member_changeset
+      }
+      if files.logo and files.logo[0] and files.logo[0].headers['content-type']
+        file = files.logo[0]
+        if file.headers['content-type'].substring(0, 'image/'.length) == 'image/'
+          group_update.logo_file = file
+      cb(null, group_update)
 
   app.post '/groups/new/', (req, res) ->
     unless utils.is_authenticated(req.session)
       return www_methods.redirect_to_login(req, res)
-    try
-      group_update = get_group_update_params(req)
-    catch e
-      return www_methods.handle_error(req, res, "Invalid JSON for member changeset")
-    www_methods.create_group req.session, group_update, (err, group) ->
+
+    get_group_update_params req, (err, group_update) ->
       return www_methods.handle_error(req, res, err) if err?
-      return res.redirect("/groups/show/#{group.slug}/")
+      www_methods.create_group req.session, group_update, (err, group) ->
+        return www_methods.handle_error(req, res, err) if err?
+        return res.redirect("/groups/show/#{group.slug}/")
 
   utils.append_slash(app, "/groups/is_available")
   app.get '/groups/is_available/', (req, res) ->
@@ -404,17 +413,13 @@ route = (config, app, sockrooms) ->
 
       # Ensure that we are a member of this group.
       membership = _.find group.members, (m) -> m.user.toString() == req.session.auth.user_id
-      unless membership?
-        return www_methods.permission_denied(req, res)
+      return www_methods.permission_denied(req, res) unless membership?
 
-      try
-        group_update = get_group_update_params(req)
-      catch e
-        return www_methods.handle_error(req, res, "Invalid JSON for member changeset")
-
-      www_methods.update_group req.session, group, group_update, (err) ->
-        return www_methods.handle_error(req, res, err) if err?
-        return res.redirect("/groups/show/#{group.slug}/")
+      get_group_update_params req, (err, group_update) ->
+        return www_methods.handle_error(req, res, err) if err
+        www_methods.update_group req.session, group, group_update, (err) ->
+          return www_methods.handle_error(req, res, err) if err?
+          return res.redirect("/groups/show/#{group.slug}/")
 
   utils.append_slash(app, "/groups/join/[^/]+", ["get", "post"])
   app.get '/groups/join/:slug/', (req, res) ->

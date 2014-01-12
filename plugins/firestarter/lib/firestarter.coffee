@@ -128,6 +128,7 @@ module.exports = (config) ->
       (done) ->
         schema.Firestarter.findOne {_id: params.firestarter_id}, (err, firestarter) ->
           return done(err) if err?
+          return done("Not found") unless firestarter?
           return done("Permission denied") unless utils.can_edit(session, firestarter)
           schema.Response.find {firestarter_id: firestarter._id}, (err, responses) ->
             return done(err, firestarter, responses)

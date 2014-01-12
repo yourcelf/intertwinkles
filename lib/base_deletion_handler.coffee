@@ -59,8 +59,8 @@ module.exports = (config, BaseEntity) ->
       ###
       BaseEntity.findOne {_id: params.entity}, (err, doc) ->
         return callback(err) if err?
-        unless utils.can_edit(session, doc)
-          return callback("Permission denied")
+        return callback("Not found") unless doc?
+        return callback("Permission denied") unless utils.can_edit(session, doc)
         doc.trash = !!params.trash
         doc.save (err, doc) -> return callback(err, doc)
 
@@ -71,6 +71,7 @@ module.exports = (config, BaseEntity) ->
       ###
       BaseEntity.findOne {_id: params.entity}, (err, doc) ->
         return callback(err) if err?
+        return callback("Not found") unless doc?
         doc.remove (err) ->
           callback(err, doc)
   }

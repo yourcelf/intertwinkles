@@ -39,6 +39,8 @@ module.exports = (config) ->
       Delete etherpad as well as mongoose document.
       ###
       schema.TwinklePad.findOne {_id: params.entity}, (err, doc) ->
+        return callback(err) if err?
+        return callback("Not found") unless doc?
         padlib.delete_pad doc, (err) ->
           return callback(err) if err?
           doc.remove (err) ->

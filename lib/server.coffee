@@ -68,7 +68,12 @@ start = (config) ->
   app.configure 'production',  -> logger.setLevel(log4js.levels.ERROR)
   app.enable "trust proxy"
   app.use connect.compress()
-  app.use express.bodyParser({keepExtensions: true})
+  # Deprecated in express 3.0.
+  #REMOVED: app.use express.bodyParser({keepExtensions: true})
+  # Added multipart/files handling in the one route that used it
+  app.use express.json()
+  app.use express.urlencoded()
+
   app.use express.cookieParser()
   app.use express.session({
     secret: config.secret

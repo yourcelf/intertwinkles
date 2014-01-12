@@ -38,7 +38,7 @@ membershipTableTemplate = _.template("""
       
 
 membershipRowTemplate = _.template("""
-  <tr class='member<%- removed ? " removed" : "" %><%- new_invitee ? " newinvite" : "" %>'>
+  <tr class='member<%- removed ? " removed" : "" %> <%- status %>'>
     <td>
       <% if (user && user.icon) { %>
         <img src='<%- user.icon.small %>' /> <%- user.name %>
@@ -129,6 +129,7 @@ class MembershipTable extends Backbone.View
       role_changed: @change_set.update[@users[member.user].email]?.role?
       new_invitee: false
       removed: @change_set.remove[@users[member.user].email]?
+      status: "current"
     }) for member in @group.members))
 
     # New invitees
@@ -141,6 +142,7 @@ class MembershipTable extends Backbone.View
       role_changed: false
       new_invitee: true
       removed: false
+      status: "newinvitee"
     }) for email, new_invitee of @change_set.add))
 
     # Existing invitees
@@ -155,6 +157,7 @@ class MembershipTable extends Backbone.View
         role_changed: @change_set.update[email]?.role?
         new_invitee: false
         removed: @change_set.remove[email]?
+        status: "invited"
       }))
 
     @$(".has-been-invited-header").toggle(@group.invited_members?.length > 0)
@@ -210,6 +213,7 @@ class MembershipTable extends Backbone.View
     @saveChangeSet()
 
   removeMember: (event) =>
+    # Remove a member or invitee.
     event.preventDefault()
     email = $(event.currentTarget).attr("data-email")
     if @change_set.add[email]?
@@ -219,9 +223,18 @@ class MembershipTable extends Backbone.View
       # Already marked for removal: toggle.
       delete @change_set.remove[email]
     else
-      if (email == intertwinkles.user.get("email") and
-            (@group.members.length - _.keys(@change_set.remove).length) < 2)
-        flash "info", "There must be other group members before you can remove yourself."
+      # Enforce non-removal of last member.
+      members = {}
+      for m in @group.members
+        member_email = @users[m.user].email
+        unless @change_set.remove[member_email]
+          members[member_email] = true
+      # If the email being removed is the last existing member, refuse.
+      if members[email]? and _.size(members) <= 1
+        if (email == intertwinkles.user.get("email"))
+          flash "info", "There must be other group members before you can remove yourself."
+        else
+          flash "info", "There must be at least one member."
         return
       # Not marked for removal yet: toggle.
       @change_set.remove[email] = true

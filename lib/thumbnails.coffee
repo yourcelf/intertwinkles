@@ -27,7 +27,7 @@ upload = (filePath, dest, callback) ->
       }
 
 remove = (files, assetBase, callback) ->
-  base = __dirname + "/../uploads"
+  base = __dirname + "/../uploads/"
   safety_base = path.normalize(base + assetBase)
   count = files.length
   errors = []

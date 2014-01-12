@@ -38,7 +38,12 @@ c.fetchBrowser = (callback) ->
       return browser.findElement(webdriver.By.css(selector))
     browser.byCsss = (selector) ->
       return browser.findElements(webdriver.By.css(selector))
-    callback(browser)
+    browser.manage().window().setSize(1024, 768).then ->
+      callback(browser)
+    browser.waitForSelector = (selector) ->
+      browser.wait ->
+        browser.byCsss(selector).then (els) ->
+          return els.length > 0
 
   unless selenium_server?
     selenium_server = new SeleniumServer(config.testing.selenium_path, {port: 4444})

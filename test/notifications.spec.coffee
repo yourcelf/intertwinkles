@@ -63,10 +63,12 @@ describe "Notifications", ->
         notifier.send_notifications (err, notices) ->
           return done(err) if err?
           expect(notices.length).to.be(1)
-          expect(mail.outbox.length).to.be(1)
-          expect(mail.outbox[0].to[0].address).to.be("two@mockmyid.com")
-          expect(mail.outbox[0].text).to.be("This is a textual body" + "\n")
-          done()
+          common.await ->
+            return false unless mail.outbox.length == 1
+            expect(mail.outbox[0].to[0].address).to.be("two@mockmyid.com")
+            expect(mail.outbox[0].text).to.be("This is a textual body" + "\n")
+            done()
+            return true
 
     ], (err) ->
       done(err)
@@ -110,11 +112,14 @@ describe "Notifications", ->
         notifier.send_notifications (err, notices) ->
           return done(err) if err?
           expect(notices.length).to.be(1)
-          expect(mail.outbox.length).to.be(1)
-          expect(mail.outbox[0].to[0].address).to.be("1234567890@tmomail.net")
-          expect(mail.outbox[0].headers.subject).to.be("Needs yr response")
-          expect(mail.outbox[0].text).to.be(" " + "\n\n")
-          done()
+          common.await ->
+            return false unless mail.outbox.length == 1
+            expect(mail.outbox.length).to.be(1)
+            expect(mail.outbox[0].to[0].address).to.be("1234567890@tmomail.net")
+            expect(mail.outbox[0].headers.subject).to.be("Needs yr response")
+            expect(mail.outbox[0].text).to.be(" " + "\n\n")
+            done()
+            return true
     ], done
 
   it "Doesn't send a second time", (done) ->

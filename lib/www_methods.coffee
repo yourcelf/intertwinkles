@@ -351,7 +351,9 @@ module.exports = (config) ->
   _remove_group_logo = (group, callback) ->
     return callback() unless group.logo?.full?
     thumbnails.remove [group.logo.full, group.logo.thumb], "/group_logos", (err) ->
-      callback(err)
+      return callback(err) if err
+      group.logo = {full: null, thumb: null}
+      callback()
 
   # Main routine for processing group updates.
   _update_group = (session, group, user_map, group_update, callback) ->

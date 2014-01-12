@@ -238,6 +238,7 @@ module.exports = (config) ->
   r.update_proposal = (session, data, callback) ->
     schema.Proposal.findOne {_id: data.proposal?._id}, (err, proposal) ->
       return callback(err) if err?
+      return callback("Not found") unless proposal?
       _update_proposal(session, proposal, data, "update", callback)
 
   # Create and update
@@ -310,6 +311,8 @@ module.exports = (config) ->
   r.add_opinion = (session, data, callback) ->
     return callback("Missing proposal id") unless data?.proposal?._id?
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
+      return callback(err) if err?
+      return callback("Not found") unless proposal?
       unless utils.can_edit(session, proposal)
         return callback("Permission denied.")
       return callback("Missing opinion text") unless data.opinion?.text
@@ -379,6 +382,8 @@ module.exports = (config) ->
   r.remove_opinion = (session, data, callback) ->
     event_opts = {data: {}, type: "trim"}
     schema.Proposal.findOne {_id: data.proposal._id}, (err, proposal) ->
+      return callback(err) if err?
+      return callback("Not found") unless proposal?
       unless utils.can_edit(session, proposal)
         return callback("Permission denied.")
       found = false

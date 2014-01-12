@@ -72,22 +72,24 @@ describe "Activity summaries", ->
     email_notices.send_daily_activity_summaries (err, count) ->
       expect(err).to.be(null)
       expect(count).to.be(3) # one sms, two emails
-      expect(mail.outbox.length).to.be(3)
-      recipients = (m.to[0].address for m in mail.outbox)
-      recipients.sort()
-      expect(recipients).to.eql(
-        ["1234567890@tmomail.net", "one@mockmyid.com", "two@mockmyid.com"]
-      )
-      done()
+      common.await ->
+        if mail.outbox.length == 3
+          recipients = (m.to[0].address for m in mail.outbox)
+          recipients.sort()
+          expect(recipients).to.eql(
+            ["1234567890@tmomail.net", "one@mockmyid.com", "two@mockmyid.com"]
+          )
+          done()
+          return true
       
   it "doesn't send if there's preference not to", (done) ->
     mail.outbox.length = 0
     schema.User.findOne {email: "one@mockmyid.com"}, (err, user) ->
       expect(err).to.be(null)
+      user.notifications.activity_summaries.email = false
       # Sending SMS blocked by missing a mobile number. User gets no
       # notification.
       user.notifications.activity_summaries.sms = true
-      user.notifications.activity_summaries.email = false
       user.mobile.number = null
       user.mobile.carrier = null
       user.save (err, user) ->
@@ -96,26 +98,31 @@ describe "Activity summaries", ->
         email_notices.send_daily_activity_summaries (err, count) ->
           expect(err).to.be(null)
           expect(count).to.be(1)
-          recipients = (m.to[0].address for m in mail.outbox)
-          expect(recipients).to.eql(["two@mockmyid.com"])
+          common.await ->
+            return false unless mail.outbox.length == 1
+            recipients = (m.to[0].address for m in mail.outbox)
+            expect(recipients).to.eql(["two@mockmyid.com"])
 
-          mail.outbox.length = 0
-          # Re-add SMS address, this time it should send, as the user still has
-          # a preference for it to be sent via SMS.  But no email still.
-          user.mobile.number = "1234567890"
-          user.mobile.carrier = "T-Mobile"
-          user.save (err, user) ->
-            expect(err).to.be(null)
-            email_notices.send_daily_activity_summaries (err, count) ->
+            mail.outbox.length = 0
+            # Re-add SMS address, this time it should send, as the user still has
+            # a preference for it to be sent via SMS.  But no email still.
+            user.mobile.number = "1234567890"
+            user.mobile.carrier = "T-Mobile"
+            user.save (err, user) ->
               expect(err).to.be(null)
-              expect(count).to.be(2)
-              expect(mail.outbox.length).to.be(2)
-              recipients = (m.to[0].address for m in mail.outbox)
-              recipients.sort()
-              expect(recipients).to.eql(
-                ["1234567890@tmomail.net", "two@mockmyid.com"]
-              )
-              done()
+              email_notices.send_daily_activity_summaries (err, count) ->
+                expect(err).to.be(null)
+                expect(count).to.be(2)
+                common.await ->
+                  return false unless mail.outbox.length == 2
+                  recipients = (m.to[0].address for m in mail.outbox)
+                  recipients.sort()
+                  expect(recipients).to.eql(
+                    ["1234567890@tmomail.net", "two@mockmyid.com"]
+                  )
+                  done()
+                  return true
+            return true
   
   it "doesn't send bare invitations", (done) ->
     # We don't want to spam users who have been invited (perhaps without their

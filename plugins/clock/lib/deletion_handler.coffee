@@ -16,6 +16,7 @@ module.exports = (config) ->
       "sharing.group_id": {$exists: true},
     }, (err, doc) ->
       return callback(err) if err?
+      return callback("Not found") unless doc?
       return callback(null, false) unless utils.can_edit(session, doc)
       return callback("Invalid url") unless doc.url == params.url
       return callback("Invalid title") unless doc.title == params.title

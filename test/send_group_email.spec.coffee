@@ -10,7 +10,7 @@ log4js = require("log4js")
 logger = log4js.getLogger("socket_server")
 logger.setLevel(log4js.levels.FATAL)
 
-describe "Activity summaries", ->
+describe "Send group emails", ->
   mail = null
   socket_client = null
   before (done) ->
@@ -39,17 +39,20 @@ describe "Activity summaries", ->
             body: "Good times"
           }, (err) ->
             expect(err).to.be(null)
-            expect(mail.outbox.length).to.be(1)
-            recipients = (a.address for a in mail.outbox[0].to)
-            recipients.sort()
-            expect(recipients).to.eql(
-              ["one@mockmyid.com", "three@mockmyid.com", "two@mockmyid.com"]
-            )
-            expect(mail.outbox[0].subject).to.be("Hey there")
-            expect(mail.outbox[0].text.trim()).to.be("Good times")
-            expect(mail.outbox[0].from[0].address).to.be("one@mockmyid.com")
-            expect(mail.outbox[0].headers.sender).to.be("notices@example.com")
-            done()
+            common.await ->
+              return false unless mail.outbox.length == 1
+              expect(mail.outbox.length).to.be(1)
+              recipients = (a.address for a in mail.outbox[0].to)
+              recipients.sort()
+              expect(recipients).to.eql(
+                ["one@mockmyid.com", "three@mockmyid.com", "two@mockmyid.com"]
+              )
+              expect(mail.outbox[0].subject).to.be("Hey there")
+              expect(mail.outbox[0].text.trim()).to.be("Good times")
+              expect(mail.outbox[0].from[0].address).to.be("one@mockmyid.com")
+              expect(mail.outbox[0].headers.sender).to.be("notices@example.com")
+              done()
+              return true
 
   it "doesn't send invalid email", (done) ->
     mail.outbox.length = 0
@@ -95,8 +98,11 @@ describe "Activity summaries", ->
             async.map bads, (bad, done) ->
               email_notices.send_custom_group_message session, bad, (err) ->
                 expect(err).to.not.be(null)
-                expect(mail.outbox.length).to.be(0)
-                done()
+                common.await ->
+                  return false unless mail.outbox.length == 0
+                  expect(mail.outbox.length).to.be(0)
+                  done()
+                  return true
             , (err) ->
               # Unauthenticated
               email_notices.send_custom_group_message {}, {
@@ -105,8 +111,11 @@ describe "Activity summaries", ->
                 subject: "Hey there"
               }, (err) ->
                 expect(err).to.not.be(null)
-                expect(mail.outbox.length).to.be(0)
-                done()
+                common.await ->
+                  return false unless mail.outbox.length == 0
+                  expect(mail.outbox.length).to.be(0)
+                  done()
+                  return true
 
   it "sends with a socket message", (done) ->
     mail.outbox.length = 0
@@ -122,19 +131,25 @@ describe "Activity summaries", ->
             }
           }
           socket_client.onceJSON (data) ->
-            expect(mail.outbox.length).to.be(1)
-            expect(data.route).to.eql("email_sent")
+            common.await ->
+              return false unless mail.outbox.length == 1
+              expect(mail.outbox.length).to.be(1)
+              expect(data.route).to.eql("email_sent")
 
-            mail.outbox.length = 0
-            socket_client.writeJSON {
-              route: "email_group",
-              body: {
-                group_id: badgroup.id
-                subject: "Hey there"
-                body: "Good times"
+              mail.outbox.length = 0
+              socket_client.writeJSON {
+                route: "email_group",
+                body: {
+                  group_id: badgroup.id
+                  subject: "Hey there"
+                  body: "Good times"
+                }
               }
-            }
-            socket_client.onceJSON (data2) ->
-              expect(mail.outbox.length).to.be(0)
-              expect(data2.route).to.be("error")
-              done()
+              socket_client.onceJSON (data2) ->
+                common.await ->
+                  return false unless mail.outbox.length == 0
+                  expect(mail.outbox.length).to.be(0)
+                  expect(data2.route).to.be("error")
+                  done()
+                  return true
+              return true

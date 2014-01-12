@@ -4,6 +4,7 @@
 #= require ../vendor/jquery.form.js
 #= require ../vendor/jquery.cookie.js
 #= require ../vendor/jquery.qrcode.min.js
+#= require ../vendor/jquerypp.custom.js
 #= require ../vendor/underscore.js
 #= require ../vendor/backbone.js
 #= require ../vendor/date.js

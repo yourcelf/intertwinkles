@@ -63,12 +63,12 @@ describe "Hangout", ->
       done()
 
   get_http_response = (url, callback) ->
-    http.get url, (res) ->
+    http.get(url, (res) ->
       data = ''
       res.on 'data', (chunk) -> data += chunk
       res.on 'end', ->
         callback(null, res.statusCode, data)
-    .on 'error', (e) ->
+    ).on 'error', (e) ->
       callback(e)
 
   it "Publishes gadget xml file", (done) ->
