@@ -89,6 +89,7 @@ start = (config, app, sockrooms) ->
         return done("Missing entity") unless data.entity?
         schema.Proposal.findOne {_id: data.entity}, (err, doc) ->
           return done(err) if err?
+          return done("Not found") unless doc?
           unless utils.can_view(session, doc)
             return done("Permission denied")
           api_methods.get_twinkles {
@@ -115,6 +116,8 @@ start = (config, app, sockrooms) ->
       return sockrooms.handleError(socket, "Missing 'callback' parameter")
     schema.Proposal.findOne data.proposal, (err, proposal) ->
       response = {}
+      return sockrooms.handleError(socket, "Mongoose error") if err?
+      return sockrooms.handleError(socket, "Not found") unless proposal?
       unless utils.can_view(session, proposal)
         response.error = "Permission denied"
       else
@@ -131,6 +134,8 @@ start = (config, app, sockrooms) ->
     return respond("Missing proposal ID") unless data.proposal_id?
     return respond("Missing callback") unless data.callback?
     schema.Proposal.findOne {_id: data.proposal_id}, (err, doc) ->
+      return sockrooms.handleError("Mongoose error") if err?
+      return sockrooms.handleError("Not found") unless doc?
       unless utils.can_view(session, doc)
         return respond("Permission denied")
       api_methods.get_events {

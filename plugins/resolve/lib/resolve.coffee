@@ -200,6 +200,8 @@ module.exports = (config) ->
         return done("Missing twinkle_id") unless twinkle_id?
         return done("Missing proposal_id") unless proposal_id?
         schema.Proposal.findOne {_id: proposal_id}, 'sharing', (err, doc) ->
+          return callback(err) if err?
+          return callback("Not found") unless doc?
           unless utils.can_view(session, doc)
             return done("Permission denied")
 

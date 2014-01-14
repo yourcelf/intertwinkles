@@ -15,6 +15,7 @@ start = (config, app, sockrooms) ->
     # Only allow to join the room if we're allowed to view the firestarter.
     schema.Firestarter.findOne {'slug': name}, 'sharing', (err, doc) ->
       return callback(err) if err?
+      return callback("Not found") unless doc?
       if utils.can_view(session, doc)
         callback(null, true)
       else
@@ -125,6 +126,8 @@ start = (config, app, sockrooms) ->
     unless data.callback?
       return sockrooms.handleError(socket, "Missing callback")
     schema.Firestarter.findOne {_id: data.firestarter_id}, 'sharing', (err, doc) ->
+      return sockrooms.handleError(socket, "mongoose error") if err?
+      return sockrooms.handleError(socket, "Not found") unless doc?
       if not utils.can_view(session, doc)
         return sockrooms.handleError(socket, "Permission denied")
       api_methods.get_events {
@@ -199,6 +202,7 @@ start = (config, app, sockrooms) ->
         return done("Missing entity") unless data.entity?
         schema.Firestarter.findOne {_id: data.entity}, (err, doc) ->
           return done(err) if err?
+          return done("Not found") unless doc?
           unless utils.can_view(session, doc)
             return done("Permission denied")
           api_methods.get_twinkles {

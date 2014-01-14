@@ -274,6 +274,8 @@ module.exports = (config) ->
       return callback(err) if err?
       return callback("Not found") unless idea?
       schema.Dotstorm.findOne {_id: idea.dotstorm_id}, 'sharing', (err, doc) ->
+        return callback(err) if err?
+        return callback("Not found") unless doc?
         return callback("Permission denied") unless utils.can_view(session, doc)
         callback(err, doc, idea)
 

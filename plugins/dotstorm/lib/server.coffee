@@ -14,6 +14,7 @@ start = (config, app, sockrooms) ->
     name = room.split("/")[1]
     schema.Dotstorm.findOne {_id: name}, 'sharing', (err, doc) ->
       return callback(err) if err?
+      return callback("Not found") unless doc?
       if utils.can_view(session, doc)
         callback(null, true)
       else
@@ -95,10 +96,10 @@ start = (config, app, sockrooms) ->
       return res.status(500).send("Server error") if err?
       return res.status(404).send("Not found") if not idea?
       schema.Dotstorm.findOne {_id: doc.dotstorm_id}, 'sharing', (err, dotstorm) ->
-        return res.status(500).send("Server error") if err?
+        return www_methods.handle_error(req, res, err) if err?
+        return www_methods.not_found(req, res) unless dotstorm?
         unless utils.can_view(req.session, dotstorm)
-          return res.status(403).send("Forbidden")
-        return res.status(404).send("Not found") if not dotstorm?
+          return www_methods.permission_denied(req, res)
         res.send(idea: idea)
 
   # Embed read-only dostorm using embed slug.
@@ -107,9 +108,9 @@ start = (config, app, sockrooms) ->
     constraint = embed_slug: req.params.embed_slug
     schema.Dotstorm.withLightIdeas constraint, (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless doc?
       unless utils.can_view(req.session, doc)
         return www_methods.permission_denied(req, res)
-      return www_methods.not_found(req, res) unless doc?
       res.render 'dotstorm/embed', context(req, {
         title: doc.name or "DotStorm"
         dotstorm: doc
@@ -123,9 +124,9 @@ start = (config, app, sockrooms) ->
     constraint = "groups._id": req.params.group_id
     schema.Dotstorm.withLightIdeas constraint, (err, doc) ->
       return www_methods.handle_error(req, res, err) if err?
+      return www_methods.not_found(req, res) unless doc?
       unless utils.can_view(req.session, doc)
         return www_methods.permission_denied(req, res)
-      return www_methods.not_found(req, res) unless doc?
       res.render 'dotstorm/embed', context(req, {
         title: doc.name or "DotStorm"
         dotstorm: doc
