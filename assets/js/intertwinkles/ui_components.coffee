@@ -301,6 +301,9 @@ footer_template = _.template("""
 <div class='container-fluid collapsible'>
   <div class='ramp'></div>
   <div class='footer-content'>
+    <div class='alert alert-danger'>
+      InterTwinkles.org will shut down June 1, 2016. <a href='http://blog.intertwinkles.org/2016/03/shutting-down-intertwinklesorg.html'>Read more</a>
+    </div>
     <div class='row-fluid'>
       <div class='span4 about-links'>
         <h2>About</h2>

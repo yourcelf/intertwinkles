@@ -1,0 +1,46 @@
+<div id='closing-notice-modal' class='modal hide fade'>
+  <div class='modal-header'>
+    <button class='close' type='button' data-dismiss='modal' aria-hidden='true'>
+      &times;
+    </button>
+    <h2>InterTwinkles will shut down on June 1, 2016</h2>
+  </div>
+  <div class='modal-body'>
+    <p>
+    On June 1, 2016, the InterTwinkles website will shut down and it will no
+    longer be possible to access any data on this site.  Please read this
+    <a href='http://blog.intertwinkles.org/2016/03/shutting-down-intertwinklesorg.html'>blog post</a>
+    for more details.
+    </p>
+    <p>
+    If you are interested in exporting your group's data from InterTwinkles,
+    please <a href='mailto:cfd@media.mit.edu'>contact us</a>.
+    </p>
+  </div>
+</div>
+<script type='text/javascript'>
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie != '') {
+      var cookies = document.cookie.split(';');
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = jQuery.trim(cookies[i]);
+        // Does this cookie string begin with the name we want?
+        if (cookie.substring(0, name.length + 1) == (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  function displayNotice() {
+    var displayed = getCookie("closing");
+    if (displayed !== "1") {
+      $("#closing-notice-modal").modal('show');
+      var expiration = new Date(new Date().getTime() + (24*60*60*1000));
+      document.cookie = 'closing=1; expires=' + expiration.toUTCString() + '; path=/';
+    }
+  }
+  displayNotice();
+</script>
